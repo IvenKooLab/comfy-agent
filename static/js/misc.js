@@ -194,7 +194,6 @@ function initSettings() {
     const repo = r.ok ? r.settings.gitee_repo : "";
     window.open(`https://gitee.com/${repo || "gu-dongwei/comfy-agent"}/releases`, "_blank");
   });
-  $("#s-lang").addEventListener("change", (e) => setLang(e.target.value));
   $("#s-save").addEventListener("click", async () => {
     const body = {
       comfy_url: $("#s-comfy").value.trim(),
