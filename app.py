@@ -142,6 +142,9 @@ def main():
     _show_window()
     _window.events.closed += _on_window_closed
     webview.start()
+    # 窗口关闭（最小化到托盘）后主线程必须驻留，否则守护线程随进程一起退出
+    while not _app_closing.is_set():
+        time.sleep(1)
 
 
 if __name__ == "__main__":
