@@ -19,6 +19,7 @@
       <a class="nav-item active" data-view="create" href="#create"><span class="ico">✦</span><span class="txt" data-i18n="nav.create">创作</span></a>
       <a class="nav-item" data-view="gallery" href="#gallery"><span class="ico">▦</span><span class="txt" data-i18n="nav.gallery">画廊</span></a>
       <a class="nav-item" data-view="editor" href="#editor"><span class="ico">⑃</span><span class="txt" data-i18n="nav.editor">工作流</span></a>
+      <a class="nav-item" data-view="templates" href="#templates"><span class="ico">❏</span><span class="txt">模板</span></a>
       <a class="nav-item" data-view="runs" href="#runs"><span class="ico">◷</span><span class="txt" data-i18n="nav.runs">任务</span></a>
       <a class="nav-item" data-view="pipeline" href="#pipeline"><span class="ico">⛓</span><span class="txt">产线</span></a>
       <a class="nav-item" data-view="launcher" href="#launcher"><span class="ico">⏻</span><span class="txt" data-i18n="nav.launcher">启动器</span></a>
@@ -163,6 +164,23 @@
           <div id="inspector-empty" class="muted pad">点击一个节点查看/编辑参数</div>
           <div id="inspector-body" hidden></div>
         </aside>
+      </div>
+    </section>
+
+    <!-- ============ 模板库 ============ -->
+    <section id="view-templates" class="view">
+      <header class="page-head">
+        <h1>模板库</h1>
+        <div class="head-tools">
+          <input id="tpl-search" class="input" style="width:280px" placeholder="搜索标题 / 描述 / 模型…">
+          <span id="tpl-count" class="muted"></span>
+        </div>
+      </header>
+      <div style="display:flex;gap:12px;height:calc(100vh - 165px)">
+        <aside class="card pad" id="tpl-groups" style="width:230px;flex:none;overflow-y:auto"></aside>
+        <div style="flex:1;min-width:0;overflow-y:auto" id="tpl-scroll">
+          <div id="tpl-cards" class="tpl-grid"></div>
+        </div>
       </div>
     </section>
 

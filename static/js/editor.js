@@ -44,19 +44,35 @@ export function initEditor() {
   });
   loadList().then(() => {
     validate();
-    // 画廊「导入编辑器」
-    const pend = localStorage.getItem("pendingImport");
-    if (pend) {
-      localStorage.removeItem("pendingImport");
-      try {
-        const { api: a, name } = JSON.parse(pend);
-        cur = { id: null, name: "来自图片·" + (name || "工作流"), api: a, layout: {}, builtin: false };
-        afterLoad();
-        toast("已从图片载入工作流，点「保存」存入库", "ok");
-      } catch { }
-    }
+    doPendingImport();
   });
 }
+
+function doPendingImport() {
+  // 画廊/模板页跳转导入（API 格式 or UI 格式）
+  const pend = localStorage.getItem("pendingImport");
+  const pendUI = localStorage.getItem("pendingImportUI");
+  if (pend) {
+    localStorage.removeItem("pendingImport");
+    try {
+      const { api: a, name } = JSON.parse(pend);
+      cur = { id: null, name: "来自图片·" + (name || "工作流"), api: a, layout: {}, builtin: false };
+      afterLoad();
+      toast("已从图片载入工作流，点「保存」存入库", "ok");
+    } catch { }
+    return;
+  }
+  if (pendUI) {
+    localStorage.removeItem("pendingImportUI");
+    try {
+      const { ui, name } = JSON.parse(pendUI);
+      importUI(ui, name || "模板");
+    } catch (err) { toast("导入失败：" + err.message, "err"); }
+  }
+}
+
+/* 供模板库等外部模块触发导入 */
+document.addEventListener("templates-import", () => doPendingImport());
 
 const snapV = (v) => snap ? Math.round(v / 12) * 12 : v;
 

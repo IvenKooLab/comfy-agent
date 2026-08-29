@@ -1676,6 +1676,59 @@ def list_characters():
     return out
 
 
+# ---------------------------------------------------------------- template library (ComfyUI 模板库代理)
+
+TPL_MIRRORS = [
+    "https://cdn.jsdelivr.net/gh/Comfy-Org/workflow_templates@main/templates/",
+    "https://gcore.jsdelivr.net/gh/Comfy-Org/workflow_templates@main/templates/",
+    "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/main/templates/",
+]
+TPL_INDEX_CACHE = os.path.join(CACHE_DIR, "templates_index.json")
+TPL_CACHE = os.path.join(CACHE_DIR, "templates")
+
+
+def tpl_fetch(rel, timeout=25):
+    """从镜像链拉取模板库文件（index/工作流JSON/媒体），24h 磁盘缓存。"""
+    rel = rel.lstrip("/")
+    if ".." in rel:
+        raise RuntimeError("illegal path")
+    if not os.path.isdir(TPL_CACHE):
+        os.makedirs(TPL_CACHE, exist_ok=True)
+    dst = os.path.join(TPL_CACHE, hashlib.sha1(rel.encode()).hexdigest() + "_" + os.path.basename(rel))
+    if os.path.isfile(dst) and time.time() - os.path.getmtime(dst) < 86400:
+        return dst
+    last = "unknown"
+    for m in TPL_MIRRORS:
+        try:
+            req = urllib.request.Request(m + urllib.parse.quote(rel), headers={"User-Agent": "comfyagent"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = r.read()
+            if not data:
+                continue
+            tmp = dst + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(data)
+            os.replace(tmp, dst)
+            return dst
+        except Exception as e:
+            last = str(e)
+    raise RuntimeError(last)
+
+
+def tpl_index():
+    if os.path.isfile(TPL_INDEX_CACHE) and time.time() - os.path.getmtime(TPL_INDEX_CACHE) < 86400:
+        return read_json_file(TPL_INDEX_CACHE, None)
+    try:
+        p = tpl_fetch("index.json", timeout=30)
+        data = read_json_file(p, None)
+        if data:
+            write_text_atomic(TPL_INDEX_CACHE, json.dumps(data, ensure_ascii=False))
+            return data
+    except Exception:
+        pass
+    return read_json_file(TPL_INDEX_CACHE, None)  # 过期缓存兜底
+
+
 # ---------------------------------------------------------------- HTTP handler
 
 class Handler(BaseHTTPRequestHandler):
@@ -2195,6 +2248,41 @@ class Handler(BaseHTTPRequestHandler):
             bdir = os.path.join(DATA_DIR, "backups")
             files = sorted([f for f in os.listdir(bdir) if f.startswith("backup_")], reverse=True) if os.path.isdir(bdir) else []
             return self.send_json({"ok": True, "backups": files[:20]})
+        # ---- 模板库
+        if path == "/api/templates/index":
+            idx = tpl_index()
+            if idx is None:
+                return self.send_json({"ok": False, "error": "模板索引不可用（所有镜像均被阻断，稍后重试）"}, 502)
+            return self.send_json({"ok": True, "groups": idx})
+        if path == "/api/templates/file":
+            try:
+                p = tpl_fetch(q.get("name", ""))
+            except Exception as e:
+                return self.send_json({"ok": False, "error": str(e)}, 502)
+            mime = ("image/webp" if p.endswith(".webp") else "image/png" if p.endswith(".png")
+                    else "video/mp4" if p.endswith(".mp4") else "application/json")
+            self.send_file(p, mime, ranges=self.headers.get("Range"))
+            return
+        if path == "/api/templates/workflow" and method == "POST":
+            name = body.get("name", "")
+            if not re.match(r"^[A-Za-z0-9_.-]+$", name):
+                return self.send_json({"ok": False, "error": "非法模板名"}, 400)
+            try:
+                p = tpl_fetch(name if name.endswith(".json") else name + ".json")
+                data = read_json_file(p, None)
+            except Exception as e:
+                return self.send_json({"ok": False, "error": f"拉取失败：{e}"}, 502)
+            if data is None:
+                return self.send_json({"ok": False, "error": "模板 JSON 解析失败"}, 500)
+            if "nodes" in data and COMFY.probe() is not None:
+                try:
+                    api_g, warns = convert_ui_to_api(data, COMFY.object_info())
+                    return self.send_json({"ok": True, "format": "api", "api": api_g, "warnings": warns})
+                except Exception as e:
+                    return self.send_json({"ok": True, "format": "ui", "ui": data,
+                                           "warnings": [f"自动转换失败（{e}），已返回 UI 原格式，请手动转换"]})
+            return self.send_json({"ok": True, "format": "api", "api": data})
+
         # ---- LLM 厂商
         if path == "/api/llm/providers":
             return self.send_json({"ok": True, "presets": [

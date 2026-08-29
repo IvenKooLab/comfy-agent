@@ -544,3 +544,21 @@ textarea.input { height: auto; padding: 9px 12px; }
 .pl-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
 .pl-item .input { flex: 1; height: 30px; font-size: 12px; }
 .pl-prompt { font-size: 11px; color: var(--text-3); padding: 2px 4px 10px; word-break: break-all; border-bottom: 1px dashed var(--line-1); }
+
+/* ---------- 模板库 ---------- */
+.tpl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+@media (max-width: 1500px) { .tpl-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 1100px) { .tpl-grid { grid-template-columns: repeat(2, 1fr); } }
+.tpl-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; cursor: pointer; transition: all .18s var(--ease); }
+.tpl-card:hover { transform: translateY(-3px); border-color: rgba(139,92,246,.5); box-shadow: var(--shadow-2); }
+.tpl-thumb { aspect-ratio: 16/10; background: linear-gradient(135deg, #2a1b5e, #1a3a5e 60%, #0e4a5e); display: flex; align-items: center; justify-content: center; position: relative; }
+.tpl-ph span { font-size: 42px; font-weight: 800; color: rgba(255,255,255,.55); font-family: var(--font); }
+.tpl-badges { position: absolute; bottom: 8px; left: 8px; right: 8px; display: flex; gap: 5px; flex-wrap: wrap; }
+.tpl-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; background: rgba(10,11,16,.7); border: 1px solid rgba(255,255,255,.16); color: #e6e8f0; backdrop-filter: blur(4px); }
+.tpl-badge.vendor { background: rgba(124,58,237,.75); border-color: transparent; }
+.tpl-info { padding: 10px 12px 12px; }
+.tpl-title { font-size: 12.5px; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tpl-desc { font-size: 11px; color: var(--text-3); line-height: 1.5; }
+.tpl-group-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; color: var(--text-2); }
+.tpl-group-item:hover { background: rgba(255,255,255,.05); color: var(--text-1); }
+.tpl-group-item.active { background: var(--brand-soft); color: #fff; }
