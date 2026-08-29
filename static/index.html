@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ComfyAgent · 可视化创作台</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎛️</text></svg>">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 侧边导航 -->
+  <nav id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">🎞️</div>
+      <div class="brand-name">ComfyAgent<br><span>可视化创作台</span></div>
+    </div>
+    <div class="nav-items">
+      <a class="nav-item active" data-view="gallery" href="#gallery"><span class="ico">🖼️</span>画廊</a>
+      <a class="nav-item" data-view="editor" href="#editor"><span class="ico">🧩</span>工作流</a>
+      <a class="nav-item" data-view="runs" href="#runs"><span class="ico">⚙️</span>任务</a>
+      <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">🟣</span>知识库</a>
+      <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✨</span>助手</a>
+      <a class="nav-item" data-view="settings" href="#settings"><span class="ico">🔧</span>设置</a>
+    </div>
+    <div class="side-foot">
+      <div id="comfy-dot" class="dot off" title="ComfyUI 状态"></div>
+      <span id="comfy-dot-text">检测中…</span>
+    </div>
+  </nav>
+
+  <!-- 主区域 -->
+  <main id="main">
+    <!-- ============ 画廊 ============ -->
+    <section id="view-gallery" class="view active">
+      <header class="page-head">
+        <h1>成果画廊</h1>
+        <div class="head-tools">
+          <input id="g-search" class="input" placeholder="搜索文件名…">
+          <div class="chips" id="g-kind">
+            <button class="chip active" data-k="all">全部</button>
+            <button class="chip" data-k="video">视频</button>
+            <button class="chip" data-k="image">图片</button>
+          </div>
+          <select id="g-sort" class="input select"><option value="new">最新优先</option><option value="old">最早优先</option><option value="big">文件最大</option></select>
+          <button id="g-refresh" class="btn ghost">↻ 刷新</button>
+          <span id="g-count" class="muted"></span>
+        </div>
+      </header>
+      <div id="gallery-grid" class="masonry"></div>
+      <div id="gallery-empty" class="empty" hidden>
+        <div class="empty-ico">📭</div>
+        <p>还没有成果物。去「工作流」页跑一个，或直接让助手「画：xxx」。</p>
+      </div>
+    </section>
+
+    <!-- ============ 工作流编辑器 ============ -->
+    <section id="view-editor" class="view">
+      <header class="page-head">
+        <h1>工作流</h1>
+        <div class="head-tools">
+          <input id="wf-name" class="input grow" placeholder="工作流名称">
+          <button id="wf-save" class="btn">💾 保存</button>
+          <button id="wf-run" class="btn primary">▶ 运行</button>
+          <button id="wf-interrupt" class="btn danger ghost">⏹ 中断</button>
+          <button id="wf-import" class="btn ghost">📥 导入</button>
+          <input id="wf-file" type="file" accept=".json,.png" multiple hidden>
+          <button id="wf-export" class="btn ghost">📤 导出API</button>
+        </div>
+      </header>
+      <div class="editor-body">
+        <aside id="wf-list"></aside>
+        <div id="canvas-wrap">
+          <svg id="graph"></svg>
+          <div class="canvas-tools">
+            <button class="tool" id="cv-add" title="添加节点(双击画布)">＋</button>
+            <button class="tool" id="cv-fit" title="适配视图">⊡</button>
+            <button class="tool" id="cv-zin" title="放大">＋🔍</button>
+            <button class="tool" id="cv-zout" title="缩小">－🔍</button>
+          </div>
+          <div id="canvas-hint" class="canvas-hint">双击空白处添加节点 · 从节点右侧圆点拖到另一节点左侧圆点连线 · 点击已连线的输入圆点断开 · Delete 删除选中</div>
+        </div>
+        <aside id="inspector">
+          <div id="inspector-empty" class="muted pad">点击一个节点查看/编辑参数</div>
+          <div id="inspector-body" hidden></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ 任务 ============ -->
+    <section id="view-runs" class="view">
+      <header class="page-head">
+        <h1>任务</h1>
+        <div class="head-tools">
+          <button id="q-interrupt" class="btn danger ghost">⏹ 中断当前</button>
+          <button id="q-clear" class="btn danger ghost">🧹 清空队列</button>
+        </div>
+      </header>
+      <div id="progress-panel" class="card pad" hidden>
+        <div class="progress-head"><span id="prog-node"></span><span id="prog-pct"></span></div>
+        <div class="progress-bar"><div id="prog-fill"></div></div>
+      </div>
+      <div class="runs-cols">
+        <div class="card pad"><h3>排队中 <span id="q-pending-n" class="badge"></span></h3><div id="q-pending"></div></div>
+        <div class="card pad"><h3>执行中 <span id="q-running-n" class="badge"></span></h3><div id="q-running"></div></div>
+      </div>
+      <h3 class="sec-title">最近完成</h3>
+      <div id="runs-list"></div>
+    </section>
+
+    <!-- ============ Obsidian ============ -->
+    <section id="view-obsidian" class="view">
+      <header class="page-head"><h1>Obsidian 知识库</h1></header>
+      <div id="obs-status" class="card pad"></div>
+      <div class="head-tools margin-top">
+        <button id="obs-sync" class="btn">🔄 同步工作流到知识库</button>
+        <button id="obs-refresh" class="btn ghost">↻ 刷新</button>
+      </div>
+      <h3 class="sec-title">归档记录</h3>
+      <div id="obs-archives" class="card"></div>
+      <h3 class="sec-title">知识库笔记</h3>
+      <div id="obs-notes" class="card"></div>
+    </section>
+
+    <!-- ============ 助手 ============ -->
+    <section id="view-agent" class="view">
+      <header class="page-head"><h1>智能助手</h1></header>
+      <div id="chat" class="card">
+        <div id="chat-log"></div>
+        <div class="chat-quick">
+          <button class="chip" data-q="状态">📊 状态</button>
+          <button class="chip" data-q="跑 Flux 文生图">🎨 生图</button>
+          <button class="chip" data-q="归档最近 5 个">📦 归档5个</button>
+          <button class="chip" data-q="清空队列">🧹 清空队列</button>
+          <button class="chip" data-q="打开知识库">🟣 知识库</button>
+        </div>
+        <div class="chat-input-row">
+          <input id="chat-input" class="input grow" placeholder="例如：画：雪夜竹林剑客 832x1216 ／ 跑 Flux 文生图 ×3 ／ 归档最近 10 个">
+          <button id="chat-send" class="btn primary">发送</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 设置 ============ -->
+    <section id="view-settings" class="view">
+      <header class="page-head"><h1>设置</h1></header>
+      <div class="card pad form">
+        <label>ComfyUI 地址<input id="s-comfy" class="input"></label>
+        <label>成果目录（output）<input id="s-output" class="input"></label>
+        <label>Obsidian 库路径（vault）<input id="s-vault" class="input"></label>
+        <label>服务端口（重启生效）<input id="s-port" class="input" type="number"></label>
+        <label>智谱 API Key（选填，给助手加智能）<input id="s-zhipu" class="input" type="password" placeholder="留空保持不变"></label>
+        <label>智谱模型<input id="s-zhipu-model" class="input"></label>
+        <div class="row">
+          <button id="s-save" class="btn primary">保存设置</button>
+          <button id="s-test" class="btn ghost">测试 ComfyUI 连接</button>
+          <span id="s-msg" class="muted"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 灯箱 -->
+<div id="lightbox" hidden>
+  <div class="lb-backdrop"></div>
+  <button class="lb-nav lb-prev" id="lb-prev">‹</button>
+  <button class="lb-nav lb-next" id="lb-next">›</button>
+  <div class="lb-media" id="lb-media"></div>
+  <aside class="lb-side">
+    <button class="lb-close" id="lb-close">✕</button>
+    <h3 id="lb-title"></h3>
+    <div id="lb-info" class="lb-info"></div>
+    <div id="lb-summary" class="lb-summary"></div>
+    <div class="lb-actions">
+      <button class="btn" id="lb-import">🧩 导入编辑器</button>
+      <button class="btn" id="lb-rerun">🎲 重新生成</button>
+      <button class="btn" id="lb-archive">🟣 归档</button>
+      <button class="btn ghost" id="lb-reveal">📂 所在文件夹</button>
+      <button class="btn ghost" id="lb-download">⬇ 下载</button>
+      <button class="btn danger ghost" id="lb-trash">🗑 删除</button>
+    </div>
+    <div class="lb-note">
+      <textarea id="lb-note-text" class="input" rows="2" placeholder="归档手记（可选）"></textarea>
+    </div>
+  </aside>
+</div>
+
+<!-- 添加节点面板 -->
+<div id="node-palette" hidden>
+  <input id="palette-search" class="input" placeholder="搜索节点（如 KSampler / SaveImage）…">
+  <div id="palette-list"></div>
+</div>
+
+<div id="toasts"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

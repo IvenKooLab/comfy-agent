@@ -1,0 +1,375 @@
+* ComfyAgent running at http://127.0.0.1:8190  (ComfyUI: http://127.0.0.1:8188)
+* gallery root: D:\tools\ComfyUI-aki-v3\ComfyUI\output
+* obsidian vault: E:\work\obsidian\TungwaiKu
+[16:14:19] "GET /api/status HTTP/1.1" 200 -
+[16:14:19] "GET /api/gallery HTTP/1.1" 200 -
+[16:14:38] "GET /api/workflows HTTP/1.1" 200 -
+[16:14:38] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:14:38] "GET /api/media?path=cm_G__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:14:38] "GET /api/media/meta?path=feibi/feibi_w4a8_00002_.png HTTP/1.1" 404 -
+[16:14:38] "GET /api/media?path=cm_G__00001_.mp4 HTTP/1.1" 206 -
+[16:14:54] "GET /api/media/meta?path=/d/tools/ComfyUI-aki-v3/ComfyUI/output/feibi/check_1.png HTTP/1.1" 404 -
+[16:15:03] "GET /api/media/meta?path=feibi/check_1.png HTTP/1.1" 200 -
+[16:15:03] "POST /api/prompt HTTP/1.1" 200 -
+[16:15:25] "POST /api/prompt HTTP/1.1" 200 -
+[16:15:38] "GET /api/history?limit=5 HTTP/1.1" 200 -
+[16:15:38] "GET /api/gallery?force=1 HTTP/1.1" 200 -
+[16:15:38] "GET /api/media/meta?path=style05_cyber_chinese_00001_.png HTTP/1.1" 200 -
+[16:15:53] "GET /api/queue HTTP/1.1" 200 -
+[16:16:24] "GET / HTTP/1.1" 200 -
+[16:16:24] "GET /style.css HTTP/1.1" 200 -
+[16:16:24] "GET /js/app.js HTTP/1.1" 200 -
+[16:16:24] "GET /js/gallery.js HTTP/1.1" 200 -
+[16:16:24] "GET /js/runs.js HTTP/1.1" 200 -
+[16:16:24] "GET /js/editor.js HTTP/1.1" 200 -
+[16:16:24] "GET /js/misc.js HTTP/1.1" 200 -
+[16:16:24] "GET /api/workflows HTTP/1.1" 200 -
+[16:16:24] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:16:24] "GET /api/settings HTTP/1.1" 200 -
+[16:16:24] "GET /api/events HTTP/1.1" 200 -
+[16:16:24] "GET /api/obsidian/archives HTTP/1.1" 200 -
+[16:16:24] "GET /api/obsidian/notes HTTP/1.1" 200 -
+[16:16:24] "GET /api/gallery HTTP/1.1" 200 -
+[16:16:24] "GET /api/status HTTP/1.1" 200 -
+[16:16:24] "GET /api/media?path=cm_G__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:24] "GET /api/media?path=cm_B__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:24] "GET /api/media?path=cm_E__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:24] "GET /api/media?path=cm_C__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:24] "GET /api/media?path=cm_F__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:24] "GET /api/media?path=cm_D__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=cm_A__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT01_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F02_xianxia%2F02_S1_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F02_xianxia%2F02_S3_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F03_kpop%2F03_S6_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=feibi%2Fcheck_2.png HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=feibi%2Fcheck_3.png HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT03_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT04_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2Ffilms%2F02_%E5%89%91%E4%BB%99%E9%A3%9E%E5%8D%87_3D%E4%BF%AE%E4%BB%99.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3v2%2F02_xianxia%2F02_S2_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F01_meiman%2F01_S6_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F02_xianxia%2F02_S2_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2Ffilms%2F03_%E9%9C%93%E8%99%B9%E5%BF%83%E5%8A%A8_%E9%9F%A9%E5%9B%A2.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_V3_guoman2d_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F01_meiman%2F01_S5_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F01_meiman%2F01_S4_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT05_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT02_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2Ffilms%2F01_%E6%9A%97%E5%A4%9C%E5%B4%9B%E8%B5%B7_2D%E7%BE%8E%E6%BC%AB.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F01_meiman%2F01_S3_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=feibi%2Ffeibi_qiubi_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT07_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F02_xianxia%2F02_S4_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT06_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=video%2Ffangu_V2_donghua_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F01_meiman%2F01_S2_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=swq_A_phx_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F03_kpop%2F03_S5_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=swq_B__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=swq_C__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=h3%2F02_xianxia%2F02_S5_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=feibi_w4a8%2Fcheck_3.png HTTP/1.1" 200 -
+[16:16:25] "GET /api/media?path=feibi%2Fcheck_1.png HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=h3%2F02_xianxia%2F02_S6_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=feibi_w4a8%2Fcheck_2.png HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=feibi_w4a8%2Ffeibi_qiubi_w4a8_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=swq_E__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=swq_D__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=feibi_w4a8%2Fcheck_1.png HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=h3%2F03_kpop%2F03_S1_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=swq_F__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=video%2Ffangu_V1_liveaction_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=style05_cyber_chinese_00001_.png HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=h3%2F03_kpop%2F03_S3_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=h3%2F03_kpop%2F03_S4_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=h3%2F03_kpop%2F03_S2_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=wan_i2v_00001.png HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=h3%2F01_meiman%2F01_S1_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:26] "GET /api/media?path=wan_i2v_00001.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:39] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT04_00001_.mp4 HTTP/1.1" 206 -
+[16:16:39] "GET /api/media/meta?path=video%2Ffangu_E001_S01E01_SHOT04_00001_.mp4 HTTP/1.1" 200 -
+[16:16:50] "GET / HTTP/1.1" 200 -
+[16:16:50] "GET /style.css HTTP/1.1" 200 -
+[16:16:50] "GET /js/app.js HTTP/1.1" 200 -
+[16:16:50] "GET /js/gallery.js HTTP/1.1" 200 -
+[16:16:50] "GET /js/editor.js HTTP/1.1" 200 -
+[16:16:50] "GET /js/runs.js HTTP/1.1" 200 -
+[16:16:50] "GET /js/misc.js HTTP/1.1" 200 -
+[16:16:50] "GET /api/workflows HTTP/1.1" 200 -
+[16:16:50] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:16:50] "GET /api/settings HTTP/1.1" 200 -
+[16:16:50] "GET /api/gallery HTTP/1.1" 200 -
+[16:16:50] "GET /api/events HTTP/1.1" 200 -
+[16:16:50] "GET /api/status HTTP/1.1" 200 -
+[16:16:50] "GET /api/obsidian/archives HTTP/1.1" 200 -
+[16:16:50] "GET /api/obsidian/notes HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=cm_F__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=cm_E__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=cm_G__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=cm_D__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=cm_C__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=cm_B__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=cm_A__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=swq_E__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=swq_F__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=swq_D__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=swq_C__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=swq_B__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=swq_A_phx_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT07_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT06_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT05_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT04_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT03_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT02_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT01_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_V3_guoman2d_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_V2_donghua_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=video%2Ffangu_V1_liveaction_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=feibi_w4a8%2Fcheck_1.png HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=feibi_w4a8%2Fcheck_2.png HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=feibi_w4a8%2Fcheck_3.png HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=feibi_w4a8%2Ffeibi_qiubi_w4a8_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=feibi%2Fcheck_1.png HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=feibi%2Fcheck_2.png HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=feibi%2Fcheck_3.png HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=feibi%2Ffeibi_qiubi_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3v2%2F02_xianxia%2F02_S2_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2Ffilms%2F01_%E6%9A%97%E5%A4%9C%E5%B4%9B%E8%B5%B7_2D%E7%BE%8E%E6%BC%AB.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2Ffilms%2F02_%E5%89%91%E4%BB%99%E9%A3%9E%E5%8D%87_3D%E4%BF%AE%E4%BB%99.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2Ffilms%2F03_%E9%9C%93%E8%99%B9%E5%BF%83%E5%8A%A8_%E9%9F%A9%E5%9B%A2.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F03_kpop%2F03_S6_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F03_kpop%2F03_S4_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F03_kpop%2F03_S5_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F03_kpop%2F03_S3_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F03_kpop%2F03_S2_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F03_kpop%2F03_S1_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F02_xianxia%2F02_S6_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F02_xianxia%2F02_S5_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F01_meiman%2F01_S6_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F02_xianxia%2F02_S4_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F02_xianxia%2F02_S3_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F02_xianxia%2F02_S2_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F02_xianxia%2F02_S1_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F01_meiman%2F01_S5_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F01_meiman%2F01_S2_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F01_meiman%2F01_S4_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F01_meiman%2F01_S3_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=h3%2F01_meiman%2F01_S1_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=style05_cyber_chinese_00001_.png HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=wan_i2v_00001.png HTTP/1.1" 200 -
+[16:16:50] "GET /api/media?path=wan_i2v_00001.mp4&thumb=1 HTTP/1.1" 200 -
+[16:16:55] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:16:55] "GET /api/obsidian/archives HTTP/1.1" 200 -
+[16:16:55] "GET /api/obsidian/notes HTTP/1.1" 200 -
+[16:16:57] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:16:57] "GET /api/obsidian/archives HTTP/1.1" 200 -
+[16:16:57] "GET /api/obsidian/notes HTTP/1.1" 200 -
+[16:17:01] "GET /api/gallery HTTP/1.1" 200 -
+[16:17:02] "GET /api/media?path=cm_F__00001_.mp4 HTTP/1.1" 206 -
+[16:17:02] "GET /api/media?path=cm_E__00001_.mp4 HTTP/1.1" 206 -
+[16:17:04] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT06_00001_.mp4 HTTP/1.1" 206 -
+[16:17:06] "GET /api/media?path=feibi%2Ffeibi_qiubi_00001_.mp4 HTTP/1.1" 206 -
+[16:17:07] "GET /api/media?path=h3%2Ffilms%2F01_%E6%9A%97%E5%A4%9C%E5%B4%9B%E8%B5%B7_2D%E7%BE%8E%E6%BC%AB.mp4 HTTP/1.1" 206 -
+Traceback (most recent call last):
+  File "E:\work\gitee\comfy-agent\server.py", line 1029, in route
+    return self.api(method, path, q, body)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\work\gitee\comfy-agent\server.py", line 1145, in api
+    return self.send_file(full, mime, ranges=self.headers.get("Range"),
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                          download_name=os.path.basename(full) if q.get("download") == "1" else None)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\work\gitee\comfy-agent\server.py", line 1007, in send_file
+    self.wfile.write(chunk)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 845, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+[16:17:07] "GET /api/media?path=h3%2Ffilms%2F01_%E6%9A%97%E5%A4%9C%E5%B4%9B%E8%B5%B7_2D%E7%BE%8E%E6%BC%AB.mp4 HTTP/1.1" 500 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 53651)
+[16:17:07] "GET /api/media?path=h3%2Ffilms%2F01_%E6%9A%97%E5%A4%9C%E5%B4%9B%E8%B5%B7_2D%E7%BE%8E%E6%BC%AB.mp4 HTTP/1.1" 206 -
+Traceback (most recent call last):
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 449, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 415, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+----------------------------------------
+[16:17:07] "GET /api/media?path=h3%2Ffilms%2F03_%E9%9C%93%E8%99%B9%E5%BF%83%E5%8A%A8_%E9%9F%A9%E5%9B%A2.mp4 HTTP/1.1" 206 -
+Traceback (most recent call last):
+  File "E:\work\gitee\comfy-agent\server.py", line 1029, in route
+    return self.api(method, path, q, body)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\work\gitee\comfy-agent\server.py", line 1145, in api
+    return self.send_file(full, mime, ranges=self.headers.get("Range"),
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                          download_name=os.path.basename(full) if q.get("download") == "1" else None)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\work\gitee\comfy-agent\server.py", line 1007, in send_file
+    self.wfile.write(chunk)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 845, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+[16:17:07] "GET /api/media?path=h3%2Ffilms%2F03_%E9%9C%93%E8%99%B9%E5%BF%83%E5%8A%A8_%E9%9F%A9%E5%9B%A2.mp4 HTTP/1.1" 500 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 62903)
+Traceback (most recent call last):
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 449, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 415, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+----------------------------------------
+[16:17:07] "GET /api/media?path=h3%2Ffilms%2F03_%E9%9C%93%E8%99%B9%E5%BF%83%E5%8A%A8_%E9%9F%A9%E5%9B%A2.mp4 HTTP/1.1" 206 -
+[16:17:07] "GET /api/media?path=h3%2Ffilms%2F03_%E9%9C%93%E8%99%B9%E5%BF%83%E5%8A%A8_%E9%9F%A9%E5%9B%A2.mp4 HTTP/1.1" 206 -
+[16:17:08] "GET /api/media?path=h3%2F03_kpop%2F03_S6_00001_.mp4 HTTP/1.1" 206 -
+[16:17:08] "GET /api/media/meta?path=h3%2F03_kpop%2F03_S6_00001_.mp4 HTTP/1.1" 200 -
+[16:17:09] "GET /api/media?path=h3%2Ffilms%2F01_%E6%9A%97%E5%A4%9C%E5%B4%9B%E8%B5%B7_2D%E7%BE%8E%E6%BC%AB.mp4 HTTP/1.1" 206 -
+[16:17:15] "GET /api/media?path=h3%2F01_meiman%2F01_S4_00001_.mp4 HTTP/1.1" 206 -
+[16:17:16] "GET /api/media?path=h3%2F03_kpop%2F03_S4_00001_.mp4 HTTP/1.1" 206 -
+[16:17:29] "GET /api/queue HTTP/1.1" 200 -
+[16:17:29] "GET /api/queue HTTP/1.1" 200 -
+[16:17:29] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:17:29] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:17:29] "GET /api/media?path=cm_F__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:17:29] "GET /api/media?path=cm_E__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:17:29] "GET /api/media?path=cmNew_A__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:17:29] "GET /api/queue HTTP/1.1" 200 -
+[16:17:29] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:17:32] "GET /api/queue HTTP/1.1" 200 -
+[16:17:32] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:17:34] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:17:34] "GET /api/obsidian/archives HTTP/1.1" 200 -
+[16:17:34] "GET /api/obsidian/notes HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 65166)
+Traceback (most recent call last):
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 449, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 415, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+----------------------------------------
+[16:18:19] "POST /api/settings HTTP/1.1" 200 -
+[16:18:28] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:18:28] "GET /api/obsidian/archives HTTP/1.1" 200 -
+[16:18:28] "GET /api/obsidian/notes HTTP/1.1" 200 -
+[16:18:30] "GET /api/gallery HTTP/1.1" 200 -
+[16:18:30] "GET /api/media?path=video%2Ffangu_E001_S01E01_SHOT06_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:18:30] "GET /api/media?path=feibi%2Ffeibi_qiubi_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:18:30] "GET /api/media?path=h3%2Ffilms%2F01_%E6%9A%97%E5%A4%9C%E5%B4%9B%E8%B5%B7_2D%E7%BE%8E%E6%BC%AB.mp4&thumb=1 HTTP/1.1" 200 -
+[16:18:30] "GET /api/media?path=h3%2Ffilms%2F03_%E9%9C%93%E8%99%B9%E5%BF%83%E5%8A%A8_%E9%9F%A9%E5%9B%A2.mp4&thumb=1 HTTP/1.1" 200 -
+[16:18:30] "GET /api/media?path=h3%2F03_kpop%2F03_S6_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:18:30] "GET /api/media?path=h3%2F03_kpop%2F03_S4_00001_.mp4&thumb=1 HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 49758)
+Traceback (most recent call last):
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 449, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 415, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "D:\tools\ComfyUI-aki-v3\python\Lib\socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+----------------------------------------
+[16:19:12] "GET / HTTP/1.1" 200 -
+[16:19:12] "GET /js/app.js HTTP/1.1" 200 -
+[16:19:12] "GET /style.css HTTP/1.1" 200 -
+[16:19:12] "GET /js/editor.js HTTP/1.1" 200 -
+[16:19:12] "GET /js/runs.js HTTP/1.1" 200 -
+[16:19:12] "GET /js/gallery.js HTTP/1.1" 200 -
+[16:19:12] "GET /js/misc.js HTTP/1.1" 200 -
+[16:19:12] "GET /api/workflows HTTP/1.1" 200 -
+[16:19:12] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:19:12] "GET /api/settings HTTP/1.1" 200 -
+[16:19:12] "GET /api/status HTTP/1.1" 200 -
+[16:19:12] "GET /api/events HTTP/1.1" 200 -
+[16:19:12] "GET /api/obsidian/archives HTTP/1.1" 200 -
+[16:19:12] "GET /api/obsidian/notes HTTP/1.1" 200 -
+[16:20:04] "GET /api/queue HTTP/1.1" 200 -
+[16:20:04] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:04] "GET /api/media?path=cm_D__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:20:04] "GET /api/media?path=cm_F__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:20:04] "GET /api/media?path=cm_E__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:20:04] "GET /api/media?path=cmNew_A__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:20:04] "GET /api/media?path=cm_G__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+[16:20:07] "GET /api/queue HTTP/1.1" 200 -
+[16:20:07] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:10] "GET /api/queue HTTP/1.1" 200 -
+[16:20:10] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:13] "GET /api/queue HTTP/1.1" 200 -
+[16:20:13] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:16] "GET /api/queue HTTP/1.1" 200 -
+[16:20:16] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:19] "GET /api/queue HTTP/1.1" 200 -
+[16:20:19] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:22] "GET /api/queue HTTP/1.1" 200 -
+[16:20:22] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:25] "GET /api/queue HTTP/1.1" 200 -
+[16:20:25] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:28] "GET /api/queue HTTP/1.1" 200 -
+[16:20:28] "GET /api/history?limit=25 HTTP/1.1" 200 -
+[16:20:28] "GET /api/obsidian/status HTTP/1.1" 200 -
+[16:20:28] "GET /api/obsidian/archives HTTP/1.1" 200 -
+[16:20:28] "GET /api/obsidian/notes HTTP/1.1" 200 -
+[16:21:37] "POST /api/obsidian/archive HTTP/1.1" 200 -
