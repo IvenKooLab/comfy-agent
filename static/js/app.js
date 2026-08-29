@@ -80,6 +80,7 @@ function connectSSE() {
     try { ev = JSON.parse(e.data); } catch { return; }
     const t = ev.type, d = ev.data || {};
     if (t === "comfy_status") setComfyDot(!!d.online);
+    if (t === "force_reload") location.reload();
     if (t === "watchdog") {
       const phase = d.phase;
       if (phase === "down") toast("看门狗：ComfyUI 掉线，准备自动重启…", "err");

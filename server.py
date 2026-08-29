@@ -1927,6 +1927,9 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 return self.send_json({"ok": True, "lines": "（暂无日志）"})
 
+        if path == "/api/broadcast/reload" and method == "POST":
+            HUB.publish({"type": "force_reload"})
+            return self.send_json({"ok": True, "msg": "已广播刷新，所有打开的窗口将自动重载"})
         if path == "/api/hardware":
             return self.send_json({"ok": True, **get_hardware()})
 
