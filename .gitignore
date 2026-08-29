@@ -2,3 +2,4 @@ data/cache/
 data/trash/
 __pycache__/
 *.pyc
+server_run.log
