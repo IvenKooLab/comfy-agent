@@ -526,3 +526,16 @@ textarea.input { height: auto; padding: 9px 12px; }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .1); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .18); }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Obsidian 可视化（补齐） ---------- */
+.obs-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 14px 0; }
+@media (max-width: 1100px) { .obs-stats { grid-template-columns: repeat(2, 1fr); } }
+.obs-stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.obs-stat .n { font-size: 22px; font-weight: 800; }
+.obs-stat .l { font-size: 10.5px; color: var(--text-3); margin-top: 2px; letter-spacing: 1.5px; }
+.obs-cols { display: flex; gap: 12px; align-items: stretch; }
+@media (max-width: 1200px) { .obs-cols { flex-direction: column; } }
+.note-item { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; color: var(--text-2); }
+.note-item:hover { background: var(--brand-soft); color: #fff; }
+.note-item .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-item .meta { flex: none; color: var(--text-4); font-size: 11px; }

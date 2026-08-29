@@ -1,9 +1,14 @@
-/* launcher.js — 启动器：ComfyUI 生命周期 + 模型管理 + 环境诊断 */
+/* launcher.js — 启动器：ComfyUI 生命周期 + 版本维护 + 模型管理 + 环境诊断 */
 import { $, api, toast, fmtSize } from "./app.js";
 
 let pollTimer = null;
+let comfyHead = null;
 
 export function initLauncher() {
+  // 版本维护
+  loadVersionInfo();
+  $("#cv-check").addEventListener("click", checkRemote);
+  $("#cv-update").addEventListener("click", doUpdate);
   $("#lc-start").addEventListener("click", async () => {
     const r = await api("/api/comfy/launch", { method: "POST", body: {} });
     toast(r.msg || r.error, r.ok ? "ok" : "err");
@@ -87,5 +92,45 @@ async function loadLog() {
     const pre = $("#lc-log");
     pre.textContent = r.lines;
     pre.scrollTop = pre.scrollHeight;
+  }
+}
+
+/* ---------- ComfyUI 版本维护 ---------- */
+async function loadVersionInfo() {
+  const info = $("#cv-version-info");
+  const r = await api("/api/comfy/git");
+  if (!r.ok) { info.textContent = "读取失败"; return; }
+  if (!r.git) { info.innerHTML = "⚠ ComfyUI 目录不是 git 仓库，无法使用一键更新"; return; }
+  comfyHead = r.head;
+  info.innerHTML = `当前 <b>${r.head}</b>（${r.branch} 分支）· 界面版本 ${r.ui_version || "未运行"} · 本地改动 ${r.dirty_tracked} 个文件（更新时自动暂存恢复）`;
+}
+
+async function checkRemote() {
+  const info = $("#cv-version-info");
+  const old = info.innerHTML;
+  info.innerHTML = "正在连接远端检查（首次 fetch 可能较慢）…";
+  const r = await api("/api/comfy/check_remote");
+  if (!r.ok) { info.innerHTML = old; toast(r.error, "err"); return; }
+  info.innerHTML = r.behind > 0
+    ? `当前 <b>${r.head}</b> · 远端有 <b style="color:var(--warn)">${r.behind}</b> 个新提交，可一键更新`
+    : `已是最新 <b>${r.head}</b>（与远端一致）`;
+}
+
+async function doUpdate() {
+  if (!confirm("一键更新 ComfyUI？\n· 本地改动会自动暂存并在更新后恢复\n· 更新后需要重启 ComfyUI 生效")) return;
+  const info = $("#cv-version-info");
+  info.innerHTML = "更新中（stash → pull → 恢复），可能需要一两分钟…";
+  const r = await api("/api/comfy/update", { method: "POST", body: {} });
+  toast(r.msg || r.error, r.ok ? "ok" : "err");
+  if (r.ok) {
+    info.innerHTML = `✓ ${r.msg} ${r.note || ""}`;
+    loadVersionInfo();
+    if (confirm("ComfyUI 已更新。现在重启 ComfyUI 使新版本生效吗？")) {
+      const rr = await api("/api/comfy/restart", { method: "POST", body: {} });
+      toast(rr.msg || rr.error, rr.ok ? "ok" : "err");
+      setTimeout(poll, 6000);
+    }
+  } else {
+    info.innerHTML = "✗ " + (r.msg || r.error);
   }
 }

@@ -193,6 +193,16 @@
           <button id="lc-stop" class="btn danger ghost" data-i18n="launcher.stop">⏹ 停止</button>
         </div>
       </header>
+      <div class="card pad" style="margin-bottom:12px">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px;flex-wrap:wrap">
+          <h3 style="font-size:13px">ComfyUI 版本维护</h3>
+          <div class="row">
+            <button id="cv-check" class="btn sm">🔍 检查更新</button>
+            <button id="cv-update" class="btn sm primary">⬆ 一键更新</button>
+          </div>
+        </div>
+        <div id="cv-version-info" class="muted">读取中…</div>
+      </div>
       <div class="runs-cols">
         <div class="card pad">
           <h3 data-i18n="launcher.cfg">启动配置</h3>
@@ -224,14 +234,38 @@
     <section id="view-obsidian" class="view">
       <header class="page-head"><h1 data-i18n="obsidian.title">知识库</h1></header>
       <div id="obs-status" class="card pad"></div>
+      <div id="obs-stats" class="obs-stats"></div>
+      <div class="obs-cols">
+        <div class="card pad" style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div class="row" style="margin-bottom:10px">
+            <input id="obs-search" class="input grow" placeholder="搜索笔记标题…">
+          </div>
+          <div id="obs-notelist" style="flex:1;overflow-y:auto;max-height:520px"></div>
+        </div>
+        <div class="card pad" style="flex:1.4;min-width:0">
+          <div class="row" style="justify-content:space-between;margin-bottom:8px">
+            <h3 style="font-size:13px">双链关系图</h3>
+            <span class="muted">拖动节点可整理布局</span>
+          </div>
+          <canvas id="obs-graph" height="430" style="width:100%;background:var(--bg-1);border-radius:10px;cursor:grab"></canvas>
+        </div>
+      </div>
+      <div id="obs-preview" class="card pad" hidden style="margin-top:14px">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          <h3 id="obs-preview-title" style="font-size:14px"></h3>
+          <div class="row">
+            <a id="obs-preview-open" class="btn sm" href="#">在 Obsidian 打开 ↗</a>
+            <button class="btn sm ghost" id="obs-preview-close">✕</button>
+          </div>
+        </div>
+        <pre id="obs-preview-content" style="max-height:420px;overflow-y:auto;font-size:12px;line-height:1.8;color:var(--text-2);white-space:pre-wrap;font-family:var(--font)"></pre>
+      </div>
       <div class="head-tools margin-top">
         <button id="obs-sync" class="btn" data-i18n="obsidian.sync">同步工作流到知识库</button>
         <button id="obs-refresh" class="btn ghost" data-i18n="common.refresh">↻ 刷新</button>
       </div>
       <h3 class="sec-title" data-i18n="obsidian.archives">归档记录</h3>
       <div id="obs-archives" class="card"></div>
-      <h3 class="sec-title" data-i18n="obsidian.notes">知识库笔记</h3>
-      <div id="obs-notes" class="card"></div>
     </section>
 
     <!-- ============ 助手 ============ -->

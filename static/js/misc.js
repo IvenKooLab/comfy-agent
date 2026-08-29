@@ -52,6 +52,9 @@ function initWizard() {
 }
 
 /* ================= Obsidian ================= */
+let vaultBase = "";
+let vaultNotes = [];
+
 function initObsidian() {
   $("#obs-sync").addEventListener("click", async () => {
     const r = await api("/api/obsidian/sync", { method: "POST", body: {} });
@@ -59,6 +62,8 @@ function initObsidian() {
     refreshObsidian();
   });
   $("#obs-refresh").addEventListener("click", refreshObsidian);
+  $("#obs-search").addEventListener("input", renderNoteList);
+  $("#obs-preview-close").addEventListener("click", () => { $("#obs-preview").hidden = true; });
   // 切到该页时刷新
   new MutationObserver(() => {
     if ($("#view-obsidian").classList.contains("active")) refreshObsidian();
@@ -69,16 +74,17 @@ function initObsidian() {
 async function refreshObsidian() {
   const st = await api("/api/obsidian/status");
   if (!st.ok) return;
+  vaultBase = st.path;
   $("#obs-status").innerHTML = `
     <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-size:15px;font-weight:700">${st.valid ? "🟢 已连接" : "🔴 库不可用"}</div>
         <div class="muted">${esc(st.path)} ${st.is_vault ? "（检测到 .obsidian，是有效库）" : "（未检测到 .obsidian，请确认路径是库根目录）"}</div>
       </div>
-      <div class="muted">笔记 ${st.notes} · 附件 ${st.attachments}</div>
+      <div class="muted">归档附件 ${st.attachments} 个</div>
     </div>
     <div class="muted margin-top">归档目录：ComfyAgent/attachments · 笔记：ComfyAgent/notes · 工作流镜像：ComfyAgent/workflows</div>`;
-
+  loadVault();
   const arch = await api("/api/obsidian/archives");
   const ab = $("#obs-archives");
   ab.innerHTML = arch.ok && arch.archives.length
@@ -86,14 +92,123 @@ async function refreshObsidian() {
         <span>${esc(a.title)}</span><span class="muted">${a.count} 个文件 · ${esc(a.time)}</span>
         <a class="obs-uri grow" href="${a.uri}">在 Obsidian 中打开 ↗</a></div>`).join("")
     : `<div class="obs-row muted">还没有归档记录。去画廊挑一张图，点「归档」试试。</div>`;
+}
 
-  const notes = await api("/api/obsidian/notes");
-  const nb = $("#obs-notes");
-  nb.innerHTML = notes.ok && notes.notes.length
-    ? notes.notes.map((n) => `<div class="obs-row">
-        <span class="grow">${esc(n.file.split("/").pop())}</span>
-        <a class="obs-uri" href="${n.uri}">打开 ↗</a></div>`).join("")
-    : `<div class="obs-row muted">（暂无笔记）</div>`;
+/* —— 全库可视化：统计 + 搜索列表 + 双链图 —— */
+async function loadVault() {
+  const r = await api("/api/obsidian/vault");
+  if (!r.ok) return;
+  vaultNotes = r.notes;
+  const s = r.stats;
+  $("#obs-stats").innerHTML = [
+    ["笔记", s.count], ["总字数", s.words >= 10000 ? (s.words / 10000).toFixed(1) + "w" : s.words],
+    ["双链", s.links], ["近7天更新", "+" + s.recent7],
+  ].map(([l, n]) => `<div class="obs-stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  renderNoteList();
+  drawGraph();
+}
+
+function renderNoteList() {
+  const q = ($("#obs-search").value || "").trim().toLowerCase();
+  const list = vaultNotes.filter((n) => !q || n.name.toLowerCase().includes(q) || n.path.toLowerCase().includes(q));
+  $("#obs-notelist").innerHTML = list.length
+    ? list.map((n) => `<div class="note-item" data-p="${n.path}"><span class="nm">📄 ${n.name}</span><span class="meta">${n.words}字</span></div>`).join("")
+    : `<div class="muted">没有匹配的笔记</div>`;
+  $$("#obs-notelist .note-item").forEach((el) => el.addEventListener("click", () => openNotePreview(el.dataset.p)));
+}
+
+async function openNotePreview(p) {
+  const r = await api("/api/obsidian/note?path=" + encodeURIComponent(p));
+  if (!r.ok) { toast(r.error, "err"); return; }
+  $("#obs-preview").hidden = false;
+  $("#obs-preview-title").textContent = p;
+  $("#obs-preview-content").textContent = r.content;
+  const q = encodeURIComponent;
+  const vname = vaultBase.split(/[\\/]/).filter(Boolean).pop() || "vault";
+  $("#obs-preview-open").href = `obsidian://open?vault=${q(vname)}&file=${q(p.replace(/\.md$/, ""))}`;
+  $("#obs-preview").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* 力导向双链关系图（原生 canvas，零依赖） */
+function drawGraph() {
+  const canvas = $("#obs-graph");
+  if (!canvas) return;
+  const W = canvas.clientWidth || 640, H = 430;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  const nodes = vaultNotes.map((n, i) => ({
+    id: n.path, label: n.name, words: n.words,
+    x: W / 2 + Math.cos((i / Math.max(vaultNotes.length, 1)) * 6.283) * W * 0.32,
+    y: H / 2 + Math.sin((i / Math.max(vaultNotes.length, 1)) * 6.283) * H * 0.32,
+    vx: 0, vy: 0,
+  }));
+  const byLabel = new Map(nodes.map((n) => [n.label.toLowerCase(), n]));
+  const seen = new Set(), E = [];
+  for (const n of vaultNotes)
+    for (const l of n.links) {
+      const s = nodes.find((x) => x.path === n.path);
+      const t = byLabel.get(l.trim().toLowerCase());
+      if (!s || !t || s === t) continue;
+      const k = [s.id, t.id].sort().join("|");
+      if (!seen.has(k)) { seen.add(k); E.push([s, t]); }
+    }
+  const graphToken = canvas.dataset.graphToken = String(Math.random());
+  let alpha = 1, drag = null;
+  function tick() {
+    for (let i = 0; i < nodes.length; i++)
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        const d2 = dx * dx + dy * dy || 1, d = Math.sqrt(d2), rep = 3200 / d2;
+        dx /= d; dy /= d;
+        a.vx -= dx * rep; a.vy -= dy * rep; b.vx += dx * rep; b.vy += dy * rep;
+      }
+    for (const [a, b] of E) {
+      let dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1, k = (d - 150) * 0.03;
+      dx /= d; dy /= d;
+      a.vx += dx * k; a.vy += dy * k; b.vx -= dx * k; b.vy -= dy * k;
+    }
+    for (const n of nodes) {
+      n.vx += (W / 2 - n.x) * 0.005; n.vy += (H / 2 - n.y) * 0.005;
+      n.x += n.vx * alpha; n.y += n.vy * alpha;
+      n.vx *= 0.85; n.vy *= 0.85;
+      n.x = Math.max(46, Math.min(W - 46, n.x)); n.y = Math.max(26, Math.min(H - 26, n.y));
+    }
+    alpha *= 0.996;
+  }
+  canvas.onmousedown = (e) => {
+    const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    drag = nodes.find((n) => (n.x - x) ** 2 + (n.y - y) ** 2 < 420) || null;
+  };
+  canvas.onmousemove = (e) => {
+    if (!drag) return;
+    const r = canvas.getBoundingClientRect();
+    drag.x = e.clientX - r.left; drag.y = e.clientY - r.top;
+    alpha = Math.max(alpha, 0.3);
+  };
+  canvas.onmouseup = () => { drag = null; };
+  canvas.ondblclick = (e) => {
+    const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const n = nodes.find((n) => (n.x - x) ** 2 + (n.y - y) ** 2 < 420);
+    if (n) openNotePreview(n.path);
+  };
+  (function frame() {
+    if (canvas.dataset.graphToken !== graphToken) return; // 旧循环自动退出
+    if (alpha > 0.004 || drag) tick();
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(139,92,246,.35)"; ctx.lineWidth = 1.2;
+    for (const [a, b] of E) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+    for (const n of nodes) {
+      const r = Math.max(6, Math.min(16, 4 + Math.sqrt(n.words) / 14));
+      const g = ctx.createRadialGradient(n.x - 2, n.y - 2, 1, n.x, n.y, r);
+      g.addColorStop(0, "#a78bfa"); g.addColorStop(1, "#6d28d9");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = "#a8aec2"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(n.label, n.x, n.y + r + 12);
+    }
+    requestAnimationFrame(frame);
+  })();
 }
 
 /* ================= Agent ================= */
