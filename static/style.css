@@ -199,6 +199,8 @@ textarea.input { height: auto; padding: 9px 12px; }
   border: 1px dashed rgba(34, 211, 238, .3); border-radius: 9px; word-break: break-all;
 }
 .en-preview .en-tag { color: var(--text-3); margin-right: 6px; }
+.en-preview { position: relative; padding-right: 60px; }
+.en-copy { position: absolute; right: 10px; top: 8px; opacity: 0; }
 .composer-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 10px 12px 12px; flex-wrap: wrap; }
 .composer-opts { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
 .opt-group { display: flex; flex-direction: column; gap: 6px; }
@@ -318,9 +320,18 @@ textarea.input { height: auto; padding: 9px 12px; }
 .lb-side h3 { font-size: 13.5px; margin-bottom: 12px; padding-right: 34px; word-break: break-all; }
 .lb-info { font-size: 11.5px; color: var(--text-3); line-height: 1.9; margin-bottom: 12px; word-break: break-all; }
 .lb-summary { background: var(--bg-1); border: 1px solid var(--line-1); border-radius: 12px; padding: 13px; font-size: 11.5px; line-height: 1.9; margin-bottom: 14px; }
-.lb-summary .kv { display: flex; gap: 10px; margin-bottom: 3px; }
+.lb-summary .kv { position: relative; display: flex; gap: 10px; margin-bottom: 3px; padding-right: 74px; }
 .lb-summary .kv span:first-child { color: var(--text-3); flex: none; width: 48px; }
-.lb-summary .kv span:last-child { word-break: break-all; color: var(--text-2); }
+.lb-summary .kv .kv-val { flex: 1; word-break: break-all; color: var(--text-2); }
+.lb-summary .kv.clamp .kv-val { max-height: 58px; overflow: hidden; mask-image: linear-gradient(180deg, #000 60%, transparent); }
+.kv-copy, .kv-expand {
+  position: absolute; right: 0; top: 0; opacity: 0; transition: opacity .15s;
+  background: var(--bg-4); border: 1px solid var(--line-2); color: var(--text-2);
+  font-size: 10.5px; border-radius: 6px; padding: 1px 7px; cursor: pointer; font-family: var(--font);
+}
+.kv-copy { right: 22px; }
+.kv-copy:hover, .kv-expand:hover { color: #fff; border-color: rgba(139, 92, 246, .6); }
+.lb-summary .kv:hover .kv-copy, .lb-summary .kv:hover .kv-expand, .en-preview:hover .en-copy { opacity: 1; }
 .lb-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .lb-actions .btn { width: 100%; }
 .lb-nav {
