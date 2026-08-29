@@ -41,6 +41,10 @@
           <button class="seg-btn active" data-mode="image"><span class="ico">🖼</span> 图像生成</button>
           <button class="seg-btn" data-mode="video"><span class="ico">🎬</span> 视频生成</button>
         </div>
+        <div class="style-row-wrap">
+          <span class="opt-label">风格 SOP</span>
+          <div class="style-row" id="c-styles"></div>
+        </div>
         <div class="composer card-lift">
           <textarea id="c-prompt" class="composer-input" rows="3"
             placeholder="描述你想要的画面…中文会自动转成英文提示词（Flux/H3 对英文跟随更准）"></textarea>
@@ -218,6 +222,15 @@
           <span id="s-msg" class="muted"></span>
         </div>
       </div>
+      <div class="card pad form" id="env-card" style="margin-top:16px">读取环境信息…</div>
+      <h3 class="sec-title">运行日志（最近 200 行）</h3>
+      <div class="card pad">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          <span class="muted">data/app.log</span>
+          <button class="btn sm ghost" id="log-refresh">↻ 刷新</button>
+        </div>
+        <pre id="log-view" style="max-height:260px;overflow-y:auto;font-family:var(--mono);font-size:11px;color:var(--text-2);white-space:pre-wrap">（点击刷新加载）</pre>
+      </div>
     </section>
   </main>
 </div>
@@ -326,6 +339,14 @@
       ComfyUI 可视化管理 ·画廊 · 工作流 · 知识库<br><br>
       <a href="javascript:void(0)" id="about-close" style="color:var(--brand-2)">关闭</a>
     </div>
+  </div>
+</div>
+
+<!-- 命令面板 Ctrl+K -->
+<div id="cmdk" hidden>
+  <div class="cmdk-box">
+    <input id="cmdk-input" class="input" placeholder="输入命令：跳转页面 / 运行工作流 / 中断 / 清空队列…">
+    <div id="cmdk-list"></div>
   </div>
 </div>
 

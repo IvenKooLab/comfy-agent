@@ -8,17 +8,34 @@ let lastSeenMtime = 0;
 let lbMeta = null;
 let selected = new Set();
 let folders = ["全部"];
+let renderLimit = 40;      // 分页渲染：每屏 40 张，滚动到底自动加载
+const PAGE = 40;
+
+/* —— 筛选持久化 —— */
+function saveFilter() { localStorage.setItem("comfyagent_filter", JSON.stringify(filter)); }
+function loadFilter() {
+  try {
+    const f = JSON.parse(localStorage.getItem("comfyagent_filter") || "{}");
+    if (f.kind) filter.kind = f.kind;
+    if (f.sort) filter.sort = f.sort;
+    if (f.folder) filter.folder = f.folder;
+  } catch { }
+}
 
 export function initGallery() {
-  $("#g-search").addEventListener("input", (e) => { filter.q = e.target.value.trim().toLowerCase(); render(); });
-  $$("#g-kind .chip").forEach((c) => c.addEventListener("click", () => {
-    $$("#g-kind .chip").forEach((x) => x.classList.remove("active"));
-    c.classList.add("active");
-    filter.kind = c.dataset.k;
-    render();
-  }));
-  $("#g-folder").addEventListener("change", (e) => { filter.folder = e.target.value; render(); });
-  $("#g-sort").addEventListener("change", (e) => { filter.sort = e.target.value; render(); });
+  loadFilter();
+  $("#g-search").addEventListener("input", (e) => { filter.q = e.target.value.trim().toLowerCase(); renderLimit = PAGE; render(); });
+  $$("#g-kind .chip").forEach((c) => {
+    c.classList.toggle("active", c.dataset.k === filter.kind);
+    c.addEventListener("click", () => {
+      $$("#g-kind .chip").forEach((x) => x.classList.remove("active"));
+      c.classList.add("active");
+      filter.kind = c.dataset.k;
+      saveFilter(); renderLimit = PAGE; render();
+    });
+  });
+  $("#g-folder").addEventListener("change", (e) => { filter.folder = e.target.value; saveFilter(); renderLimit = PAGE; render(); });
+  $("#g-sort").addEventListener("change", (e) => { filter.sort = e.target.value; saveFilter(); render(); });
   $("#g-refresh").addEventListener("click", () => galleryRefresh(true));
   // 批量操作
   $("#b-archive").addEventListener("click", () => batchArchive());
@@ -34,6 +51,19 @@ export function initGallery() {
     if (e.key === "Escape") closeLightbox();
     if (e.key === "ArrowLeft") step(-1);
     if (e.key === "ArrowRight") step(1);
+  });
+  // 画廊批量：Ctrl+A 全选可见 / Esc 清除（迭代26）
+  document.addEventListener("keydown", (e) => {
+    if (!$("#view-gallery").classList.contains("active")) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      visible().forEach((i) => selected.add(i.path));
+      render();
+      toast(`已全选 ${selected.size} 个`, "ok");
+    }
+    if (e.key === "Escape" && selected.size) {
+      selected.clear(); syncBatchBar(); render();
+    }
   });
   $("#lb-archive").addEventListener("click", doArchive);
   $("#lb-reveal").addEventListener("click", async () => {
@@ -91,6 +121,7 @@ function syncFolderOptions() {
   const sel = $("#g-folder");
   const cur = filter.folder;
   sel.innerHTML = folders.map((f) => `<option ${f === cur ? "selected" : ""}>${f}</option>`).join("");
+  $("#g-sort").value = filter.sort;
 }
 
 function visible() {
@@ -111,7 +142,8 @@ function render() {
   $("#g-count").textContent = `${list.length} / ${items.length} 个`;
   $("#gallery-empty").hidden = list.length > 0;
   grid.innerHTML = "";
-  for (const it of list) {
+  const shown = list.slice(0, renderLimit);
+  for (const it of shown) {
     const card = document.createElement("div");
     card.className = "g-item" + (selected.has(it.path) ? " selected" : "");
     card.dataset.path = it.path;
@@ -138,7 +170,31 @@ function render() {
     });
     card.querySelector(".g-check").addEventListener("click", (e) => { e.stopPropagation(); toggleSelect(it.path); });
     wireActions(card, it);
+    // 视频 hover 600ms 后静默预览播放（迭代15）
+    if (it.kind === "video") {
+      let hv = null;
+      const t = setTimeout(() => {
+        hv = document.createElement("video");
+        hv.src = mediaUrl(it.path); hv.muted = true; hv.loop = true; hv.playsInline = true;
+        hv.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;background:#000;position:absolute;inset:0";
+        card.appendChild(hv);
+        hv.play().catch(() => { });
+      }, 600);
+      card.addEventListener("mouseleave", () => { clearTimeout(t); hv?.remove(); hv = null; });
+    }
     grid.appendChild(card);
+  }
+  // 分页哨兵
+  const oldSentinel = $("#gallery-more");
+  if (oldSentinel) oldSentinel.remove();
+  if (list.length > shown.length) {
+    const s = document.createElement("div");
+    s.id = "gallery-more";
+    s.className = "muted";
+    s.style.cssText = "text-align:center;padding:16px;column-span:all;cursor:pointer";
+    s.textContent = `↓ 加载更多（还有 ${list.length - shown.length} 个）`;
+    s.addEventListener("click", () => { renderLimit += PAGE; render(); });
+    grid.appendChild(s);
   }
   syncBatchBar();
 }

@@ -207,6 +207,30 @@ async function loadForm() {
   $("#s-port").value = s.port || 8190;
   $("#s-zhipu-model").value = s.zhipu_model || "glm-4-flash";
   $("#s-zhipu").placeholder = s.has_zhipu_key ? "已配置（留空保持不变）" : "sk-…";
+  // 环境卡（迭代27）
+  const st = await api("/api/status");
+  if (st.ok) {
+    const dev = (st.system_stats?.devices || [])[0];
+    $("#env-card").innerHTML = `
+      <div class="row" style="justify-content:space-between">
+        <span>版本 <b>${st.version || "?"}</b></span>
+        <span class="muted">ComfyUI ${st.comfy_online ? "✓ 在线" : "✗ 离线"}</span>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <span class="muted">ffmpeg：${st.ffmpeg ? "✓ 可用（视频海报帧）" : "✗ 未找到（视频无预览，其余可用）"}</span>
+        <span class="muted">${dev ? (dev.name || "") : ""}</span>
+      </div>`;
+  }
+  $("#log-refresh").addEventListener("click", loadLog);
+  loadLog();
+}
+async function loadLog() {
+  const r = await api("/api/logs");
+  if (r.ok) {
+    const pre = $("#log-view");
+    pre.textContent = r.lines;
+    pre.scrollTop = pre.scrollHeight;
+  }
 }
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
