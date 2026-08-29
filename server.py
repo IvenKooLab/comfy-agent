@@ -31,14 +31,15 @@ import webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-# 打包成 exe（PyInstaller）时：静态资源在 _MEIPASS，数据目录放 exe 旁边（可持久化）
+# 打包成 exe（PyInstaller）时：静态资源在 _MEIPASS，数据目录放系统 APPDATA（重建/更新永不触碰用户数据）
 if getattr(sys, "frozen", False):
     BASE_DIR = os.path.dirname(sys.executable)
     STATIC_DIR = os.path.join(sys._MEIPASS, "static")
+    DATA_DIR = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~/AppData/Roaming"), "ComfyAgent", "data")
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     STATIC_DIR = os.path.join(BASE_DIR, "static")
-DATA_DIR = os.path.join(BASE_DIR, "data")
+    DATA_DIR = os.path.join(BASE_DIR, "data")
 WORKFLOW_DIR = os.path.join(DATA_DIR, "workflows")
 CACHE_DIR = os.path.join(DATA_DIR, "cache")
 THUMB_DIR = os.path.join(CACHE_DIR, "thumbs")
@@ -2288,6 +2289,10 @@ class Handler(BaseHTTPRequestHandler):
                 os.remove(p)
                 return self.send_json({"ok": True, "msg": "已删除"})
             return self.send_json({"ok": False, "error": "不存在"}, 404)
+        if path == "/api/debug":
+            return self.send_json({"ok": True, "DATA_DIR": DATA_DIR, "BASE_DIR": BASE_DIR,
+                                   "STATIC_DIR": STATIC_DIR, "frozen": getattr(sys, "frozen", False),
+                                   "cwd": os.getcwd(), "appdata_env": os.environ.get("APPDATA", "")})
         if path == "/api/backup" and method == "POST":
             return self.send_json({"ok": True, **backup_now(body.get("reason", "manual"))})
         if path == "/api/backups":
@@ -2373,6 +2378,38 @@ def create_server():
     """初始化配置/线程并返回 HTTPServer（供控制台模式和桌面壳共用）。"""
     global SETTINGS, COMFY
     ensure_dirs()
+    # exe 旧版数据迁移：dist/ComfyAgent/data（随重建会被清空）→ APPDATA 永久数据目录
+    if getattr(sys, "frozen", False):
+        old = os.path.join(os.path.dirname(sys.executable), "data")
+        if os.path.isdir(old):
+            moved_marker = os.path.join(old, ".migrated")
+            if not os.path.isfile(moved_marker):
+                try:
+                    for sub in ("workflows", "batches", "characters", "backups"):
+                        src_d, dst_d = os.path.join(old, sub), os.path.join(DATA_DIR, sub)
+                        if os.path.isdir(src_d):
+                            os.makedirs(dst_d, exist_ok=True)
+                            for f in os.listdir(src_d):
+                                dp = os.path.join(dst_d, f)
+                                if not os.path.exists(dp):
+                                    shutil.copy2(os.path.join(src_d, f), dp)
+                    for f in ("settings.json", "runs.json", "templates_index.json"):
+                        sf, df = os.path.join(old, f), os.path.join(DATA_DIR, f)
+                        if os.path.isfile(sf) and not os.path.exists(df):
+                            shutil.copy2(sf, df)
+                    open(moved_marker, "w").write("migrated")
+                    print("* migrated old dist data ->", DATA_DIR)
+                except Exception as e:
+                    print("* migrate warn:", e)
+        # 首次安装种子：exe 旁 seed/ 目录（构建时附带内置工作流/角色示例）
+        seed_wf = os.path.join(BASE_DIR, "seed", "workflows")
+        wf_dir = os.path.join(DATA_DIR, "workflows")
+        os.makedirs(wf_dir, exist_ok=True)
+        if os.path.isdir(seed_wf):
+            for f in os.listdir(seed_wf):
+                if f.endswith(".json") and not os.path.exists(os.path.join(wf_dir, f)):
+                    shutil.copy2(os.path.join(seed_wf, f), os.path.join(wf_dir, f))
+            print("* seeded builtin workflows")
     SETTINGS = load_settings()
     COMFY = ComfyClient(SETTINGS["comfy_url"])
     threading.Thread(target=ws_monitor_loop, daemon=True).start()
