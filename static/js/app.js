@@ -4,6 +4,7 @@ import { initEditor } from "./editor.js";
 import { initRuns, runsOnSSE } from "./runs.js";
 import { initMisc } from "./misc.js";
 import { initCreate, refreshFeed } from "./create.js";
+import { initLauncher } from "./launcher.js";
 
 export const $ = (sel) => document.querySelector(sel);
 export const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -48,7 +49,7 @@ export function mediaUrl(path, extra = {}) {
 }
 
 /* ---------- 路由 ---------- */
-const views = ["create", "gallery", "editor", "runs", "obsidian", "agent", "settings"];
+const views = ["create", "gallery", "editor", "runs", "launcher", "obsidian", "agent", "settings"];
 export function goto(view) {
   if (!views.includes(view)) return;
   location.hash = "#" + view;
@@ -134,7 +135,7 @@ function hwLoop() {
 window.APP_VERSION = "ComfyAgent v3.0.0";
 
 /* ---------- 全局快捷键 ---------- */
-const VIEW_KEYS = { "1": "create", "2": "gallery", "3": "editor", "4": "runs", "5": "obsidian", "6": "agent" };
+const VIEW_KEYS = { "1": "create", "2": "gallery", "3": "editor", "4": "runs", "5": "launcher", "6": "obsidian", "7": "agent" };
 document.addEventListener("keydown", (e) => {
   if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
   if (VIEW_KEYS[e.key]) goto(VIEW_KEYS[e.key]);
@@ -209,6 +210,7 @@ async function boot() {
   initGallery();
   initEditor();
   initRuns();
+  initLauncher();
   initMisc();
   applyHash();
   connectSSE();

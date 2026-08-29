@@ -63,6 +63,12 @@ export function initCreate() {
     saveParams({ count: selCount });
   }));
   $("#c-dice").addEventListener("click", () => { $("#c-seed").value = Math.floor(Math.random() * 2 ** 31); });
+  // 风格行滚动箭头（迭代：替代原生滚动条）
+  $("#style-prev").addEventListener("click", () => $("#c-styles").scrollBy({ left: -260, behavior: "smooth" }));
+  $("#style-next").addEventListener("click", () => $("#c-styles").scrollBy({ left: 260, behavior: "smooth" }));
+  $("#c-styles").addEventListener("wheel", (e) => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); $("#c-styles").scrollLeft += e.deltaY; }
+  }, { passive: false });
   $("#c-translate").addEventListener("click", () => {
     $("#c-translate").classList.toggle("active");
     if (!$("#c-translate").classList.contains("active")) $("#c-en-preview").hidden = true;
