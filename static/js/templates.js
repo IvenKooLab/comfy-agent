@@ -89,8 +89,10 @@ function renderCards() {
     card.className = "tpl-card";
     const badge = (t.models || []).slice(0, 2).map((m) => `<span class="tpl-badge vendor">${m}</span>`).join("");
     const tags = (t.tags || []).slice(0, 2).map((tg) => `<span class="tpl-badge">${tg}</span>`).join("");
+    const preview = `/api/templates/preview?name=${encodeURIComponent(t.name)}&ext=${t.mediaSubtype || "webp"}`;
     card.innerHTML = `
       <div class="tpl-thumb"><div class="tpl-ph"><span>${t.title.slice(0, 1)}</span></div>
+        <img class="tpl-img" src="${preview}" loading="lazy" onerror="this.remove()">
         <div class="tpl-badges">${badge}${tags}</div></div>
       <div class="tpl-info">
         <div class="tpl-title" title="${t.title}">${t.title}</div>
