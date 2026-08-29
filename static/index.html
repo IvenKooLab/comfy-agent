@@ -295,8 +295,18 @@
         <label><span data-i18n="settings.output">成果目录（output）</span><input id="s-output" class="input"></label>
         <label><span data-i18n="settings.vault">Obsidian 库路径（vault）</span><input id="s-vault" class="input"></label>
         <label><span data-i18n="settings.port">服务端口（重启生效）</span><input id="s-port" class="input" type="number"></label>
-        <label><span data-i18n="settings.zhipu">智谱 API Key（选填，给助手加智能）</span><input id="s-zhipu" class="input" type="password" placeholder="留空保持不变"></label>
-        <label><span data-i18n="settings.zhipu.model">智谱模型</span><input id="s-zhipu-model" class="input"></label>
+        <label><span data-i18n="settings.llm.provider">AI 厂商</span>
+          <select id="s-llm-provider" class="input select"></select>
+        </label>
+        <label><span data-i18n="settings.llm.base">接口地址（Base URL，OpenAI 兼容）</span><input id="s-llm-base" class="input"></label>
+        <label><span data-i18n="settings.llm.key">API Key</span><input id="s-llm-key" class="input" type="password" placeholder="留空保持不变"></label>
+        <label><span data-i18n="settings.llm.model">模型</span>
+          <div class="seed-row">
+            <select id="s-llm-model" class="input select" style="flex:1"></select>
+            <button id="s-llm-refresh" class="btn sm" style="flex:none" title="从厂商拉取可用模型列表">↻ 拉取模型</button>
+          </div>
+          <input id="s-llm-model-manual" class="input" placeholder="拉取失败？手动填写模型名" style="display:none;margin-top:6px">
+        </label>
         <label><span data-i18n="settings.gitee.repo">Gitee 仓库（owner/repo，用于检查更新）</span><input id="s-gitee-repo" class="input"></label>
         <label><span data-i18n="settings.gitee.token">Gitee 私人令牌（私有仓检查更新用，选填）</span><input id="s-gitee-token" class="input" type="password" placeholder="留空保持不变"></label>
         <label><span data-i18n="settings.lang">界面语言 Language</span>
