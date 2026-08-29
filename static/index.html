@@ -37,9 +37,11 @@
         <h1 class="create-title">今天想<em>创作</em>什么？</h1>
         <div class="composer card-lift">
           <textarea id="c-prompt" class="composer-input" rows="3"
-            placeholder="描述你想要的画面…提示：Flux 对英文提示词跟随更准，中文可用但构图会漂移"></textarea>
+            placeholder="描述你想要的画面…中文会自动转成英文提示词（Flux 对英文跟随更准）"></textarea>
+          <div id="c-en-preview" class="en-preview" hidden></div>
           <div class="composer-bar">
             <div class="composer-opts">
+              <button id="c-translate" class="chip active" title="提交前把中文自动翻译成英文提示词">✦ 中文→英文</button>
               <div class="opt-group" id="c-wf-box">
                 <span class="opt-label">工作流</span>
                 <select id="c-wf" class="opt-select"></select>
