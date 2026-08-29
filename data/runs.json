@@ -1,5 +1,98 @@
 [
   {
+    "prompt_id": "aa1e5386-8c53-49d7-a3cc-e3c1804354b3",
+    "name": "管线运行验证·MICRO_01",
+    "seed": 460846771,
+    "submitted": "2026-08-29 20:27:43",
+    "status": "queued",
+    "graph": {
+      "1": {
+        "class_type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "flux1-dev-fp8.safetensors"
+        }
+      },
+      "2": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "1",
+            1
+          ],
+          "text": "cinematic close-up, swordsman in white robe on sea of clouds, guoman 3d style"
+        }
+      },
+      "3": {
+        "class_type": "FluxGuidance",
+        "inputs": {
+          "conditioning": [
+            "2",
+            0
+          ],
+          "guidance": 3.5
+        }
+      },
+      "4": {
+        "class_type": "EmptySD3LatentImage",
+        "inputs": {
+          "width": 832,
+          "height": 1216,
+          "batch_size": 1
+        }
+      },
+      "5": {
+        "class_type": "KSampler",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "positive": [
+            "3",
+            0
+          ],
+          "negative": [
+            "3",
+            0
+          ],
+          "seed": 460846771,
+          "steps": 20,
+          "cfg": 1.0,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "denoise": 1.0,
+          "latent_image": [
+            "4",
+            0
+          ]
+        }
+      },
+      "6": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "5",
+            0
+          ],
+          "vae": [
+            "1",
+            2
+          ]
+        }
+      },
+      "7": {
+        "class_type": "SaveImage",
+        "inputs": {
+          "images": [
+            "6",
+            0
+          ],
+          "filename_prefix": "flux"
+        }
+      }
+    }
+  },
+  {
     "prompt_id": "2fb189c1-7f5d-483d-96a9-dfb7a4b6d5cb",
     "name": "logo候选B",
     "seed": 1170902670,

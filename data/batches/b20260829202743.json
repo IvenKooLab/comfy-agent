@@ -1,0 +1,16 @@
+{
+  "id": "b20260829202743",
+  "name": "管线运行验证",
+  "workflow_id": "builtin-flux",
+  "created": "2026-08-29 20:27",
+  "updated": "2026-08-29 20:27",
+  "items": [
+    {
+      "name": "MICRO_01",
+      "prompt": "cinematic close-up, swordsman in white robe on sea of clouds, guoman 3d style",
+      "status": "success",
+      "prompt_id": "aa1e5386-8c53-49d7-a3cc-e3c1804354b3",
+      "output": "flux_00005_.png"
+    }
+  ]
+}

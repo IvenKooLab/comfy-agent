@@ -352,6 +352,11 @@ async function refreshLLMModels(keep) {
 function initSettings() {
   initLLMSettings();
   loadForm();
+  $("#s-backup").addEventListener("click", async () => {
+    const r = await api("/api/backup", { method: "POST", body: { reason: "manual" } });
+    $("#s-backup-info").textContent = r.ok ? `已备份 ${r.file}` : (r.error || "失败");
+    toast(r.ok ? "已备份到 data/backups" : "备份失败", r.ok ? "ok" : "err");
+  });
   $("#s-lang").addEventListener("change", (e) => setLang(e.target.value));
   $("#s-update").addEventListener("click", async () => {
     const info = $("#s-update-info");
@@ -380,6 +385,8 @@ function initSettings() {
       llm_base_url: $("#s-llm-base").value.trim(),
       llm_model: ($("#s-llm-model-manual").style.display !== "none" && $("#s-llm-model-manual").value.trim())
         || $("#s-llm-model").value,
+      comfy_watchdog: $("#s-watchdog").checked,
+      comfy_autorequeue: $("#s-autorequeue").checked,
     };
     if ($("#s-llm-key").value.trim()) body.llm_key = $("#s-llm-key").value.trim();
     const r = await api("/api/settings", { method: "POST", body });
@@ -406,6 +413,8 @@ async function loadForm() {
   $("#s-llm-base").value = s.llm_base || s.llm_base_url || "";
   $("#s-llm-key").placeholder = s.has_llm_key ? "已配置（留空保持不变）" : "sk-…";
   if (s.llm_model) { const m = $("#s-llm-model"); m.innerHTML = `<option>${s.llm_model}</option>`; m.value = s.llm_model; }
+  $("#s-watchdog").checked = s.comfy_watchdog !== false;
+  $("#s-autorequeue").checked = s.comfy_autorequeue !== false;
   $("#s-lang").value = getLang();
   // 环境卡（迭代27）
   const st = await api("/api/status");
