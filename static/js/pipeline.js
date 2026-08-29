@@ -1,12 +1,43 @@
-/* pipeline.js — 产线：批次（脚本解析/排队/重试/拼接） + 角色资产库 */
-import { $, $$, api, toast } from "./app.js";
+/* pipeline.js — 产线：批次（脚本解析/排队/重试/拼接）+ 角色资产库 */
+import { $, $$, api, toast, mediaUrl } from "./app.js";
 
 let batches = [];
 let cur = null;          // 当前批次对象
 let characters = [];
 let curChar = null;
 
+/* ---------- 画廊选图器（关键帧/参考图共用） ---------- */
+let pickerCb = null;
+
+function openPicker(title, cb) {
+  pickerCb = cb;
+  $("#picker-title").textContent = title;
+  $("#picker").hidden = false;
+  $("#picker-search").value = "";
+  loadPicker("");
+}
+
+async function loadPicker(q) {
+  const r = await api("/api/gallery");
+  if (!r.ok) return;
+  const items = r.items.filter((i) => i.kind === "image" && (!q || i.name.toLowerCase().includes(q)));
+  const grid = $("#picker-grid");
+  grid.innerHTML = items.length ? "" : `<div class="muted" style="grid-column:1/-1;padding:20px">没有匹配的图片</div>`;
+  for (const it of items.slice(0, 60)) {
+    const el = document.createElement("div");
+    el.className = "tpl-card";
+    el.innerHTML = `<div class="tpl-thumb" style="aspect-ratio:3/4"><img src="${mediaUrl(it.path, { thumb: "1" })}" style="width:100%;height:100%;object-fit:cover">
+      <div class="tpl-badges"><span class="tpl-badge">${it.w ? it.w + "×" + it.h : "IMG"}</span></div></div>
+      <div class="tpl-info"><div class="tpl-title" title="${it.path}">${it.name}</div></div>`;
+    el.addEventListener("click", () => { $("#picker").hidden = true; pickerCb && pickerCb(it.path); });
+    grid.appendChild(el);
+  }
+}
+
 export function initPipeline() {
+  $("#picker-close").addEventListener("click", () => { $("#picker").hidden = true; });
+  $("#picker-search").addEventListener("input", (e) => loadPicker(e.target.value.trim().toLowerCase()));
+  $("#picker").addEventListener("click", (e) => { if (e.target.id === "picker") $("#picker").hidden = true; });
   $("#pl-import").addEventListener("click", () => { $("#pl-import-box").hidden = !$("#pl-import-box").hidden; });
   $("#pl-new").addEventListener("click", () => newBatch());
   $("#pl-parse").addEventListener("click", parseImport);
@@ -14,7 +45,12 @@ export function initPipeline() {
   $("#pl-run").addEventListener("click", runBatch);
   $("#pl-concat").addEventListener("click", concatBatch);
   $("#pl-del").addEventListener("click", delBatch);
-  $("#char-new").addEventListener("click", () => { curChar = null; $("#char-editor").hidden = false; $("#char-name").value = ""; $("#char-lock").value = ""; $("#char-ref").value = ""; });
+  $("#char-new").addEventListener("click", () => { curChar = null; $("#char-editor").hidden = false; $("#char-name").value = ""; $("#char-lock").value = ""; $("#char-ref").value = ""; updateRefPreview(null); });
+  $("#char-pick").addEventListener("click", () => openPicker("选择角色参考图（定妆照/三视图）", (path) => {
+    $("#char-ref").value = path;
+    updateRefPreview(path);
+  }));
+  $("#char-pick-clear").addEventListener("click", () => { $("#char-ref").value = ""; updateRefPreview(null); });
   $("#char-save").addEventListener("click", saveChar);
   $("#char-del").addEventListener("click", delChar);
   let syncTimer = null;
@@ -86,15 +122,29 @@ function renderItems() {
   const stMap = { success: ["✓ 成功", "success"], error: ["✗ 失败", "error"], queued: ["⏳ 排队", "queued"] };
   box.innerHTML = cur.items.map((it, i) => {
     const [txt, cls] = stMap[it.status] || ["— 未排队", ""];
+    const ff = it.first_frame
+      ? `<button class="btn sm pl-ff set" data-i="${i}" title="${it.first_frame}">🖼 已设关键帧</button>`
+      : `<button class="btn sm ghost pl-ff" data-i="${i}">🖼 关键帧</button>`;
     return `<div class="pl-item">
       <span class="run-status ${cls}">${txt}</span>
       <input class="input pl-item-name" data-i="${i}" value="${it.name.replace(/"/g, "&quot;")}">
+      ${ff}
       <button class="btn sm ghost pl-retry" data-i="${i}" title="单独重试这一镜">↻</button>
     </div>
     <div class="pl-prompt" data-i="${i}">${it.prompt.slice(0, 220)}${it.prompt.length > 220 ? "…" : ""}</div>`;
   }).join("");
   box.querySelectorAll(".pl-item-name").forEach((inp) => inp.addEventListener("change", (e) => {
     cur.items[+e.target.dataset.i].name = e.target.value; saveBatch(true);
+  }));
+  box.querySelectorAll(".pl-ff").forEach((b) => b.addEventListener("click", () => {
+    const i = +b.dataset.i;
+    if (cur.items[i].first_frame && !confirm("清除该镜头的关键帧？")) { /* 保留可重选 */ }
+    openPicker(`选择镜头「${cur.items[i].name}」的首帧图（i2v 锁脸）`, (path) => {
+      cur.items[i].first_frame = path;
+      saveBatch(true);
+      renderItems();
+      toast("关键帧已设置（提交时自动注入 i2v 首帧）", "ok");
+    });
   }));
   box.querySelectorAll(".pl-retry").forEach((b) => b.addEventListener("click", async () => {
     const i = +b.dataset.i;
@@ -192,6 +242,13 @@ function editChar(id) {
   curChar = c;
   $("#char-editor").hidden = false;
   $("#char-name").value = c.name; $("#char-lock").value = c.lock || ""; $("#char-ref").value = c.ref || "";
+  updateRefPreview(c.ref);
+}
+
+function updateRefPreview(path) {
+  const img = $("#char-ref-preview");
+  if (path) { img.src = "/api/media?path=" + encodeURIComponent(path) + "&thumb=1"; img.style.display = ""; }
+  else img.style.display = "none";
 }
 
 async function saveChar() {
