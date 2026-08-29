@@ -1,5 +1,191 @@
 [
   {
+    "prompt_id": "2fb189c1-7f5d-483d-96a9-dfb7a4b6d5cb",
+    "name": "logo候选B",
+    "seed": 1170902670,
+    "submitted": "2026-08-29 19:07:06",
+    "status": "queued",
+    "graph": {
+      "1": {
+        "class_type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "flux1-dev-fp8.safetensors"
+        }
+      },
+      "2": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "1",
+            1
+          ],
+          "text": "flat sticker style icon, cute chibi anime fox spirit mascot bust portrait, big amber eyes, playful wink, fluffy white fur with violet tips, tiny cyan headphones, holding a film clapperboard, centered composition, bold clean white outline, smooth gradient background from violet to cyan, kawaii logo design, high quality, guoman 3d animation style"
+        }
+      },
+      "3": {
+        "class_type": "FluxGuidance",
+        "inputs": {
+          "conditioning": [
+            "2",
+            0
+          ],
+          "guidance": 3.5
+        }
+      },
+      "4": {
+        "class_type": "EmptySD3LatentImage",
+        "inputs": {
+          "width": 1024,
+          "height": 1024,
+          "batch_size": 1
+        }
+      },
+      "5": {
+        "class_type": "KSampler",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "positive": [
+            "3",
+            0
+          ],
+          "negative": [
+            "3",
+            0
+          ],
+          "seed": 1170902670,
+          "steps": 28,
+          "cfg": 1.0,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "denoise": 1.0,
+          "latent_image": [
+            "4",
+            0
+          ]
+        }
+      },
+      "6": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "5",
+            0
+          ],
+          "vae": [
+            "1",
+            2
+          ]
+        }
+      },
+      "7": {
+        "class_type": "SaveImage",
+        "inputs": {
+          "images": [
+            "6",
+            0
+          ],
+          "filename_prefix": "logo_B"
+        }
+      }
+    }
+  },
+  {
+    "prompt_id": "1e63575a-b860-485b-ada5-f551f1f1a28c",
+    "name": "logo候选A",
+    "seed": 393036942,
+    "submitted": "2026-08-29 19:07:06",
+    "status": "queued",
+    "graph": {
+      "1": {
+        "class_type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "flux1-dev-fp8.safetensors"
+        }
+      },
+      "2": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "1",
+            1
+          ],
+          "text": "flat sticker style icon, cute chibi anime girl mascot bust portrait, white-lavender hair with ahoge, big sparkling violet eyes, cheerful open-mouth smile, wearing tiny cyan headphones, holding a film clapperboard, centered composition, bold clean white outline, smooth gradient background from deep violet to bright cyan, kawaii logo design, high quality, guoman 3d animation style"
+        }
+      },
+      "3": {
+        "class_type": "FluxGuidance",
+        "inputs": {
+          "conditioning": [
+            "2",
+            0
+          ],
+          "guidance": 3.5
+        }
+      },
+      "4": {
+        "class_type": "EmptySD3LatentImage",
+        "inputs": {
+          "width": 1024,
+          "height": 1024,
+          "batch_size": 1
+        }
+      },
+      "5": {
+        "class_type": "KSampler",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "positive": [
+            "3",
+            0
+          ],
+          "negative": [
+            "3",
+            0
+          ],
+          "seed": 393036942,
+          "steps": 28,
+          "cfg": 1.0,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "denoise": 1.0,
+          "latent_image": [
+            "4",
+            0
+          ]
+        }
+      },
+      "6": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "5",
+            0
+          ],
+          "vae": [
+            "1",
+            2
+          ]
+        }
+      },
+      "7": {
+        "class_type": "SaveImage",
+        "inputs": {
+          "images": [
+            "6",
+            0
+          ],
+          "filename_prefix": "logo_A"
+        }
+      }
+    }
+  },
+  {
     "prompt_id": "c92997cf-834b-403f-9d28-66245abc7171",
     "name": "风格SOP验证·国漫史诗",
     "seed": 99,

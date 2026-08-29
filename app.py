@@ -47,7 +47,17 @@ _app_closing = threading.Event()
 
 
 def _tray_icon():
-    """程序托盘图标：渐变底 + C（与 exe 图标同款意象）。"""
+    """托盘图标：优先用动漫风 logo（打包资源），失败则退回程序化渐变。"""
+    candidates = []
+    if getattr(sys, "frozen", False):
+        candidates.append(os.path.join(sys._MEIPASS, "static", "assets", "icon.png"))
+    candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "assets", "icon.png"))
+    for p in candidates:
+        try:
+            if os.path.isfile(p):
+                return Image.open(p).resize((64, 64), Image.LANCZOS)
+        except Exception:
+            continue
     img = Image.new("RGB", (64, 64), (139, 92, 246))
     d = ImageDraw.Draw(img)
     for y in range(64):
