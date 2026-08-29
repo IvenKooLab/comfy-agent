@@ -217,6 +217,24 @@ function initCmdk() {
 window.addEventListener("error", (e) => {
   if (!window.__bootError) window.__bootError = (e.message || "") + " @" + (e.filename || "") + ":" + (e.lineno || "");
 });
+/* ---------- 服务重启自愈：后端未就绪时显示等待页并自动恢复 ---------- */
+async function waitServerAndBoot() {
+  try {
+    await fetch("/api/status", { cache: "no-store" });
+  } catch {
+    document.body.innerHTML = `<div style="position:fixed;inset:0;background:#08090d;color:#a8aec2;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;gap:14px;z-index:999">
+      <div style="font-size:40px">⏳</div>
+      <div style="font-size:15px;color:#f0f2f8">ComfyAgent 服务正在重启…</div>
+      <div style="font-size:12px">页面将自动恢复（每 2 秒探测一次）</div></div>`;
+    for (;;) {
+      await new Promise((r) => setTimeout(r, 2000));
+      try { await fetch("/api/status", { cache: "no-store" }); break; } catch { }
+    }
+    location.reload();
+    return;
+  }
+  boot();
+}
 async function boot() {
   try {
     applyI18n();
@@ -247,4 +265,4 @@ async function boot() {
     }
   }
 }
-boot();
+waitServerAndBoot();
