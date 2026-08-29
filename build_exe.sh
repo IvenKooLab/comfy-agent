@@ -21,9 +21,10 @@ fi
   --exclude-module tkinter --exclude-module unittest --exclude-module pydoc_data \
   app.py
 
-# 3) 附带运行资源（内置工作流库）+ 发布 zip
+# 3) 附带运行资源（内置工作流库/版本号）+ 发布 zip
 mkdir -p dist/ComfyAgent/data/workflows
 cp -f data/workflows/*.json dist/ComfyAgent/data/workflows/ 2>/dev/null || true
+cp -f VERSION dist/ComfyAgent/VERSION 2>/dev/null || true
 cd dist
 rm -f ComfyAgent-win64.zip
 powershell -NoProfile -Command "Compress-Archive -Path ComfyAgent -DestinationPath ComfyAgent-win64.zip -Force"

@@ -14,6 +14,7 @@ import os
 import queue as queue_mod
 import random
 import re
+import shlex
 import shutil
 import socket
 import struct
@@ -55,6 +56,9 @@ DEFAULT_SETTINGS = {
     "zhipu_model": "glm-4-flash",
     "client_id": uuid.uuid4().hex,
     "gallery_cap": 2000,
+    "comfy_dir": r"D:\tools\ComfyUI-aki-v3\ComfyUI",
+    "comfy_python": r"D:\tools\ComfyUI-aki-v3\python\python.exe",
+    "comfy_launch_args": "--listen 127.0.0.1 --port 8188 --reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory",
 }
 
 MEDIA_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
@@ -1208,6 +1212,95 @@ def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
         return {"ok": False, "msg": f"提交失败：{e}（ComfyUI 在线吗？）"}
 
 
+# ---------------------------------------------------------------- launcher (绘世式启动器)
+
+_comfy_proc = {"handle": None}
+
+
+def _comfy_port():
+    try:
+        return urllib.parse.urlparse(SETTINGS.get("comfy_url", "")).port or 8188
+    except Exception:
+        return 8188
+
+
+def comfy_running():
+    return COMFY.probe() is not None
+
+
+def comfy_stop():
+    """只杀监听 ComfyUI 端口的那个 PID（/T 连子进程），绝不波及其他进程。"""
+    port = str(_comfy_port())
+    r = subprocess.run(["netstat", "-ano", "-p", "tcp"], capture_output=True, text=True,
+                       timeout=15, creationflags=0x08000000)
+    pids = set()
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and parts[1].endswith(":" + port) and "LISTENING" in line.upper():
+            pids.add(parts[-1])
+    if not pids:
+        return {"ok": False, "msg": "没找到监听该端口的进程（可能已经停止）"}
+    for pid in pids:
+        subprocess.run(["taskkill", "/F", "/T", "/PID", pid], capture_output=True, creationflags=0x08000000)
+    time.sleep(1.5)
+    return {"ok": True, "msg": f"已停止 ComfyUI（PID {', '.join(sorted(pids))}）"}
+
+
+def comfy_launch():
+    if comfy_running():
+        return {"ok": False, "msg": "ComfyUI 已在运行，无需重复启动"}
+    exe = SETTINGS.get("comfy_python", "")
+    cdir = SETTINGS.get("comfy_dir", "")
+    if not os.path.isfile(exe):
+        return {"ok": False, "msg": f"找不到 Python 解释器：{exe}（到启动器页修改）"}
+    if not os.path.isdir(cdir):
+        return {"ok": False, "msg": f"ComfyUI 目录不存在：{cdir}（到启动器页修改）"}
+    try:
+        args = shlex.split(SETTINGS.get("comfy_launch_args", ""))
+    except ValueError:
+        args = []
+    logp = os.path.join(DATA_DIR, "comfy.log")
+    lf = open(logp, "a", encoding="utf-8")
+    proc = subprocess.Popen([exe, "main.py", *args], cwd=cdir, stdout=lf, stderr=subprocess.STDOUT,
+                            creationflags=0x08000000 | 0x200)  # CREATE_NO_WINDOW | NEW_PROCESS_GROUP
+    _comfy_proc["handle"] = proc
+    return {"ok": True, "msg": f"ComfyUI 启动中（PID {proc.pid}）… 首次加载模型约 1-3 分钟，可到「启动器」页看日志"}
+
+
+def launcher_info():
+    cdir = SETTINGS.get("comfy_dir", "")
+    models = {}
+    for sub in ("checkpoints", "loras", "vae", "upscale_models", "controlnet"):
+        p = os.path.join(cdir, "models", sub)
+        items, total_size, count = [], 0, 0
+        if os.path.isdir(p):
+            allf = []
+            for f in os.listdir(p):
+                fp = os.path.join(p, f)
+                if os.path.isfile(fp) and not f.startswith("put_"):
+                    allf.append((f, os.path.getsize(fp)))
+            allf.sort(key=lambda x: -x[1])
+            count = len(allf)
+            total_size = sum(s for _, s in allf)
+            items = [{"name": n, "size": s} for n, s in allf[:30]]
+        models[sub] = {"items": items, "count": count, "size": total_size}
+    nodes_dir = os.path.join(cdir, "custom_nodes")
+    nodes = []
+    if os.path.isdir(nodes_dir):
+        nodes = sorted(d for d in os.listdir(nodes_dir)
+                       if os.path.isdir(os.path.join(nodes_dir, d)) and not d.startswith(("_", ".")))
+    try:
+        disk = shutil.disk_usage(SETTINGS.get("output_dir", BASE_DIR))
+        disk_info = {"free": disk.free, "total": disk.total}
+    except Exception:
+        disk_info = None
+    return {
+        "comfy_dir": cdir, "models": models, "nodes": nodes, "disk": disk_info,
+        "python_version": sys.version.split()[0], "ffmpeg": bool(FFMPEG),
+        "running": comfy_running(), "port": _comfy_port(),
+    }
+
+
 # ---------------------------------------------------------------- HTTP handler
 
 class Handler(BaseHTTPRequestHandler):
@@ -1326,7 +1419,8 @@ class Handler(BaseHTTPRequestHandler):
             s.pop("client_id", None)
             return self.send_json({"ok": True, "settings": s})
         if path == "/api/settings" and method == "POST":
-            for k in ("port", "comfy_url", "output_dir", "vault_path", "zhipu_model"):
+            for k in ("port", "comfy_url", "output_dir", "vault_path", "zhipu_model",
+                      "comfy_dir", "comfy_python", "comfy_launch_args"):
                 if k in body:
                     SETTINGS[k] = body[k]
             if body.get("zhipu_key"):
@@ -1551,6 +1645,26 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/obsidian/open":
             rel = q.get("path", "")
             return self.send_json({"ok": True, "uri": obsidian_uri(rel)})
+
+        # ---- 启动器
+        if path == "/api/launcher/info":
+            return self.send_json({"ok": True, **launcher_info()})
+        if path == "/api/comfy/launch" and method == "POST":
+            return self.send_json(comfy_launch())
+        if path == "/api/comfy/stop" and method == "POST":
+            return self.send_json(comfy_stop())
+        if path == "/api/comfy/restart" and method == "POST":
+            stop = comfy_stop()
+            if stop["ok"]:
+                time.sleep(3)
+            return self.send_json(comfy_launch())
+        if path == "/api/comfy/log":
+            try:
+                logp = os.path.join(DATA_DIR, "comfy.log")
+                with open(logp, encoding="utf-8", errors="replace") as f:
+                    return self.send_json({"ok": True, "lines": "".join(f.readlines()[-300:]) or "（暂无日志）"})
+            except Exception:
+                return self.send_json({"ok": True, "lines": "（暂无日志：还没从创作台启动过 ComfyUI）"})
 
         # ---- Agent
         if path == "/api/styles":
