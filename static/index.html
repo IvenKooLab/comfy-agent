@@ -248,6 +248,16 @@
   <div id="palette-list"></div>
 </div>
 
+<!-- 全局硬件状态条 -->
+<footer id="hw-bar">
+  <span id="hw-gpu-name" class="hw-name">GPU</span>
+  <div class="hw-seg"><span class="hw-label">显存</span><div class="hw-bar"><i id="hw-vram-fill"></i></div><span id="hw-vram-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label">利用率</span><span id="hw-util-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label">温度</span><span id="hw-temp-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label">内存</span><div class="hw-bar"><i id="hw-ram-fill"></i></div><span id="hw-ram-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label">队列</span><span id="hw-queue-text">—</span></div>
+</footer>
+
 <div id="toasts"></div>
 
 <script type="module" src="/js/app.js"></script>

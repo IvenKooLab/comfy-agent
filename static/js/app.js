@@ -90,6 +90,40 @@ export function setComfyDot(on) {
   $("#comfy-dot-text").textContent = on ? "ComfyUI 在线" : "ComfyUI 离线";
 }
 
+/* ---------- 硬件状态条（2s 轮询） ---------- */
+const fmtGB = (b) => (b / 1073741824).toFixed(1) + "G";
+function hwLoop() {
+  const upd = async () => {
+    try {
+      const h = await (await fetch("/api/hardware")).json();
+      if (!h.ok) return;
+      const g = h.gpu;
+      $("#hw-gpu-name").textContent = g?.name || "GPU";
+      if (g?.vram_total) {
+        const used = g.vram_used != null ? g.vram_used : (g.vram_total - (g.vram_free || 0));
+        $("#hw-vram-fill").style.width = Math.min(100, used / g.vram_total * 100) + "%";
+        $("#hw-vram-text").textContent = fmtGB(used) + " / " + fmtGB(g.vram_total);
+      } else {
+        $("#hw-vram-text").textContent = "—";
+      }
+      $("#hw-util-text").textContent = g?.util != null ? Math.round(g.util) + "%" : "—";
+      const t = $("#hw-temp-text");
+      t.textContent = g?.temp != null ? Math.round(g.temp) + "°C" : "—";
+      t.classList.toggle("hot", g?.temp != null && g.temp >= 83);
+      if (h.ram?.total) {
+        const used = h.ram.total - (h.ram.free || 0);
+        $("#hw-ram-fill").style.width = Math.min(100, used / h.ram.total * 100) + "%";
+        $("#hw-ram-text").textContent = fmtGB(used) + " / " + fmtGB(h.ram.total);
+      } else {
+        $("#hw-ram-text").textContent = "—";
+      }
+      $("#hw-queue-text").textContent = h.queue ?? 0;
+    } catch { /* 服务未就绪时静默 */ }
+  };
+  upd();
+  setInterval(upd, 2000);
+}
+
 /* ---------- 启动 ---------- */
 async function boot() {
   initCreate();
@@ -99,6 +133,7 @@ async function boot() {
   initMisc();
   applyHash();
   connectSSE();
+  hwLoop();
   try {
     const st = await api("/api/status");
     setComfyDot(st.comfy_online);
