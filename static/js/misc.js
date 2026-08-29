@@ -43,7 +43,7 @@ function initWizard() {
     const body = {};
     if ($("#w2-input").value.trim()) body.output_dir = $("#w2-input").value.trim();
     if ($("#w3-input").value.trim()) body.vault_path = $("#w3-input").value.trim();
-    if ($("#w4-input").value.trim()) body.zhipu_key = $("#w4-input").value.trim();
+    if ($("#w4-input").value.trim()) body.llm_key = $("#w4-input").value.trim();
     if (Object.keys(body).length) await api("/api/settings", { method: "POST", body });
     localStorage.setItem("comfyagent_wizard", "1");
     $("#wizard").hidden = true;
