@@ -10,6 +10,7 @@ ComfyAgent 桌面壳（产品级入口）：
 import os
 import sys
 import threading
+import time
 
 # 日志重定向（--noconsole 时没有 stdout）
 BASE_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
