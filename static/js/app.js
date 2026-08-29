@@ -206,22 +206,35 @@ function initCmdk() {
 }
 
 /* ---------- 启动 ---------- */
+window.addEventListener("error", (e) => {
+  if (!window.__bootError) window.__bootError = (e.message || "") + " @" + (e.filename || "") + ":" + (e.lineno || "");
+});
 async function boot() {
-  applyI18n();
-  initCreate();
-  initGallery();
-  initEditor();
-  initRuns();
-  initLauncher();
-  initMisc();
-  applyHash();
-  connectSSE();
-  hwLoop();
-  initCmdk();
-  $("#nav-about")?.addEventListener("click", () => { $("#about-modal").hidden = false; });
   try {
+    applyI18n();
+    initCreate();
+    initGallery();
+    initEditor();
+    initRuns();
+    initLauncher();
+    initMisc();
+    applyHash();
+    connectSSE();
+    hwLoop();
+    initCmdk();
+    $("#nav-about")?.addEventListener("click", () => { $("#about-modal").hidden = false; });
     const st = await api("/api/status");
     setComfyDot(st.comfy_online);
-  } catch { setComfyDot(false); }
+  } catch (err) {
+    window.__bootError = (err && err.stack) || String(err);
+    console.error("[ComfyAgent] boot failed:", err);
+    const box = $("#app");
+    if (box) {
+      const el = document.createElement("div");
+      el.style.cssText = "position:fixed;top:60px;left:212px;z-index:300;max-width:520px;background:#2a1418;border:1px solid var(--err);border-radius:12px;padding:14px 16px;font-size:12px;color:#ffd9df;white-space:pre-wrap";
+      el.textContent = "界面初始化出错：" + ((err && err.message) || err) + "（刷新重试；若反复出现，删除 data/ 后重启）";
+      document.body.appendChild(el);
+    }
+  }
 }
 boot();

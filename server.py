@@ -1355,6 +1355,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", mime)
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(clen))
+        # 本地静态资源：禁止缓存，保证更新后前端立即生效
+        self.send_header("Cache-Control", "no-store")
         if code == 206:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         if download_name:
