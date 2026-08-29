@@ -2300,6 +2300,22 @@ class Handler(BaseHTTPRequestHandler):
             files = sorted([f for f in os.listdir(bdir) if f.startswith("backup_")], reverse=True) if os.path.isdir(bdir) else []
             return self.send_json({"ok": True, "backups": files[:20]})
         # ---- 模板库
+        if path == "/api/templates/preview":
+            name = re.sub(r"[^A-Za-z0-9_.-]", "", q.get("name", ""))
+            ext = "webp" if q.get("ext", "webp") == "webp" else "png"
+            try:
+                with urllib.request.urlopen(COMFY.base + f"/templates/{name}-1.{ext}", timeout=20) as r:
+                    data = r.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/webp")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "max-age=86400")
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception:
+                self.send_response(404)
+                self.end_headers()
+            return
         if path == "/api/templates/index":
             idx = tpl_index()
             if idx is None:
@@ -2318,11 +2334,20 @@ class Handler(BaseHTTPRequestHandler):
             name = body.get("name", "")
             if not re.match(r"^[A-Za-z0-9_.-]+$", name):
                 return self.send_json({"ok": False, "error": "非法模板名"}, 400)
+            data = None
+            # 首选：ComfyUI 服务器本地 /templates/ 路由（离线可用、零延迟）
             try:
-                p = tpl_fetch(name if name.endswith(".json") else name + ".json")
-                data = read_json_file(p, None)
-            except Exception as e:
-                return self.send_json({"ok": False, "error": f"拉取失败：{e}"}, 502)
+                with urllib.request.urlopen(COMFY.base + f"/templates/{name}.json", timeout=20) as r:
+                    data = json.loads(r.read())
+            except Exception:
+                data = None
+            if data is None:
+                # 兜底：镜像链拉取
+                try:
+                    p = tpl_fetch(name if name.endswith(".json") else name + ".json")
+                    data = read_json_file(p, None)
+                except Exception as e:
+                    return self.send_json({"ok": False, "error": f"拉取失败：{e}"}, 502)
             if data is None:
                 return self.send_json({"ok": False, "error": "模板 JSON 解析失败"}, 500)
             if "nodes" in data and COMFY.probe() is not None:
