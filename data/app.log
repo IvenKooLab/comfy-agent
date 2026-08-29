@@ -1,0 +1,415 @@
+[17:23:38] * ComfyAgent running at http://127.0.0.1:8190  (ComfyUI: http://127.0.0.1:8188)
+[17:23:38] * gallery root: D:\tools\ComfyUI-aki-v3\ComfyUI\output
+[17:23:38] * obsidian vault: E:\work\obsidian\TungwaiKu
+[17:23:38] [17:23:38] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET / HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /js/app.js HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /style.css HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /js/gallery.js HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /js/editor.js HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /js/runs.js HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /js/misc.js HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /js/create.js HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/settings HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/obsidian/status HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/workflows HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/workflows HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/events HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/gallery HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/obsidian/archives HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/gallery HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/obsidian/notes HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/status HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=flux_00004_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=flux_00003_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=flux_00002_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=fixcheck_00001_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=fluxC_00001_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=fluxB_00001_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=fluxA2_00001_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=flux_cm2_00001_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=flux_cm_00001_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=flux_00001_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=agent_smoke_00001_.png HTTP/1.1" 200 -
+
+[17:23:39] [17:23:39] "GET /api/media?path=cmNew_C__00001_.mp4&thumb=1 HTTP/1.1" 200 -
+
+[17:23:40] [17:23:40] "GET /api/events HTTP/1.1" 200 -
+
+[17:23:40] [17:23:40] "GET /api/events HTTP/1.1" 200 -
+
+[17:23:41] [17:23:41] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:23:41] [17:23:41] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:23:43] [17:23:43] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:23:43] [17:23:43] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:23:45] [17:23:45] "GET /api/status HTTP/1.1" 200 -
+
+[17:23:45] [17:23:45] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:23:45] [17:23:45] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:40] * ComfyAgent running at http://127.0.0.1:8190  (ComfyUI: http://127.0.0.1:8188)
+[17:26:40] * gallery root: D:\tools\ComfyUI-aki-v3\ComfyUI\output
+[17:26:40] * obsidian vault: E:\work\obsidian\TungwaiKu
+[17:26:40] [17:26:40] "GET /api/events HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET / HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /style.css HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /js/app.js HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /js/gallery.js HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /js/editor.js HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /js/runs.js HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /js/misc.js HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /js/create.js HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/workflows HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/workflows HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/settings HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/obsidian/status HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/events HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/obsidian/archives HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/gallery HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/obsidian/notes HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/gallery HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/status HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=cmP_00001_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=flux_00004_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=flux_00003_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=fixcheck_00001_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=flux_00002_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=fluxC_00001_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=fluxB_00001_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=fluxA2_00001_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=flux_cm2_00001_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=flux_00001_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=flux_cm_00001_.png HTTP/1.1" 200 -
+
+[17:26:41] [17:26:41] "GET /api/media?path=agent_smoke_00001_.png HTTP/1.1" 200 -
+
+[17:26:42] [17:26:42] "GET /api/events HTTP/1.1" 200 -
+
+[17:26:43] [17:26:43] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:43] [17:26:43] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:45] [17:26:45] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:45] [17:26:45] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:47] [17:26:47] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:47] [17:26:47] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:49] [17:26:49] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:49] [17:26:49] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:51] [17:26:51] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:51] [17:26:51] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:53] [17:26:53] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:53] [17:26:53] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:55] [17:26:55] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:26:56] ----------------------------------------
+[17:26:56] Exception occurred during processing of request from
+[17:26:56] ('127.0.0.1', 50048)
+[17:26:56] Traceback (most recent call last):
+
+[17:26:56]   File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[17:26:56]   File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[17:26:56]   File "D:\tools\ComfyUI-aki-v3\python\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+
+[17:26:56]   File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 449, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+
+[17:26:56]   File "D:\tools\ComfyUI-aki-v3\python\Lib\http\server.py", line 415, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ~~~~~~~~~~~~~~~~~~~^^^^^^^
+
+[17:26:56]   File "D:\tools\ComfyUI-aki-v3\python\Lib\socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+
+[17:26:56] ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+
+[17:26:56] ----------------------------------------
+[17:29:56] * ComfyAgent running at http://127.0.0.1:8190  (ComfyUI: http://127.0.0.1:8188)
+[17:29:56] * gallery root: D:\tools\ComfyUI-aki-v3\ComfyUI\output
+[17:29:56] * obsidian vault: E:\work\obsidian\TungwaiKu
+[17:29:56] [17:29:56] "GET /api/events HTTP/1.1" 200 -
+
+[17:29:56] [17:29:56] "GET /api/events HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET / HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /style.css HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /js/app.js HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /js/gallery.js HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /js/editor.js HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /js/runs.js HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /js/misc.js HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /js/create.js HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/settings HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/workflows HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/obsidian/status HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/workflows HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/events HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/obsidian/archives HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/gallery HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/gallery HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/status HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/obsidian/notes HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=cmP_00003_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=cmP_00002_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=cmP_00001_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=flux_00004_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=flux_00003_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=fixcheck_00001_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=flux_00002_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=fluxC_00001_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=fluxB_00001_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=fluxA2_00001_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=flux_cm2_00001_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/media?path=flux_00001_.png HTTP/1.1" 200 -
+
+[17:29:57] [17:29:57] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:29:59] [17:29:59] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:29:59] [17:29:59] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:01] [17:30:01] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:01] [17:30:01] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:03] [17:30:03] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:03] [17:30:03] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:04] [17:30:04] "GET /api/status HTTP/1.1" 200 -
+
+[17:30:05] [17:30:05] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:05] [17:30:05] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:07] [17:30:07] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:07] [17:30:07] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:09] [17:30:09] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:09] [17:30:09] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:09] [17:30:09] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:11] [17:30:11] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:11] [17:30:11] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:13] [17:30:13] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:13] [17:30:13] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:15] [17:30:15] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:15] [17:30:15] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:17] [17:30:17] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:17] [17:30:17] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:19] [17:30:19] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:19] [17:30:19] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:21] [17:30:21] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:21] [17:30:21] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:23] [17:30:23] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:23] [17:30:23] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:25] [17:30:25] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:25] [17:30:25] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:27] [17:30:27] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:27] [17:30:27] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:29] [17:30:29] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:29] [17:30:29] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:31] [17:30:31] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:31] [17:30:31] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:33] [17:30:33] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:33] [17:30:33] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:35] [17:30:35] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:35] [17:30:35] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:37] [17:30:37] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:37] [17:30:37] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:39] [17:30:39] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:39] [17:30:39] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:41] [17:30:41] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:41] [17:30:41] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:43] [17:30:43] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:43] [17:30:43] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:45] [17:30:45] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:45] [17:30:45] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:47] [17:30:47] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:47] [17:30:47] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:49] [17:30:49] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:49] [17:30:49] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:51] [17:30:51] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:51] [17:30:51] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:53] [17:30:53] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:53] [17:30:53] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:55] [17:30:55] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:55] [17:30:55] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:57] [17:30:57] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:57] [17:30:57] "GET /api/hardware HTTP/1.1" 200 -
+
+[17:30:59] [17:30:59] "GET /api/hardware HTTP/1.1" 200 -
+

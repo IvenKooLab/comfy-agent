@@ -1,85 +1,52 @@
-# ComfyAgent · 可视化创作台
+# ComfyAgent · AI 创作台
 
-对标可灵 AI 创作台控制台的**本地 ComfyUI 可视化管理 Agent**：暗色控制台风格、零第三方依赖（纯 Python 标准库后端 + 原生 JS 前端），专为「本地显卡跑 ComfyUI 的个人创作者」设计。
+本地优先的 AI 创作桌面软件：一个原生窗口管理你的 ComfyUI —— 中文提示词生图/生视频、成果画廊、可视化工作流、任务队列、Obsidian 知识库、硬件监控。
 
-![tech](https://img.shields.io/badge/python-stdlib%20only-blue) ![ui](https://img.shields.io/badge/UI-%E5%8F%AF%E7%81%B5%E9%A3%8E%E6%A0%BC%E6%9A%97%E8%89%B2%E6%8E%A7%E5%88%B6%E5%8F%B0-7c5cff)
+![创作页](docs/screenshot-create.png)
 
-## 功能总览
-
-| 页面 | 能干什么 |
+| | |
 |---|---|
-| 🖼️ **画廊** | 实时瀑布流展示 ComfyUI output 全部成果（视频带 ffmpeg 首帧海报、hover 预览播放）；灯箱查看生成参数（自动解析 PNG 内嵌工作流：模型/采样器/步数/种子/提示词）；一键重跑 / 导入编辑器 / 归档 / 删除（进回收站） |
-| 🧩 **工作流** | SVG 节点图可视化编辑器：拖拽节点、连线/断开、缩放平移、双击添加节点（全节点目录搜索）；右侧检查器编辑参数（seed 带🎲随机）；导入 ComfyUI 导出的 UI 格式 JSON（自动转 API 格式）/ API 格式 JSON / **直接拖 PNG 提取内嵌工作流**；内置 Flux 文生图模板 |
-| ⚙️ **任务** | 队列状态（执行中/排队中）、WebSocket 实时采样进度条、最近 25 条执行历史带成品缩略图 |
-| 🟣 **知识库** | 连接 Obsidian：单图/批量归档（复制媒体 + 生成带元数据的 Markdown 笔记，obsidian:// 一键打开）；工作流单向同步为库内 Markdown 文档 |
-| ✨ **助手** | 中文指令直达：「画：雪夜剑客 832x1216」「跑 Flux 文生图 ×3」「归档最近 10 个」「状态/中断/清空队列」；可选配智谱 GLM Key 处理自由表述 |
-| 🔧 **设置** | ComfyUI 地址 / output 目录 / Obsidian 库路径 / 端口 / 智谱 Key |
+| ![画廊](docs/screenshot-gallery.png) | ![工作流](docs/screenshot-editor.png) |
 
-## 快速开始
+## 为什么是它
 
-### 方式一：exe 免安装版（推荐）
+- **桌面产品**：双击 exe = 原生窗口 + 系统托盘，关窗最小化、再点托盘唤回；单实例；无控制台黑框
+- **本地优先**：生成全程在你自己的显卡上，数据不出机器（可选的 GLM 增强除外）
+- **零依赖技术栈**：纯 Python 标准库后端 + 原生 JS 前端，发布包仅 ~10MB
 
-仓库里直接下载 `dist/ComfyAgent-win64.zip`（约 8MB）：
+## 功能
 
-1. 解压到任意目录
-2. 双击 `ComfyAgent.exe` —— 自动启动服务并打开浏览器（http://127.0.0.1:8190）
-3. 数据（设置/工作流库/缩略图缓存/回收站）都在 exe 旁边的 `data/` 目录，删目录即卸载
+- ✦ **创作**：中文输入自动增强为英文提示词（GLM 精修，MyMemory 兜底）→ Flux 生图 / H3 W4A8 生视频（640×352·5秒·4步·原生音频）；图/视频双模式 Tab 与真实耗时预估
+- ▦ **画廊**：实时瀑布流、视频悬浮预览、悬浮操作（重跑/导入/归档/下载/删除）、批量选择批量归档删除、按文件夹筛选、PNG 内嵌参数解析（模型/采样器/种子/提示词）
+- ⑃ **工作流**：SVG 节点图可视化编辑（拖拽连线/网格吸附/节点校验/快捷键）；内置 Flux 文生图 + H3 文生/图生视频工作流；导入 ComfyUI 导出的 UI/API JSON 或 PNG 提取
+- ◷ **任务**：队列/执行状态、采样进度条、每条任务的时长预估与失败一键重试
+- ◈ **知识库**：成果一键归档为 Obsidian 笔记（带生成参数表格 + obsidian:// 跳转）；工作流同步
+- ✧ **助手**：中文指令直达（画/跑/归档/状态/中断/清空），支持自由表述（GLM）
+- 全局**硬件状态条**：GPU 利用率/温度/显存、内存、队列（nvidia-smi，2s 刷新）
 
-> 前提：本机有 ComfyUI（默认 127.0.0.1:8188）和 ffmpeg（视频海报帧用，没有会降级但能用）。
-> 杀软提示：PyInstaller 打包的程序偶有误报，火绒/Defender 加信任即可。
+## 安装使用
 
-自己构建：`pip install pyinstaller` 后运行 `bash build_exe.sh`（或参考其中的命令）。
+1. 下载/解压 `dist/ComfyAgent-win64.zip`
+2. 双击 `ComfyAgent.exe` —— 原生窗口自动打开（首次有 30 秒设置向导）
+3. 关窗最小化到托盘，托盘菜单可退出
 
-### 方式二：源码运行
+前提：本机 ComfyUI（默认 127.0.0.1:8188）；ffmpeg 在 PATH（视频海报帧，缺了会降级）；WebView2 运行时（Win10/11 一般自带）。
+
+> 火绒/杀软若误报 PyInstaller 程序，加信任即可。数据全部在 exe 旁的 `data/`，删目录即卸载。
+
+## 开发
 
 ```bash
-python server.py --open   # 或双击 start.bat
-# 打开 http://127.0.0.1:8190
+# 源码模式（浏览器打开，带 --open 自动开页）
+python server.py --open
+# 桌面壳模式
+python app.py
+# 构建产品 exe（需 pip install pyinstaller pywebview pystray pillow）
+bash build_exe.sh
 ```
 
-要求：
-- Python 3.9+（无需 pip 装任何东西）
-- 本机 ComfyUI（默认 `http://127.0.0.1:8188`，离线时画廊可浏览、编辑器降级可用）
-- ffmpeg 在 PATH（视频海报帧缩略图；没有也能跑，只是视频卡片无预览图）
-- Obsidian（可选，配置库路径后启用归档）
-
-## 架构
-
-```
-comfy-agent/
-├── server.py            # 全部后端：静态托管 + REST API + SSE + WS客户端(~1100行, stdlib only)
-├── static/
-│   ├── index.html       # 单页应用骨架
-│   ├── style.css        # 可灵风暗色主题
-│   └── js/
-│       ├── app.js       # 路由 / API封装 / SSE / Toast
-│       ├── gallery.js   # 画廊瀑布流 + 灯箱 + PNG元数据展示
-│       ├── editor.js    # SVG 节点图编辑器（连线/检查器/导入导出/节点面板）
-│       ├── runs.js      # 队列 + 进度 + 历史
-│       └── misc.js      # Obsidian / 助手 / 设置
-├── data/                # 运行时数据（设置、工作流库、缩略图缓存、回收站、任务记录）
-└── start.bat
-```
-
-**通信链路**：浏览器 ⇄ server.py（REST + SSE）⇄ ComfyUI（HTTP API + WebSocket 进度事件）。
-进度通过标准库手写的 WebSocket 客户端接收，经 SSE 转发给所有打开的页面；ComfyUI 掉线自动重连。
-
-**工作流格式**：编辑器直接编辑 ComfyUI **API 格式**（即 PNG 内嵌的 `prompt`，与官方 `/prompt` 端点一致）。
-导入 UI 格式（前端导出的带 nodes/links 的 JSON）时按 object_info schema 启发式转换 widgets_values，复杂自定义节点可能有警告提示。
-
-## 常用操作速查
-
-- **把 ComfyUI 里调好的工作流搬进来**：ComfyUI 画布 → 导出（API）→ 编辑器「导入」选 JSON → 保存
-- **复用某张成图的参数**：画廊点开该图 → 「导入编辑器」或「重新生成」（改 seed）
-- **批量跑**：工作流页「运行」输入次数（每批自动换随机 seed），或对助手说「跑 xxx ×5」
-- **归档成果**：画廊灯箱点「归档」（可写手记），或对助手说「归档最近 10 个」
-
-## 已知边界
-
-- UI→API 转换是启发式的：标准节点（KSampler/CLIPTextEncode/LoadImage/保存类）验证可靠，冷门自定义节点的控件顺序可能错位（导入后有警告，检查一下参数再跑）
-- 视频文件本身不含生成参数，重跑仅对 PNG（ComfyUI 保存时内嵌工作流）有效
-- 删除走 `data/trash/` 软删除，不直接抹文件
+架构与迭代史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License
 
-MIT — 自用顺手就行的私房工具。
+MIT

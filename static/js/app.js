@@ -59,6 +59,10 @@ function applyHash() {
   $$(".view").forEach((el) => el.classList.toggle("active", el.id === "view-" + v));
   $$(".nav-item").forEach((el) => el.classList.toggle("active", el.dataset.view === v));
   if (v === "gallery") galleryRefresh(false);
+  else {
+    const bb = $("#batch-bar");
+    if (bb && !bb.hidden && v !== "gallery") bb.hidden = true; // 批量操作只在画廊生效
+  }
   if (v === "create") refreshFeed();
 }
 window.addEventListener("hashchange", applyHash);
@@ -124,6 +128,21 @@ function hwLoop() {
   setInterval(upd, 2000);
 }
 
+window.APP_VERSION = "ComfyAgent v3.0.0";
+
+/* ---------- 全局快捷键 ---------- */
+const VIEW_KEYS = { "1": "create", "2": "gallery", "3": "editor", "4": "runs", "5": "obsidian", "6": "agent" };
+document.addEventListener("keydown", (e) => {
+  if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (VIEW_KEYS[e.key]) goto(VIEW_KEYS[e.key]);
+  if (e.key === "/") {
+    e.preventDefault();
+    goto("gallery");
+    setTimeout(() => $("#g-search")?.focus(), 80);
+  }
+});
+const isTypingTarget = (t) => ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName);
+
 /* ---------- 启动 ---------- */
 async function boot() {
   initCreate();
@@ -134,6 +153,7 @@ async function boot() {
   applyHash();
   connectSSE();
   hwLoop();
+  $("#nav-about")?.addEventListener("click", () => { $("#about-modal").hidden = false; });
   try {
     const st = await api("/api/status");
     setComfyDot(st.comfy_online);

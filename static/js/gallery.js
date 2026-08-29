@@ -1,11 +1,13 @@
-/* gallery.js — 成果画廊：瀑布流 + 灯箱 + 元数据 + 实时刷新 */
+/* gallery.js — 画廊：瀑布流 + 灯箱 + 批量选择/批量归档删除 + 文件夹筛选 */
 import { $, $$, api, toast, fmtSize, fmtTime, mediaUrl, goto } from "./app.js";
 
 let items = [];
-let filter = { q: "", kind: "all", sort: "new" };
+let filter = { q: "", kind: "all", sort: "new", folder: "全部" };
 let lbIndex = -1;
 let lastSeenMtime = 0;
 let lbMeta = null;
+let selected = new Set();
+let folders = ["全部"];
 
 export function initGallery() {
   $("#g-search").addEventListener("input", (e) => { filter.q = e.target.value.trim().toLowerCase(); render(); });
@@ -15,8 +17,13 @@ export function initGallery() {
     filter.kind = c.dataset.k;
     render();
   }));
+  $("#g-folder").addEventListener("change", (e) => { filter.folder = e.target.value; render(); });
   $("#g-sort").addEventListener("change", (e) => { filter.sort = e.target.value; render(); });
   $("#g-refresh").addEventListener("click", () => galleryRefresh(true));
+  // 批量操作
+  $("#b-archive").addEventListener("click", () => batchArchive());
+  $("#b-trash").addEventListener("click", () => batchTrash());
+  $("#b-cancel").addEventListener("click", () => { selected.clear(); syncBatchBar(); render(); });
   // 灯箱
   $("#lb-close").addEventListener("click", closeLightbox);
   $(".lb-backdrop").addEventListener("click", closeLightbox);
@@ -30,32 +37,30 @@ export function initGallery() {
   });
   $("#lb-archive").addEventListener("click", doArchive);
   $("#lb-reveal").addEventListener("click", async () => {
-    const it = items[lbIndex];
+    const it = visible()[lbIndex];
     if (it) await api("/api/media/reveal", { method: "POST", body: { path: it.path } });
   });
   $("#lb-download").addEventListener("click", () => {
-    const it = items[lbIndex];
+    const it = visible()[lbIndex];
     if (it) window.open(mediaUrl(it.path, { download: "1" }), "_blank");
   });
   $("#lb-trash").addEventListener("click", async () => {
-    const it = items[lbIndex];
+    const it = visible()[lbIndex];
     if (!it || !confirm(`把「${it.name}」移入回收站？`)) return;
     const r = await api("/api/media/trash", { method: "POST", body: { paths: [it.path] } });
-    if (r.ok) { toast("已移入回收站（data/trash）", "ok"); closeLightbox(); galleryRefresh(true); }
+    if (r.ok) { toast("已移入回收站（data/trash）", "ok"); selected.delete(it.path); syncBatchBar(); closeLightbox(); galleryRefresh(true); }
     else toast(r.error, "err");
   });
   $("#lb-import").addEventListener("click", () => {
-    const it = items[lbIndex];
+    const it = visible()[lbIndex];
     if (!it) return;
     if (!lbMeta || !lbMeta.prompt) { toast("该文件没有嵌入工作流（视频/旧图可能没有）", "err"); return; }
-    localStorage.setItem("pendingImport", JSON.stringify({
-      api: lbMeta.prompt, name: it.name.replace(/\.[^.]+$/, ""),
-    }));
+    localStorage.setItem("pendingImport", JSON.stringify({ api: lbMeta.prompt, name: it.name.replace(/\.[^.]+$/, "") }));
     closeLightbox();
     goto("editor");
   });
   $("#lb-rerun").addEventListener("click", async () => {
-    const it = items[lbIndex];
+    const it = visible()[lbIndex];
     if (!it) return;
     if (!lbMeta || !lbMeta.prompt) { toast("没有嵌入工作流，无法直接重跑", "err"); return; }
     const r = await api("/api/prompt", { method: "POST", body: { name: "重跑·" + it.name, prompt: lbMeta.prompt } });
@@ -70,21 +75,31 @@ export async function galleryRefresh(force) {
   const prevMax = lastSeenMtime;
   items = r.items;
   lastSeenMtime = items.length ? items[0].mtime : 0;
-  render();
-  // 标出新文件
-  if (force && prevMax && lastSeenMtime > prevMax) {
-    $$("#gallery-grid .g-item").forEach((el) => {
-      const it = items.find((i) => i.path === el.dataset.path);
-      if (it && it.mtime > prevMax) el.classList.add("fresh");
-    });
-    toast("画廊有新成果 ✨", "ok");
+  // 文件夹清单（顶层目录）
+  const dirs = new Set();
+  for (const it of items) {
+    const top = it.path.includes("/") ? it.path.split("/")[0] : "output 根目录";
+    dirs.add(top);
   }
+  folders = ["全部", ...[...dirs].sort()];
+  syncFolderOptions();
+  render();
+  if (force && prevMax && lastSeenMtime > prevMax) toast("画廊有新成果 ✨", "ok");
+}
+
+function syncFolderOptions() {
+  const sel = $("#g-folder");
+  const cur = filter.folder;
+  sel.innerHTML = folders.map((f) => `<option ${f === cur ? "selected" : ""}>${f}</option>`).join("");
 }
 
 function visible() {
-  let list = items.filter((i) =>
-    (filter.kind === "all" || i.kind === filter.kind) &&
-    (!filter.q || i.name.toLowerCase().includes(filter.q)));
+  let list = items.filter((i) => {
+    const top = i.path.includes("/") ? i.path.split("/")[0] : "output 根目录";
+    return (filter.kind === "all" || i.kind === filter.kind)
+      && (filter.folder === "全部" || top === filter.folder)
+      && (!filter.q || i.name.toLowerCase().includes(filter.q));
+  });
   if (filter.sort === "old") list = [...list].reverse();
   else if (filter.sort === "big") list = [...list].sort((a, b) => b.size - a.size);
   return list;
@@ -98,10 +113,11 @@ function render() {
   grid.innerHTML = "";
   for (const it of list) {
     const card = document.createElement("div");
-    card.className = "g-item";
+    card.className = "g-item" + (selected.has(it.path) ? " selected" : "");
     card.dataset.path = it.path;
     const src = it.kind === "video" ? mediaUrl(it.path, { thumb: "1" }) : mediaUrl(it.path);
     card.innerHTML = `
+      <div class="g-check" title="选择">✓</div>
       <img loading="lazy" src="${src}" alt="">
       ${it.kind === "video" ? '<div class="g-play"><span>▶</span></div>' : ""}
       <div class="g-overlay">
@@ -116,72 +132,81 @@ function render() {
       <span class="g-badge">${it.kind === "video" ? "视频" : "图片"}${it.w ? " · " + it.w + "×" + it.h : ""}</span>
       <div class="g-foot"><span class="g-name" title="${it.path}">${it.name}</span><span class="g-date">${fmtTime(it.mtime)}</span></div>`;
     card.addEventListener("click", (e) => {
-      if (e.target.closest(".g-act")) return;
+      if (e.target.closest(".g-act") || e.target.closest(".g-check")) return;
+      if (e.ctrlKey || e.metaKey) { toggleSelect(it.path); return; }
       openLightbox(list, list.indexOf(it));
     });
-    // 悬浮操作
-    card.querySelector('[data-act="download"]')?.addEventListener("click", (e) => {
-      e.stopPropagation(); window.open(mediaUrl(it.path, { download: "1" }), "_blank");
-    });
-    card.querySelector('[data-act="archive"]')?.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const r = await api("/api/obsidian/archive", {
-        method: "POST", body: { paths: [it.path], title: it.name.replace(/\.[^.]+$/, "").slice(0, 40) },
-      });
-      if (r.ok) { toast(`已归档：${r.note}`, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
-      else toast(r.error || "归档失败", "err");
-    });
-    card.querySelector('[data-act="edit"]')?.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
-      if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流", "err"); return; }
-      localStorage.setItem("pendingImport", JSON.stringify({ api: meta.prompt, name: it.name.replace(/\.[^.]+$/, "") }));
-      goto("editor");
-    });
-    card.querySelector('[data-act="rerun"]')?.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
-      if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流，无法直接重跑", "err"); return; }
-      const r = await api("/api/prompt", { method: "POST", body: { name: "重跑·" + it.name, prompt: meta.prompt } });
-      r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
-    });
-    card.querySelector('[data-act="del"]')?.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      if (!confirm(`把「${it.name}」移入回收站？`)) return;
-      const r = await api("/api/media/trash", { method: "POST", body: { paths: [it.path] } });
-      if (r.ok) { toast("已移入回收站（data/trash）", "ok"); galleryRefresh(true); }
-      else toast(r.error, "err");
-    });
+    card.querySelector(".g-check").addEventListener("click", (e) => { e.stopPropagation(); toggleSelect(it.path); });
+    wireActions(card, it);
     grid.appendChild(card);
   }
+  syncBatchBar();
 }
 
-/* 创作页复用灯箱 */
-export function openLightboxPublic(list, idx) { openLightbox(list, idx); }
+function wireActions(card, it) {
+  card.querySelector('[data-act="download"]')?.addEventListener("click", (e) => {
+    e.stopPropagation(); window.open(mediaUrl(it.path, { download: "1" }), "_blank");
+  });
+  card.querySelector('[data-act="archive"]')?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const r = await api("/api/obsidian/archive", {
+      method: "POST", body: { paths: [it.path], title: it.name.replace(/\.[^.]+$/, "").slice(0, 40) },
+    });
+    if (r.ok) { toast(`已归档：${r.note}`, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
+    else toast(r.error || "归档失败", "err");
+  });
+  card.querySelector('[data-act="edit"]')?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
+    if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流", "err"); return; }
+    localStorage.setItem("pendingImport", JSON.stringify({ api: meta.prompt, name: it.name.replace(/\.[^.]+$/, "") }));
+    goto("editor");
+  });
+  card.querySelector('[data-act="rerun"]')?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
+    if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流，无法直接重跑", "err"); return; }
+    const r = await api("/api/prompt", { method: "POST", body: { name: "重跑·" + it.name, prompt: meta.prompt } });
+    r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
+  });
+  card.querySelector('[data-act="del"]')?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!confirm(`把「${it.name}」移入回收站？`)) return;
+    const r = await api("/api/media/trash", { method: "POST", body: { paths: [it.path] } });
+    if (r.ok) { toast("已移入回收站", "ok"); galleryRefresh(true); }
+    else toast(r.error, "err");
+  });
+}
 
-let hoverTimer = null;
-function hoverPreview(card, it) {
-  if (it.kind !== "video") return;
-  hoverTimer = setTimeout(() => {
-    hoverStop(card);
-    const v = document.createElement("video");
-    v.src = mediaUrl(it.path); v.muted = true; v.loop = true; v.playsInline = true;
-    v.style.cssText = "width:100%;display:block;background:#000";
-    v.className = "hover-video";
-    card.querySelector("img")?.replaceWith(v);
-    v.play().catch(() => {});
-  }, 500);
+/* —— 批量 —— */
+function toggleSelect(path) {
+  selected.has(path) ? selected.delete(path) : selected.add(path);
+  const card = $(`#gallery-grid .g-item[data-path="${CSS.escape(path)}"]`);
+  card?.classList.toggle("selected", selected.has(path));
+  syncBatchBar();
 }
-function hoverStop(card) {
-  clearTimeout(hoverTimer);
-  card.querySelectorAll(".hover-video")?.forEach((v) => v.removeEventListener);
+function syncBatchBar() {
+  const bar = $("#batch-bar");
+  bar.hidden = selected.size === 0;
+  $("#batch-n").textContent = selected.size;
+}
+async function batchArchive() {
+  const paths = [...selected];
+  if (!paths.length) return;
+  const r = await api("/api/obsidian/archive", { method: "POST", body: { paths, title: `批量归档${paths.length}个` } });
+  if (r.ok) { toast(`已归档 ${r.count} 个到 ${r.note}`, "ok"); selected.clear(); syncBatchBar(); render(); }
+  else toast(r.error || "归档失败", "err");
+}
+async function batchTrash() {
+  const paths = [...selected];
+  if (!paths.length || !confirm(`把选中的 ${paths.length} 个文件移入回收站？`)) return;
+  const r = await api("/api/media/trash", { method: "POST", body: { paths } });
+  if (r.ok) { toast(`已移入回收站 ${r.count} 个`, "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
+  else toast(r.error, "err");
 }
 
-function openLightbox(list, idx) {
-  lbIndex = idx;
-  $("#lightbox").hidden = false;
-  renderLightbox(list);
-}
+/* —— 灯箱 —— */
+function openLightbox(list, idx) { lbIndex = idx; $("#lightbox").hidden = false; renderLightbox(list); }
 function closeLightbox() { $("#lightbox").hidden = true; $("#lb-media").innerHTML = ""; }
 function step(delta) {
   const list = visible();
@@ -189,6 +214,7 @@ function step(delta) {
   lbIndex = (lbIndex + delta + list.length) % list.length;
   renderLightbox(list);
 }
+export function openLightboxPublic(list, idx) { openLightbox(list, idx); }
 
 async function renderLightbox(list) {
   const it = list[lbIndex];
@@ -204,7 +230,7 @@ async function renderLightbox(list) {
   $("#lb-summary").innerHTML = `<div class="muted">读取生成参数…</div>`;
   if (it.kind === "video") {
     const v = document.createElement("video");
-    v.src = mediaUrl(it.path); v.controls = true; v.autoplay = true; v.loop = true; v.muted = false;
+    v.src = mediaUrl(it.path); v.controls = true; v.autoplay = true; v.loop = true;
     box.appendChild(v);
   } else {
     const img = document.createElement("img");
@@ -219,8 +245,7 @@ async function renderLightbox(list) {
       const kv = (k, v) => v == null || v === "" ? "" : `<div class="kv"><span>${k}</span><span>${v}</span></div>`;
       $("#lb-summary").innerHTML =
         kv("模型", s.model) + kv("采样", `${s.sampler ?? "-"} · ${s.steps ?? "-"}步 · cfg ${s.cfg ?? "-"}`) +
-        kv("种子", s.seed) + kv("尺寸", s.dimensions) +
-        kv("提示词", s.prompt) + kv("负向", s.negative);
+        kv("种子", s.seed) + kv("尺寸", s.dimensions) + kv("提示词", s.prompt) + kv("负向", s.negative);
     } else {
       $("#lb-summary").innerHTML = `<div class="muted">未嵌入生成参数</div>`;
     }
@@ -234,11 +259,8 @@ async function doArchive() {
   if (!it) return;
   const note = $("#lb-note-text").value.trim();
   const r = await api("/api/obsidian/archive", {
-    method: "POST",
-    body: { paths: [it.path], title: it.name.replace(/\.[^.]+$/, "").slice(0, 40), note },
+    method: "POST", body: { paths: [it.path], title: it.name.replace(/\.[^.]+$/, "").slice(0, 40), note },
   });
-  if (r.ok) {
-    toast(`已归档到 Obsidian：${r.note}`, "ok");
-    const a = document.createElement("a"); a.href = r.uri; a.click();
-  } else toast(r.error || "归档失败", "err");
+  if (r.ok) { toast(`已归档到 Obsidian：${r.note}`, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
+  else toast(r.error || "归档失败", "err");
 }

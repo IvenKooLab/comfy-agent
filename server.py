@@ -1066,7 +1066,8 @@ def submit_workflow(wf, times=1, seed=None, overrides=None):
             prompt_ids.append(pid)
             cur_seed = api[seed_nodes[0][0]]["inputs"][seed_nodes[0][1]] if seed_nodes else None
             add_run({"prompt_id": pid, "name": wf.get("name", "未命名"), "seed": cur_seed,
-                     "submitted": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "queued"})
+                     "submitted": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "queued",
+                     "graph": json.loads(json.dumps(api))})
         n = len(prompt_ids)
         msg = f"已提交「{wf.get('name')}」×{n}（seed=" + (
             str(seed) if seed is not None else "随机") + "），到「任务」页看进度。"
@@ -1259,6 +1260,17 @@ class Handler(BaseHTTPRequestHandler):
             res = submit_workflow(wf, times=int(body.get("times", 1) or 1),
                                   seed=body.get("seed"), overrides=body.get("overrides"))
             return self.send_json(res)
+        if path == "/api/runs":
+            runs = [{k: v for k, v in r.items() if k != "graph"} | {"has_graph": bool(r.get("graph"))}
+                    for r in load_runs()]
+            return self.send_json({"ok": True, "runs": runs[:60]})
+        if path == "/api/rerun" and method == "POST":
+            pid = body.get("prompt_id", "")
+            run = next((r for r in load_runs() if r.get("prompt_id") == pid), None)
+            if not run or not run.get("graph"):
+                return self.send_json({"ok": False, "msg": "找不到该任务的图快照（旧任务不支持一键重试）"})
+            res = submit_workflow({"name": "重试·" + run.get("name", ""), "api": run["graph"]}, times=1, seed=None)
+            return self.send_json(res)
         if path == "/api/interrupt" and method == "POST":
             COMFY.http("/interrupt", payload={}, timeout=8)
             return self.send_json({"ok": True, "msg": "已中断当前任务"})
@@ -1408,7 +1420,8 @@ class Handler(BaseHTTPRequestHandler):
 
 # ---------------------------------------------------------------- main
 
-def main():
+def create_server():
+    """初始化配置/线程并返回 HTTPServer（供控制台模式和桌面壳共用）。"""
     global SETTINGS, COMFY
     ensure_dirs()
     SETTINGS = load_settings()
@@ -1421,9 +1434,15 @@ def main():
     print(f"* ComfyAgent running at http://127.0.0.1:{port}  (ComfyUI: {SETTINGS['comfy_url']})")
     print(f"* gallery root: {SETTINGS['output_dir']}")
     print(f"* obsidian vault: {SETTINGS['vault_path']}")
-    # exe 双击启动 / 带 --open 参数时自动打开浏览器
-    if getattr(sys, "frozen", False) or "--open" in sys.argv:
-        threading.Timer(1.2, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
+    # exe 双击启动 / 带 --open 参数时自动打开浏览器（桌面壳模式不走这里）
+    if not getattr(sys, "frozen", False) or "--open" in sys.argv:
+        if "--open" in sys.argv:
+            threading.Timer(1.2, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
+    return httpd
+
+
+def main():
+    httpd = create_server()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

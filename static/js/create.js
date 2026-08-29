@@ -4,9 +4,32 @@ import { $, $$, api, toast, mediaUrl, fmtTime, goto } from "./app.js";
 let workflows = [];
 let selSize = { w: 832, h: 1216 };
 let selCount = 1;
+let mode = "image";   // 'image' | 'video'
 let feedItems = [];
 
+const INSPIRE = {
+  image: [
+    "cinematic close-up, swordsman in white robe looking back, sea of clouds at dawn, guoman 3d style",
+    "misty immortal mountains panorama, ink-wash anime style, flowing clouds",
+    "chibi mascot typing on a tiny laptop, macro lens, soft light",
+  ],
+  video: [
+    "slow dolly-in on a swordsman standing above a sea of clouds, robes flowing, morning light",
+    "a cute mascot waving at the camera in a cozy room, soft warm lighting",
+    "drifting clouds over ink-wash immortal mountains, seamless loop",
+  ],
+};
+const VIDEO_HINT = "H3 W4A8 快线 · 640×352 · ≈5秒 · 4步 · 原生音频 · 约8.5分钟/条（视频尺寸由工作流锁定）";
+const IMAGE_HINT = "Flux 文生图 · 20步 · 约1-2分钟/张（视队列而定）";
+
 export function initCreate() {
+  // 模式切换（图/视频）
+  $$("#c-mode .seg-btn").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.mode === mode) return;
+    mode = b.dataset.mode;
+    $$("#c-mode .seg-btn").forEach((x) => x.classList.toggle("active", x === b));
+    applyMode();
+  }));
   // 尺寸/数量分段
   $$("#c-size .seg-btn").forEach((b) => b.addEventListener("click", () => {
     $$("#c-size .seg-btn").forEach((x) => x.classList.remove("active"));
@@ -23,36 +46,49 @@ export function initCreate() {
     $("#c-translate").classList.toggle("active");
     if (!$("#c-translate").classList.contains("active")) $("#c-en-preview").hidden = true;
   });
-  $$(".inspire-chips .chip").forEach((c) => c.addEventListener("click", () => {
-    $("#c-prompt").value = c.textContent.trim();
-    $("#c-prompt").focus();
-  }));
   $("#c-go").addEventListener("click", create);
   $("#c-prompt").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) create();
   });
   loadWorkflows();
   refreshFeed();
-  // 出片后刷新 feed
   document.addEventListener("sse", (e) => {
-    const t = e.detail?.type;
-    if (t === "execution_success") setTimeout(refreshFeed, 1500);
+    if (e.detail?.type === "execution_success") setTimeout(refreshFeed, 1500);
   });
+}
+
+function applyMode() {
+  // 灵感词
+  const box = $("#c-inspire");
+  box.innerHTML = "";
+  for (const q of INSPIRE[mode]) {
+    const c = document.createElement("button");
+    c.className = "chip"; c.textContent = q;
+    c.addEventListener("click", () => { $("#c-prompt").value = q; $("#c-prompt").focus(); });
+    box.appendChild(c);
+  }
+  // 工作流过滤 + 尺寸显隐 + 预估提示
+  const sel = $("#c-wf");
+  const fits = workflows.filter((w) => mode === "video"
+    ? /H3/.test(w.name) : !/H3/.test(w.name));
+  sel.innerHTML = "";
+  for (const wf of fits) {
+    const o = document.createElement("option");
+    o.value = wf.id || wf.name;
+    o.textContent = wf.name;
+    sel.appendChild(o);
+  }
+  sel.value = mode === "video" ? "h3-t2v" : "builtin-flux";
+  if (!sel.value) sel.selectedIndex = 0;
+  $("#c-size-box").style.display = mode === "video" ? "none" : "";
+  $("#c-hint").innerHTML = `<span class="dot2"></span>${mode === "video" ? VIDEO_HINT : IMAGE_HINT}`;
 }
 
 async function loadWorkflows() {
   const r = await api("/api/workflows");
   if (!r.ok) return;
   workflows = r.workflows;
-  const sel = $("#c-wf");
-  sel.innerHTML = "";
-  for (const wf of workflows) {
-    const o = document.createElement("option");
-    o.value = wf.id || wf.name;
-    o.textContent = wf.name;
-    sel.appendChild(o);
-  }
-  sel.value = "builtin-flux";
+  applyMode();
 }
 
 async function create() {

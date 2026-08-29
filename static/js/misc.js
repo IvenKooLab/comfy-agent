@@ -5,6 +5,49 @@ export function initMisc() {
   initObsidian();
   initAgent();
   initSettings();
+  initWizard();
+  initAbout();
+}
+
+function initAbout() {
+  $("#about-version").textContent = (window.APP_VERSION || "") + " · 本地优先 · 数据不出机器";
+  $("#about-close").addEventListener("click", () => { $("#about-modal").hidden = true; });
+  $("#about-modal").addEventListener("click", (e) => { if (e.target.id === "about-modal") e.target.hidden = true; });
+}
+
+/* ================= 首次运行向导 ================= */
+function initWizard() {
+  if (localStorage.getItem("comfyagent_wizard")) return;
+  $("#wizard").hidden = false;
+  api("/api/settings").then((r) => {
+    if (!r.ok) return;
+    $("#w2-input").value = r.settings.output_dir || "";
+    $("#w3-input").value = r.settings.vault_path || "";
+  });
+  $("#w1-btn").addEventListener("click", async () => {
+    $("#w1-state").textContent = "探测中…";
+    const st = await api("/api/status");
+    if (st.comfy_online) {
+      $("#w1-state").innerHTML = `✓ 已连接 ComfyUI（${(st.system_stats?.system || {}).comfyui_version || "?"}）`;
+      $("#w1").classList.add("done");
+    } else {
+      $("#w1-state").textContent = "未检测到 —— 请先启动 ComfyUI，或到设置页修改地址（也可以先跳过，稍后配置）";
+    }
+  });
+  $("#wizard-skip").addEventListener("click", () => {
+    localStorage.setItem("comfyagent_wizard", "1");
+    $("#wizard").hidden = true;
+  });
+  $("#wizard-done").addEventListener("click", async () => {
+    const body = {};
+    if ($("#w2-input").value.trim()) body.output_dir = $("#w2-input").value.trim();
+    if ($("#w3-input").value.trim()) body.vault_path = $("#w3-input").value.trim();
+    if ($("#w4-input").value.trim()) body.zhipu_key = $("#w4-input").value.trim();
+    if (Object.keys(body).length) await api("/api/settings", { method: "POST", body });
+    localStorage.setItem("comfyagent_wizard", "1");
+    $("#wizard").hidden = true;
+    toast("设置已保存，开始创作吧 ✦", "ok");
+  });
 }
 
 /* ================= Obsidian ================= */
@@ -53,13 +96,26 @@ async function refreshObsidian() {
 }
 
 /* ================= Agent ================= */
+const CHAT_KEY = "comfyagent_chat";
+
+function loadChatHistory() { try { return JSON.parse(localStorage.getItem(CHAT_KEY) || "[]"); } catch { return []; } }
+function saveChatHistory(log) {
+  try {
+    const items = [...log.querySelectorAll(".msg")]
+      .filter((m) => !m.classList.contains("time") && !m.querySelector(".typing"))
+      .slice(-40)
+      .map((m) => ({ who: m.classList.contains("user") ? "user" : "bot", text: m.innerText }));
+    localStorage.setItem(CHAT_KEY, JSON.stringify(items));
+  } catch { }
+}
+
 function initAgent() {
   const log = $("#chat-log");
-  const say = (text, who = "bot", actions = null) => {
+  const say = (text, who = "bot", actions = null, silent = false) => {
     const el = document.createElement("div");
     el.className = `msg ${who}`;
     el.textContent = text;
-    if (actions?.length) {
+    if (actions?.length && who === "bot") {
       const box = document.createElement("div");
       box.className = "msg-actions";
       for (const a of actions) {
@@ -85,8 +141,16 @@ function initAgent() {
     }
     log.appendChild(el);
     log.scrollTop = log.scrollHeight;
+    if (!silent) saveChatHistory(log);
+    return el;
   };
-  say("你好，我是创作台助手。直接说人话就行：\n· 「画：雪夜竹林里的剑客 832x1216」\n· 「跑 Flux 文生图 ×3」\n· 「归档最近 10 个」\n· 「状态 / 中断 / 清空队列」", "bot");
+  // 恢复历史
+  const hist = loadChatHistory();
+  if (hist.length) {
+    for (const m of hist) say(m.text, m.who, null, true);
+  } else {
+    say("你好，我是创作台助手。直接说人话就行：\n· 「画：雪夜竹林里的剑客」\n· 「跑 H3 文生视频 ×2」\n· 「归档最近 10 个」\n· 「状态 / 中断 / 清空队列」", "bot");
+  }
 
   const send = async () => {
     const text = $("#chat-input").value.trim();
@@ -94,7 +158,8 @@ function initAgent() {
     $("#chat-input").value = "";
     say(text, "user");
     const holder = document.createElement("div");
-    holder.className = "msg bot"; holder.textContent = "思考中…";
+    holder.className = "msg bot";
+    holder.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
     log.appendChild(holder); log.scrollTop = log.scrollHeight;
     const r = await api("/api/agent", { method: "POST", body: { text } });
     holder.remove();
