@@ -25,6 +25,7 @@
     </div>
     <div class="nav-foot">
       <a class="nav-item small" data-view="settings" href="#settings"><span class="ico">⚙</span><span class="txt">设置</span></a>
+      <a class="nav-item small" id="nav-about" href="javascript:void(0)"><span class="ico">◉</span><span class="txt">关于</span></a>
       <div class="comfy-state"><i id="comfy-dot" class="dot off"></i><span id="comfy-dot-text">检测中…</span></div>
     </div>
   </nav>
@@ -35,9 +36,14 @@
     <section id="view-create" class="view active">
       <div class="create-wrap">
         <h1 class="create-title">今天想<em>创作</em>什么？</h1>
+        <div class="create-sub">本地 ComfyUI · 生成全程在你的显卡上进行</div>
+        <div class="mode-tabs" id="c-mode">
+          <button class="seg-btn active" data-mode="image"><span class="ico">🖼</span> 图像生成</button>
+          <button class="seg-btn" data-mode="video"><span class="ico">🎬</span> 视频生成</button>
+        </div>
         <div class="composer card-lift">
           <textarea id="c-prompt" class="composer-input" rows="3"
-            placeholder="描述你想要的画面…中文会自动转成英文提示词（Flux 对英文跟随更准）"></textarea>
+            placeholder="描述你想要的画面…中文会自动转成英文提示词（Flux/H3 对英文跟随更准）"></textarea>
           <div id="c-en-preview" class="en-preview" hidden></div>
           <div class="composer-bar">
             <div class="composer-opts">
@@ -71,13 +77,10 @@
             <button id="c-go" class="btn-go"><span>✦ 生 成</span></button>
           </div>
         </div>
+        <div class="composer-hint" id="c-hint"></div>
         <div class="inspire">
           <span class="inspire-label">灵感</span>
-          <div class="inspire-chips">
-            <button class="chip">cinematic close-up, swordsman in white robe looking back, sea of clouds at dawn, 3d guoman style</button>
-            <button class="chip">misty immortal mountains panorama, ink-wash anime style, flowing clouds</button>
-            <button class="chip">chibi mascot typing on a tiny laptop, macro lens, soft light</button>
-          </div>
+          <div class="inspire-chips" id="c-inspire"></div>
         </div>
         <div class="feed-head">
           <h2>最新创作</h2>
@@ -98,6 +101,7 @@
             <button class="chip" data-k="video">视频</button>
             <button class="chip" data-k="image">图片</button>
           </div>
+          <select id="g-folder" class="input select"><option>全部</option></select>
           <select id="g-sort" class="input select"><option value="new">最新优先</option><option value="old">最早优先</option><option value="big">文件最大</option></select>
           <button id="g-refresh" class="btn ghost">↻</button>
           <span id="g-count" class="muted"></span>
@@ -129,6 +133,7 @@
         <div id="canvas-wrap">
           <svg id="graph"></svg>
           <div class="canvas-tools">
+            <button class="tool on" id="cv-snap" title="网格吸附">#</button>
             <button class="tool" id="cv-add" title="添加节点(双击画布)">＋</button>
             <button class="tool" id="cv-fit" title="适配视图">⊡</button>
             <button class="tool" id="cv-zin" title="放大">+</button>
@@ -257,6 +262,72 @@
   <div class="hw-seg"><span class="hw-label">内存</span><div class="hw-bar"><i id="hw-ram-fill"></i></div><span id="hw-ram-text">—</span></div>
   <div class="hw-seg"><span class="hw-label">队列</span><span id="hw-queue-text">—</span></div>
 </footer>
+
+<!-- 批量操作条 -->
+<div id="batch-bar" hidden>
+  <span class="n">已选 <span id="batch-n">0</span> 项</span>
+  <button class="btn sm" id="b-archive">◈ 批量归档</button>
+  <button class="btn sm danger ghost" id="b-trash">🗑 批量删除</button>
+  <button class="btn sm ghost" id="b-cancel">取消</button>
+</div>
+
+<!-- 首次运行向导 -->
+<div id="wizard" hidden>
+  <div class="wizard-card">
+    <h2>欢迎使用 ComfyAgent 👋</h2>
+    <div class="wsub">花 30 秒完成初始设置，随时可在「设置」页修改</div>
+    <div class="wstep" id="w1">
+      <div class="wnum">1</div>
+      <div style="flex:1">
+        <div class="wt">检测 ComfyUI</div>
+        <div class="wd" id="w1-state">点击下方按钮探测本机 ComfyUI（默认 127.0.0.1:8188）</div>
+        <div class="wfield"><button class="btn sm" id="w1-btn">🔍 立即检测</button></div>
+      </div>
+    </div>
+    <div class="wstep" id="w2">
+      <div class="wnum">2</div>
+      <div style="flex:1">
+        <div class="wt">成果目录</div>
+        <div class="wd">ComfyUI 的 output 目录，画廊将实时展示这里的所有成果</div>
+        <div class="wfield"><input class="input" id="w2-input"></div>
+      </div>
+    </div>
+    <div class="wstep" id="w3">
+      <div class="wnum">3</div>
+      <div style="flex:1">
+        <div class="wt">Obsidian 知识库（可选）</div>
+        <div class="wd">配置 vault 路径后，可一键把成果归档为带参数的笔记</div>
+        <div class="wfield"><input class="input" id="w3-input" placeholder="例如 E:\work\obsidian\MyVault"></div>
+      </div>
+    </div>
+    <div class="wstep" id="w4">
+      <div class="wnum">4</div>
+      <div style="flex:1">
+        <div class="wt">智谱 API Key（可选）</div>
+        <div class="wd">让中文提示词增强和助手更聪明（GLM-4-Flash 免费额度即可）</div>
+        <div class="wfield"><input class="input" id="w4-input" type="password" placeholder="留空跳过"></div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:18px">
+      <button class="btn ghost" id="wizard-skip">稍后再说</button>
+      <button class="btn primary" id="wizard-done">完成并进入创作台</button>
+    </div>
+  </div>
+</div>
+
+<!-- 关于 -->
+<div id="about-modal" hidden>
+  <div class="wizard-card" style="width:420px;text-align:center">
+    <div class="brand-logo" style="margin:0 auto 12px;width:48px;height:48px;font-size:20px">◉</div>
+    <h2>ComfyAgent</h2>
+    <div class="wsub" id="about-version"></div>
+    <div class="muted" style="line-height:2">
+      本地优先的 AI 创作台 · 纯本地运行<br>
+      ComfyUI 可视化管理 ·画廊 · 工作流 · 知识库<br><br>
+      <a href="javascript:void(0)" id="about-close" style="color:var(--brand-2)">关闭</a>
+    </div>
+  </div>
+</div>
 
 <div id="toasts"></div>
 

@@ -9,6 +9,7 @@ let cur = null;                 // {id,name,api,layout,builtin}
 let objectInfo = null;
 let view = { x: 40, y: 30, k: 1 };
 let selected = null;
+let snap = true;
 let svg, gEdges, gNodes, gTemp;
 
 /* ================= 初始化 ================= */
@@ -21,6 +22,8 @@ export function initEditor() {
   svg.addEventListener("dblclick", onCanvasDblClick);
   document.addEventListener("keydown", (e) => {
     if (!$("#view-editor").classList.contains("active")) return;
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveWorkflow(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runWorkflow(); }
     if ((e.key === "Delete" || e.key === "Backspace") && selected && !isTyping(e.target)) delNode(selected);
   });
   $("#wf-save").addEventListener("click", saveWorkflow);
@@ -29,6 +32,7 @@ export function initEditor() {
   $("#wf-import").addEventListener("click", () => $("#wf-file").click());
   $("#wf-file").addEventListener("change", onImportFiles);
   $("#wf-export").addEventListener("click", exportApi);
+  $("#cv-snap").addEventListener("click", () => { snap = !snap; $("#cv-snap").classList.toggle("on", snap); });
   $("#cv-add").addEventListener("click", (e) => openPalette(e.clientX - 300, e.clientY - 100));
   $("#cv-fit").addEventListener("click", fitView);
   $("#cv-zin").addEventListener("click", () => zoomBy(1.25));
@@ -39,6 +43,7 @@ export function initEditor() {
     if (!pal.hidden && !pal.contains(e.target) && e.target.id !== "cv-add") pal.hidden = true;
   });
   loadList().then(() => {
+    validate();
     // 画廊「导入编辑器」
     const pend = localStorage.getItem("pendingImport");
     if (pend) {
@@ -51,6 +56,21 @@ export function initEditor() {
       } catch { }
     }
   });
+}
+
+const snapV = (v) => snap ? Math.round(v / 12) * 12 : v;
+
+/* 校验：object_info 可用时给未知类型节点打 invalid 标 */
+async function validate() {
+  try {
+    const r = await api("/api/object_info");
+    if (!r.ok) return;
+    objectInfo = r.object_info;
+    for (const id of nodeIds()) {
+      const ok = !!schemaOf(cur.api[id].class_type);
+      gNodes.querySelector(`g[data-id="${CSS.escape(id)}"]`)?.classList.toggle("invalid", !ok);
+    }
+  } catch { /* ComfyUI 离线时跳过 */ }
 }
 
 const mk = (tag, attrs = {}) => {
@@ -295,7 +315,10 @@ function onNodeDown(e, id) {
   selectNode(id);
   const start = { mx: e.clientX, my: e.clientY, ox: cur.layout[id][0], oy: cur.layout[id][1] };
   const move = (ev) => {
-    cur.layout[id] = [start.ox + (ev.clientX - start.mx) / view.k, start.oy + (ev.clientY - start.my) / view.k];
+    cur.layout[id] = [
+      snapV(start.ox + (ev.clientX - start.mx) / view.k),
+      snapV(start.oy + (ev.clientY - start.my) / view.k),
+    ];
     const g = gNodes.querySelector(`g[data-id="${CSS.escape(id)}"]`);
     if (g) g.setAttribute("transform", `translate(${cur.layout[id][0]},${cur.layout[id][1]})`);
     renderEdgesOnly();
