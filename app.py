@@ -12,9 +12,10 @@ import sys
 import threading
 import time
 
-# 日志重定向（--noconsole 时没有 stdout）
+# 日志重定向（--noconsole 时没有 stdout）—— 写入用户数据目录（与 server.DATA_DIR 一致）
 BASE_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
-LOG_PATH = os.path.join(BASE_DIR, "data", "app.log")
+APPDATA = os.environ.get("APPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Roaming")
+LOG_PATH = os.path.join(APPDATA, "ComfyAgent", "data", "app.log") if getattr(sys, "frozen", False) else os.path.join(BASE_DIR, "data", "app.log")
 
 
 class _Logger:
