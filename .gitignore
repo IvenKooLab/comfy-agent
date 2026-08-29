@@ -1,0 +1,4 @@
+data/cache/
+data/trash/
+__pycache__/
+*.pyc
