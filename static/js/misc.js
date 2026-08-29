@@ -289,7 +289,68 @@ function initAgent() {
 }
 
 /* ================= 设置 ================= */
+let llmPresets = [];
+
+function initLLMSettings() {
+  api("/api/llm/providers").then((r) => {
+    if (!r.ok) return;
+    llmPresets = r.presets;
+    const sel = $("#s-llm-provider");
+    sel.innerHTML = llmPresets.map((p) => `<option value="${p.id}">${p.name}</option>`).join("");
+    api("/api/settings").then((s) => {
+      if (!s.ok) return;
+      sel.value = s.settings.llm_provider || "zhipu";
+      onProviderChange(s.settings.llm_model);
+    });
+  });
+  $("#s-llm-provider").addEventListener("change", () => onProviderChange());
+  $("#s-llm-refresh").addEventListener("click", () => refreshLLMModels());
+}
+
+function currentPreset() {
+  return llmPresets.find((p) => p.id === $("#s-llm-provider").value) || { base: "", models: [] };
+}
+
+function onProviderChange(keepModel) {
+  const p = currentPreset();
+  if (p.id !== "custom" && p.base) $("#s-llm-base").value = p.base;
+  // 预设兜底模型列表先填上，再尝试动态拉取
+  fillModelSelect(p.models || []);
+  if (keepModel) $("#s-llm-model").value = keepModel;
+  refreshLLMModels(keepModel);
+}
+
+function fillModelSelect(models, keep) {
+  const sel = $("#s-llm-model");
+  const cur = keep || sel.value;
+  sel.innerHTML = (models.length ? models : [""]).map((m) => `<option>${m}</option>`).join("");
+  if (cur && models.includes(cur)) sel.value = cur;
+}
+
+async function refreshLLMModels(keep) {
+  const manual = $("#s-llm-model-manual");
+  const btn = $("#s-llm-refresh");
+  btn.disabled = true; btn.textContent = "拉取中…";
+  try {
+    const body = { provider: $("#s-llm-provider").value, base_url: $("#s-llm-base").value.trim() };
+    const key = $("#s-llm-key").value.trim();
+    if (key) body.key = key;
+    const r = await api("/api/llm/models", { method: "POST", body });
+    if (r.ok && r.models.length) {
+      fillModelSelect(r.models, keep || r.models.includes($("#s-llm-model").value) ? $("#s-llm-model").value : undefined);
+      manual.style.display = "none";
+      toast(`已拉取 ${r.models.length} 个模型`, "ok");
+    } else {
+      manual.style.display = "block";
+      toast("该厂商模型列表拉取失败，可手动填写模型名", "err");
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = "↻ 拉取模型";
+  }
+}
+
 function initSettings() {
+  initLLMSettings();
   loadForm();
   $("#s-lang").addEventListener("change", (e) => setLang(e.target.value));
   $("#s-update").addEventListener("click", async () => {
@@ -315,10 +376,13 @@ function initSettings() {
       output_dir: $("#s-output").value.trim(),
       vault_path: $("#s-vault").value.trim(),
       port: parseInt($("#s-port").value) || 8190,
-      zhipu_model: $("#s-zhipu-model").value.trim(),
       gitee_repo: $("#s-gitee-repo").value.trim(),
+      llm_provider: $("#s-llm-provider").value,
+      llm_base_url: $("#s-llm-base").value.trim(),
+      llm_model: ($("#s-llm-model-manual").style.display !== "none" && $("#s-llm-model-manual").value.trim())
+        || $("#s-llm-model").value,
     };
-    if ($("#s-zhipu").value.trim()) body.zhipu_key = $("#s-zhipu").value.trim();
+    if ($("#s-llm-key").value.trim()) body.llm_key = $("#s-llm-key").value.trim();
     if ($("#s-gitee-token").value.trim()) body.gitee_token = $("#s-gitee-token").value.trim();
     const r = await api("/api/settings", { method: "POST", body });
     $("#s-msg").textContent = r.ok ? r.msg : r.error;
@@ -341,10 +405,11 @@ async function loadForm() {
   $("#s-output").value = s.output_dir || "";
   $("#s-vault").value = s.vault_path || "";
   $("#s-port").value = s.port || 8190;
-  $("#s-zhipu-model").value = s.zhipu_model || "glm-4-flash";
-  $("#s-zhipu").placeholder = s.has_zhipu_key ? "已配置（留空保持不变）" : "sk-…";
   $("#s-gitee-repo").value = s.gitee_repo || "gu-dongwei/comfy-agent";
   $("#s-gitee-token").placeholder = s.has_gitee_token ? "已配置（留空保持不变）" : "私有仓检查更新需要";
+  $("#s-llm-base").value = s.llm_base || s.llm_base_url || "";
+  $("#s-llm-key").placeholder = s.has_llm_key ? "已配置（留空保持不变）" : "sk-…";
+  if (s.llm_model) { const m = $("#s-llm-model"); m.innerHTML = `<option>${s.llm_model}</option>`; m.value = s.llm_model; }
   $("#s-lang").value = getLang();
   // 环境卡（迭代27）
   const st = await api("/api/status");

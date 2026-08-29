@@ -61,6 +61,21 @@ DEFAULT_SETTINGS = {
     "comfy_launch_args": "--listen 127.0.0.1 --port 8188 --reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory",
     "gitee_repo": "gu-dongwei/comfy-agent",
     "gitee_token": "",
+    "llm_provider": "zhipu",
+    "llm_base_url": "https://open.bigmodel.cn/api/paas/v4",
+    "llm_key": "",
+    "llm_model": "glm-4-flash",
+}
+
+# LLM 厂商预设（OpenAI 兼容协议）；models 为兜底列表，优先用 /models 动态拉取
+LLM_PRESETS = {
+    "zhipu":       {"name": "智谱 GLM",     "base": "https://open.bigmodel.cn/api/paas/v4",             "models": ["glm-4-flash", "glm-4-plus", "glm-4.5", "glm-4.5-air"]},
+    "deepseek":    {"name": "DeepSeek",      "base": "https://api.deepseek.com/v1",                       "models": ["deepseek-chat", "deepseek-reasoner"]},
+    "moonshot":    {"name": "月之暗面 Kimi", "base": "https://api.moonshot.cn/v1",                        "models": ["moonshot-v1-8k", "moonshot-v1-32k", "kimi-k2-0711-preview"]},
+    "dashscope":   {"name": "阿里通义千问",  "base": "https://dashscope.aliyuncs.com/compatible-mode/v1", "models": ["qwen-plus", "qwen-turbo", "qwen-max"]},
+    "siliconflow": {"name": "硅基流动",      "base": "https://api.siliconflow.cn/v1",                     "models": ["Qwen/Qwen2.5-7B-Instruct", "deepseek-ai/DeepSeek-V3"]},
+    "openai":      {"name": "OpenAI",        "base": "https://api.openai.com/v1",                         "models": ["gpt-4o-mini", "gpt-4o"]},
+    "custom":      {"name": "自定义 OpenAI 兼容", "base": "", "models": []},
 }
 
 MEDIA_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
@@ -83,6 +98,12 @@ def load_settings():
                 s.update(json.load(f))
         except Exception:
             pass
+    # 旧版 zhipu_key/zhipu_model → 新 llm_* 字段迁移
+    if not s.get("llm_key") and s.get("zhipu_key"):
+        s["llm_provider"] = "zhipu"
+        s["llm_key"] = s["zhipu_key"]
+        s["llm_model"] = s.get("zhipu_model", "glm-4-flash")
+        s["llm_base_url"] = LLM_PRESETS["zhipu"]["base"]
     return s
 
 
@@ -904,26 +925,45 @@ def polish_english(en):
     return en + ", " + _STYLE_BOOST
 
 
-def enhance_prompt_zhipu(text, key, model):
-    body = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": (
-                "你是 Flux 文生图提示词专家。把用户的中文画面描述翻译并重写为一段 40-80 词的高质量英文提示词："
-                "保留主体、动作、构图、光线、风格意图；补全必要细节（镜头类型、光线、氛围、风格）。"
-                "只输出英文提示词本身，不要任何解释或引号。")},
-            {"role": "user", "content": text},
-        ], "temperature": 0.3,
-    }).encode()
-    req = urllib.request.Request("https://open.bigmodel.cn/api/paas/v4/chat/completions", data=body,
+def _llm_chat(messages, temperature=0.3, timeout=60):
+    """统一 LLM 通道：OpenAI 兼容协议，按设置里的厂商/BaseURL/Key/模型调用。"""
+    provider = SETTINGS.get("llm_provider", "zhipu")
+    base = (SETTINGS.get("llm_base_url") or LLM_PRESETS.get(provider, {}).get("base", "")).rstrip("/")
+    key = SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key") or ""
+    model = SETTINGS.get("llm_model") or SETTINGS.get("zhipu_model") or "glm-4-flash"
+    if not key:
+        raise RuntimeError("未配置 API Key（设置页 → AI 厂商）")
+    if not base:
+        raise RuntimeError("未配置接口地址（设置页 → AI 厂商）")
+    body = json.dumps({"model": model, "messages": messages, "temperature": temperature}).encode()
+    req = urllib.request.Request(base + "/chat/completions", data=body,
                                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
-    with urllib.request.urlopen(req, timeout=30) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         data = json.loads(r.read())
     return data["choices"][0]["message"]["content"].strip()
 
 
+def llm_models_fetch(provider, base_url=None, key=None):
+    """拉取厂商模型列表（OpenAI 兼容 /models）。失败返回 None。"""
+    preset = LLM_PRESETS.get(provider, {})
+    base = (base_url or preset.get("base", "")).rstrip("/")
+    key = key or SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key") or ""
+    if not base:
+        return None
+    req = urllib.request.Request(base + "/models",
+                                 headers={"Authorization": f"Bearer {key}", "User-Agent": "comfyagent"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = json.loads(r.read())
+        ids = [m.get("id") for m in (data.get("data") or []) if m.get("id")]
+        return sorted(ids) or None
+    except Exception:
+        return None
+
+
 _IMG_FORMULA = ("主体(the subject) → 动作/姿态 → 环境 → 光线 → 镜头/构图 → 艺术风格，"
                 "写成一段连贯的自然语言长描述（Flux 的 T5 编码器吃密集描述，不要关键词堆砌）")
+
 _VIDEO_FORMULA = ("一个连续镜头（5 秒内）：主体 → 主体动作/表情变化 → 运镜方式（缓慢推近/横移/固定机位）"
                   " → 环境与光线 → 环境音描述。遵守 h3lite 提示词规范：单一场景、动作幅度小、不写对白。")
 
@@ -934,34 +974,22 @@ def enhance_prompt(text, style_id=None, mode="image"):
     if not text:
         return {"ok": False, "error": "空提示词"}
     style = get_style(style_id)
-    key = SETTINGS.get("zhipu_key", "")
-    if key:
+    if SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key"):
         try:
-            if mode == "video":
-                formula, extra = _VIDEO_FORMULA, ""
-            else:
-                formula, extra = _IMG_FORMULA, ""
+            formula = _VIDEO_FORMULA if mode == "video" else _IMG_FORMULA
             style_line = f"\n风格方向（务必贯彻）：{style['direction']}" if style else ""
-            body = json.dumps({
-                "model": SETTINGS.get("zhipu_model", "glm-4-flash"),
-                "messages": [
-                    {"role": "system", "content": (
-                        f"你是{'视频' if mode == 'video' else '图像'}生成提示词专家。把用户的中文描述翻译并重写为"
-                        f"一段 40-90 词的英文提示词。结构公式：{formula}{style_line}\n"
-                        "只输出英文提示词本身，不要解释或引号。")},
-                    {"role": "user", "content": text},
-                ], "temperature": 0.3,
-            }).encode()
-            req = urllib.request.Request("https://open.bigmodel.cn/api/paas/v4/chat/completions", data=body,
-                                         headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
-            with urllib.request.urlopen(req, timeout=30) as r:
-                data = json.loads(r.read())
-            en = data["choices"][0]["message"]["content"].strip()
+            en = _llm_chat([
+                {"role": "system", "content": (
+                    f"你是{'视频' if mode == 'video' else '图像'}生成提示词专家。把用户的中文描述翻译并重写为"
+                    f"一段 40-90 词的英文提示词。结构公式：{formula}{style_line}\n"
+                    "只输出英文提示词本身，不要解释或引号。")},
+                {"role": "user", "content": text},
+            ])
             if style and style["tokens"].split(",")[0].strip().lower() not in en.lower():
                 en = en.rstrip(".") + ", " + style["tokens"].rstrip(", ")
-            return {"ok": True, "english": en, "engine": "glm", "style": style_id}
+            return {"ok": True, "english": en, "engine": "llm", "style": style_id}
         except Exception as e:
-            note = f"GLM 增强失败({e})，用免费翻译兜底"
+            note = f"LLM 增强失败({e})，用免费翻译兜底"
     else:
         note = None
     try:
@@ -976,24 +1004,17 @@ def enhance_prompt(text, style_id=None, mode="image"):
 
 
 
-def zhipu_chat(text, key, model):
-    body = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": (
-                "你是 ComfyAgent 控制台助手，把用户中文指令转成 JSON 动作。可用动作："
-                '{"run":{"workflow":"名称","times":1,"seed":null,"text":"提示词覆盖"},'
-                '{"interrupt":{}},{"clear_queue":{}},{"status":{}},'
-                '{"archive":{"count":5,"title":""}},{"open":{"view":"gallery"}}。'
-                "只输出一个 JSON 对象，不要多余文字。无法理解则输出 {\"reply\":\"解释原因\"}")},
-            {"role": "user", "content": text},
-        ], "temperature": 0.1,
-    }).encode()
-    req = urllib.request.Request("https://open.bigmodel.cn/api/paas/v4/chat/completions", data=body,
-                                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        data = json.loads(r.read())
-    return data["choices"][0]["message"]["content"]
+def agent_intent_llm(text):
+    """助手意图理解：统一 LLM 通道，输出 JSON 动作。"""
+    return _llm_chat([
+        {"role": "system", "content": (
+            "你是 ComfyAgent 控制台助手，把用户中文指令转成 JSON 动作。可用动作："
+            '{"run":{"workflow":"名称","times":1,"seed":null,"text":"提示词覆盖"},'
+            '{"interrupt":{}},{"clear_queue":{}},{"status":{}},'
+            '{"archive":{"count":5,"title":""}},{"open":{"view":"gallery"}}。'
+            "只输出一个 JSON 对象，不要多余文字。无法理解则输出 {\"reply\":\"解释原因\"}")},
+        {"role": "user", "content": text},
+    ], temperature=0.1)
 
 
 def agent_execute(text):
@@ -1078,9 +1099,9 @@ def agent_execute(text):
         reply = res.get("msg", "")
         acts.append({"type": "submitted", "prompt_ids": res.get("prompt_ids", [])})
     else:
-        if SETTINGS.get("zhipu_key"):
+        if SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key"):
             try:
-                raw = zhipu_chat(t, SETTINGS["zhipu_key"], SETTINGS.get("zhipu_model", "glm-4-flash"))
+                raw = agent_intent_llm(t)
                 raw = raw.strip().strip("`")
                 raw = re.sub(r"^json\s*", "", raw)
                 obj = json.loads(raw)
@@ -1089,7 +1110,7 @@ def agent_execute(text):
                 else:
                     return agent_execute_coerce(obj)
             except Exception as e:
-                reply = f"（GLM 解析失败：{e}）" + AGENT_HELP
+                reply = f"（LLM 解析失败：{e}）" + AGENT_HELP
         else:
             reply = AGENT_HELP
     return {"reply": reply, "actions": acts}
@@ -1531,20 +1552,24 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/settings" and method == "GET":
             s = dict(SETTINGS)
             s["has_zhipu_key"] = bool(s.get("zhipu_key"))
-            s["has_gitee_token"] = bool(s.get("gitee_token"))
+            s["has_llm_key"] = bool(s.get("llm_key") or s.get("zhipu_key"))
             s.pop("zhipu_key", None)
+            s.pop("llm_key", None)
             s.pop("gitee_token", None)
             s.pop("client_id", None)
             return self.send_json({"ok": True, "settings": s})
         if path == "/api/settings" and method == "POST":
             for k in ("port", "comfy_url", "output_dir", "vault_path", "zhipu_model",
-                      "comfy_dir", "comfy_python", "comfy_launch_args", "gitee_repo", "gitee_token"):
+                      "comfy_dir", "comfy_python", "comfy_launch_args", "gitee_repo", "gitee_token",
+                      "llm_provider", "llm_base_url", "llm_model"):
                 if k in body:
                     SETTINGS[k] = body[k]
             if body.get("zhipu_key"):
                 SETTINGS["zhipu_key"] = body["zhipu_key"]
             if body.get("gitee_token"):
                 SETTINGS["gitee_token"] = body["gitee_token"]
+            if body.get("llm_key"):
+                SETTINGS["llm_key"] = body["llm_key"]
             save_settings(SETTINGS)
             _gallery_cache["ts"] = 0
             return self.send_json({"ok": True, "msg": "已保存（端口改动需重启服务）"})
@@ -1841,6 +1866,16 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 return self.send_json({"ok": True, "lines": "（暂无日志：还没从创作台启动过 ComfyUI）"})
 
+        # ---- LLM 厂商
+        if path == "/api/llm/providers":
+            return self.send_json({"ok": True, "presets": [
+                {"id": k, "name": v["name"], "base": v["base"], "models": v["models"]}
+                for k, v in LLM_PRESETS.items()]})
+        if path == "/api/llm/models" and method == "POST":
+            ids = llm_models_fetch(body.get("provider", ""), body.get("base_url"), body.get("key"))
+            preset = LLM_PRESETS.get(body.get("provider", ""), {})
+            return self.send_json({"ok": ids is not None, "models": ids or preset.get("models", []),
+                                   "fetched": ids is not None})
         # ---- Agent
         if path == "/api/styles":
             return self.send_json({"ok": True, "styles": [
