@@ -1,8 +1,9 @@
 /* app.js — 核心：API 封装、路由、SSE、Toast、全局状态 */
-import { initGallery, galleryRefresh } from "./gallery.js";
+import { initGallery, galleryRefresh, openLightboxPublic } from "./gallery.js";
 import { initEditor } from "./editor.js";
 import { initRuns, runsOnSSE } from "./runs.js";
 import { initMisc } from "./misc.js";
+import { initCreate, refreshFeed } from "./create.js";
 
 export const $ = (sel) => document.querySelector(sel);
 export const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -47,17 +48,18 @@ export function mediaUrl(path, extra = {}) {
 }
 
 /* ---------- 路由 ---------- */
-const views = ["gallery", "editor", "runs", "obsidian", "agent", "settings"];
+const views = ["create", "gallery", "editor", "runs", "obsidian", "agent", "settings"];
 export function goto(view) {
   if (!views.includes(view)) return;
   location.hash = "#" + view;
 }
 function applyHash() {
-  let v = (location.hash || "#gallery").slice(1);
-  if (!views.includes(v)) v = "gallery";
+  let v = (location.hash || "#create").slice(1);
+  if (!views.includes(v)) v = "create";
   $$(".view").forEach((el) => el.classList.toggle("active", el.id === "view-" + v));
   $$(".nav-item").forEach((el) => el.classList.toggle("active", el.dataset.view === v));
   if (v === "gallery") galleryRefresh(false);
+  if (v === "create") refreshFeed();
 }
 window.addEventListener("hashchange", applyHash);
 
@@ -90,6 +92,7 @@ export function setComfyDot(on) {
 
 /* ---------- 启动 ---------- */
 async function boot() {
+  initCreate();
   initGallery();
   initEditor();
   initRuns();

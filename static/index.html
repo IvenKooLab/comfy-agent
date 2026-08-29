@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ComfyAgent · 可视化创作台</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎛️</text></svg>">
+<title>ComfyAgent · AI 创作台</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎬</text></svg>">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -12,29 +12,83 @@
   <!-- 侧边导航 -->
   <nav id="sidebar">
     <div class="brand">
-      <div class="brand-logo">🎞️</div>
-      <div class="brand-name">ComfyAgent<br><span>可视化创作台</span></div>
+      <div class="brand-logo"><span>◉</span></div>
+      <div class="brand-name">ComfyAgent</div>
     </div>
     <div class="nav-items">
-      <a class="nav-item active" data-view="gallery" href="#gallery"><span class="ico">🖼️</span>画廊</a>
-      <a class="nav-item" data-view="editor" href="#editor"><span class="ico">🧩</span>工作流</a>
-      <a class="nav-item" data-view="runs" href="#runs"><span class="ico">⚙️</span>任务</a>
-      <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">🟣</span>知识库</a>
-      <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✨</span>助手</a>
-      <a class="nav-item" data-view="settings" href="#settings"><span class="ico">🔧</span>设置</a>
+      <a class="nav-item active" data-view="create" href="#create"><span class="ico">✦</span><span class="txt">创作</span></a>
+      <a class="nav-item" data-view="gallery" href="#gallery"><span class="ico">▦</span><span class="txt">画廊</span></a>
+      <a class="nav-item" data-view="editor" href="#editor"><span class="ico">⑃</span><span class="txt">工作流</span></a>
+      <a class="nav-item" data-view="runs" href="#runs"><span class="ico">◷</span><span class="txt">任务</span></a>
+      <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">◈</span><span class="txt">知识库</span></a>
+      <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✧</span><span class="txt">助手</span></a>
     </div>
-    <div class="side-foot">
-      <div id="comfy-dot" class="dot off" title="ComfyUI 状态"></div>
-      <span id="comfy-dot-text">检测中…</span>
+    <div class="nav-foot">
+      <a class="nav-item small" data-view="settings" href="#settings"><span class="ico">⚙</span><span class="txt">设置</span></a>
+      <div class="comfy-state"><i id="comfy-dot" class="dot off"></i><span id="comfy-dot-text">检测中…</span></div>
     </div>
   </nav>
 
   <!-- 主区域 -->
   <main id="main">
+    <!-- ============ 创作（Composer 首页） ============ -->
+    <section id="view-create" class="view active">
+      <div class="create-wrap">
+        <h1 class="create-title">今天想<em>创作</em>什么？</h1>
+        <div class="composer card-lift">
+          <textarea id="c-prompt" class="composer-input" rows="3"
+            placeholder="描述你想要的画面…例如：电影感特写，赛博朋克风的中国少女剑客，霓虹雨夜，832x1216"></textarea>
+          <div class="composer-bar">
+            <div class="composer-opts">
+              <div class="opt-group" id="c-wf-box">
+                <span class="opt-label">工作流</span>
+                <select id="c-wf" class="opt-select"></select>
+              </div>
+              <div class="opt-group" id="c-size-box">
+                <span class="opt-label">尺寸</span>
+                <div class="seg" id="c-size">
+                  <button class="seg-btn active" data-w="832" data-h="1216">3:4</button>
+                  <button class="seg-btn" data-w="1216" data-h="832">16:9</button>
+                  <button class="seg-btn" data-w="1024" data-h="1024">1:1</button>
+                </div>
+              </div>
+              <div class="opt-group">
+                <span class="opt-label">数量</span>
+                <div class="seg" id="c-count">
+                  <button class="seg-btn active" data-n="1">1</button>
+                  <button class="seg-btn" data-n="2">2</button>
+                  <button class="seg-btn" data-n="4">4</button>
+                </div>
+              </div>
+              <div class="opt-group seed-box">
+                <span class="opt-label">种子</span>
+                <input id="c-seed" class="opt-input" type="number" placeholder="随机">
+                <button id="c-dice" class="dice" title="随机种子">🎲</button>
+              </div>
+            </div>
+            <button id="c-go" class="btn-go"><span>✦ 生 成</span></button>
+          </div>
+        </div>
+        <div class="inspire">
+          <span class="inspire-label">灵感</span>
+          <div class="inspire-chips">
+            <button class="chip">电影感特写，雨夜霓虹下的少女剑客，赛博国风</button>
+            <button class="chip">云海仙山全景，水墨国漫风格，云雾流动</button>
+            <button class="chip">Q版团子在书桌上打字，微距，柔光</button>
+          </div>
+        </div>
+        <div class="feed-head">
+          <h2>最新创作</h2>
+          <a class="feed-more" href="#gallery">进入画廊 →</a>
+        </div>
+        <div id="create-feed" class="feed"></div>
+      </div>
+    </section>
+
     <!-- ============ 画廊 ============ -->
-    <section id="view-gallery" class="view active">
+    <section id="view-gallery" class="view">
       <header class="page-head">
-        <h1>成果画廊</h1>
+        <h1>画廊</h1>
         <div class="head-tools">
           <input id="g-search" class="input" placeholder="搜索文件名…">
           <div class="chips" id="g-kind">
@@ -43,14 +97,14 @@
             <button class="chip" data-k="image">图片</button>
           </div>
           <select id="g-sort" class="input select"><option value="new">最新优先</option><option value="old">最早优先</option><option value="big">文件最大</option></select>
-          <button id="g-refresh" class="btn ghost">↻ 刷新</button>
+          <button id="g-refresh" class="btn ghost">↻</button>
           <span id="g-count" class="muted"></span>
         </div>
       </header>
       <div id="gallery-grid" class="masonry"></div>
       <div id="gallery-empty" class="empty" hidden>
         <div class="empty-ico">📭</div>
-        <p>还没有成果物。去「工作流」页跑一个，或直接让助手「画：xxx」。</p>
+        <p>还没有成果物。去<a href="#create">创作</a>页生成第一个，或让助手「画：xxx」。</p>
       </div>
     </section>
 
@@ -60,12 +114,12 @@
         <h1>工作流</h1>
         <div class="head-tools">
           <input id="wf-name" class="input grow" placeholder="工作流名称">
-          <button id="wf-save" class="btn">💾 保存</button>
+          <button id="wf-save" class="btn">保存</button>
           <button id="wf-run" class="btn primary">▶ 运行</button>
-          <button id="wf-interrupt" class="btn danger ghost">⏹ 中断</button>
-          <button id="wf-import" class="btn ghost">📥 导入</button>
+          <button id="wf-interrupt" class="btn danger ghost">⏹</button>
+          <button id="wf-import" class="btn ghost">导入</button>
           <input id="wf-file" type="file" accept=".json,.png" multiple hidden>
-          <button id="wf-export" class="btn ghost">📤 导出API</button>
+          <button id="wf-export" class="btn ghost">导出API</button>
         </div>
       </header>
       <div class="editor-body">
@@ -75,10 +129,10 @@
           <div class="canvas-tools">
             <button class="tool" id="cv-add" title="添加节点(双击画布)">＋</button>
             <button class="tool" id="cv-fit" title="适配视图">⊡</button>
-            <button class="tool" id="cv-zin" title="放大">＋🔍</button>
-            <button class="tool" id="cv-zout" title="缩小">－🔍</button>
+            <button class="tool" id="cv-zin" title="放大">+</button>
+            <button class="tool" id="cv-zout" title="缩小">−</button>
           </div>
-          <div id="canvas-hint" class="canvas-hint">双击空白处添加节点 · 从节点右侧圆点拖到另一节点左侧圆点连线 · 点击已连线的输入圆点断开 · Delete 删除选中</div>
+          <div id="canvas-hint" class="canvas-hint">双击空白添加节点 · 拖动输出口到输入口连线 · 点击已连输入口断开 · Delete 删除选中</div>
         </div>
         <aside id="inspector">
           <div id="inspector-empty" class="muted pad">点击一个节点查看/编辑参数</div>
@@ -110,10 +164,10 @@
 
     <!-- ============ Obsidian ============ -->
     <section id="view-obsidian" class="view">
-      <header class="page-head"><h1>Obsidian 知识库</h1></header>
+      <header class="page-head"><h1>知识库</h1></header>
       <div id="obs-status" class="card pad"></div>
       <div class="head-tools margin-top">
-        <button id="obs-sync" class="btn">🔄 同步工作流到知识库</button>
+        <button id="obs-sync" class="btn">同步工作流到知识库</button>
         <button id="obs-refresh" class="btn ghost">↻ 刷新</button>
       </div>
       <h3 class="sec-title">归档记录</h3>
@@ -124,15 +178,15 @@
 
     <!-- ============ 助手 ============ -->
     <section id="view-agent" class="view">
-      <header class="page-head"><h1>智能助手</h1></header>
+      <header class="page-head"><h1>助手</h1></header>
       <div id="chat" class="card">
         <div id="chat-log"></div>
         <div class="chat-quick">
-          <button class="chip" data-q="状态">📊 状态</button>
-          <button class="chip" data-q="跑 Flux 文生图">🎨 生图</button>
-          <button class="chip" data-q="归档最近 5 个">📦 归档5个</button>
-          <button class="chip" data-q="清空队列">🧹 清空队列</button>
-          <button class="chip" data-q="打开知识库">🟣 知识库</button>
+          <button class="chip" data-q="状态">状态</button>
+          <button class="chip" data-q="跑 Flux 文生图">生图</button>
+          <button class="chip" data-q="归档最近 5 个">归档5个</button>
+          <button class="chip" data-q="清空队列">清空队列</button>
+          <button class="chip" data-q="打开知识库">知识库</button>
         </div>
         <div class="chat-input-row">
           <input id="chat-input" class="input grow" placeholder="例如：画：雪夜竹林剑客 832x1216 ／ 跑 Flux 文生图 ×3 ／ 归档最近 10 个">
@@ -173,12 +227,12 @@
     <div id="lb-info" class="lb-info"></div>
     <div id="lb-summary" class="lb-summary"></div>
     <div class="lb-actions">
-      <button class="btn" id="lb-import">🧩 导入编辑器</button>
-      <button class="btn" id="lb-rerun">🎲 重新生成</button>
-      <button class="btn" id="lb-archive">🟣 归档</button>
-      <button class="btn ghost" id="lb-reveal">📂 所在文件夹</button>
-      <button class="btn ghost" id="lb-download">⬇ 下载</button>
-      <button class="btn danger ghost" id="lb-trash">🗑 删除</button>
+      <button class="btn" id="lb-import">导入编辑器</button>
+      <button class="btn" id="lb-rerun">重新生成</button>
+      <button class="btn" id="lb-archive">归档到知识库</button>
+      <button class="btn ghost" id="lb-reveal">所在文件夹</button>
+      <button class="btn ghost" id="lb-download">下载</button>
+      <button class="btn danger ghost" id="lb-trash">删除</button>
     </div>
     <div class="lb-note">
       <textarea id="lb-note-text" class="input" rows="2" placeholder="归档手记（可选）"></textarea>

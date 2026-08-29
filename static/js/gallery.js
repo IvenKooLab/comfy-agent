@@ -100,19 +100,64 @@ function render() {
     const card = document.createElement("div");
     card.className = "g-item";
     card.dataset.path = it.path;
-    const src = it.kind === "video" ? mediaUrl(it.path, { thumb: "1" }) : mediaUrl(it.path, it.thumb ? { thumb: "1" } : {});
-    const inner = it.kind === "video"
-      ? `<img loading="lazy" src="${src}" alt=""><div class="g-play">▶</div>`
-      : `<img loading="lazy" src="${src}" alt="">`;
-    card.innerHTML = `${inner}<span class="g-badge">${it.kind === "video" ? "MP4" : "IMG"}${it.w ? " · " + it.w + "×" + it.h : ""}</span>
+    const src = it.kind === "video" ? mediaUrl(it.path, { thumb: "1" }) : mediaUrl(it.path);
+    card.innerHTML = `
+      <img loading="lazy" src="${src}" alt="">
+      ${it.kind === "video" ? '<div class="g-play"><span>▶</span></div>' : ""}
+      <div class="g-overlay">
+        <div class="g-acts">
+          <button class="g-act" data-act="rerun" title="重新生成">↻</button>
+          <button class="g-act" data-act="edit" title="导入编辑器">⑃</button>
+          <button class="g-act" data-act="archive" title="归档到知识库">◈</button>
+          <button class="g-act" data-act="download" title="下载">↓</button>
+          <button class="g-act del" data-act="del" title="删除">✕</button>
+        </div>
+      </div>
+      <span class="g-badge">${it.kind === "video" ? "视频" : "图片"}${it.w ? " · " + it.w + "×" + it.h : ""}</span>
       <div class="g-foot"><span class="g-name" title="${it.path}">${it.name}</span><span class="g-date">${fmtTime(it.mtime)}</span></div>`;
-    card.addEventListener("click", () => openLightbox(list, list.indexOf(it)));
-    // 视频卡片 hover 预览
-    card.addEventListener("mouseenter", () => hoverPreview(card, it));
-    card.addEventListener("mouseleave", () => hoverStop(card));
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".g-act")) return;
+      openLightbox(list, list.indexOf(it));
+    });
+    // 悬浮操作
+    card.querySelector('[data-act="download"]')?.addEventListener("click", (e) => {
+      e.stopPropagation(); window.open(mediaUrl(it.path, { download: "1" }), "_blank");
+    });
+    card.querySelector('[data-act="archive"]')?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const r = await api("/api/obsidian/archive", {
+        method: "POST", body: { paths: [it.path], title: it.name.replace(/\.[^.]+$/, "").slice(0, 40) },
+      });
+      if (r.ok) { toast(`已归档：${r.note}`, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
+      else toast(r.error || "归档失败", "err");
+    });
+    card.querySelector('[data-act="edit"]')?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
+      if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流", "err"); return; }
+      localStorage.setItem("pendingImport", JSON.stringify({ api: meta.prompt, name: it.name.replace(/\.[^.]+$/, "") }));
+      goto("editor");
+    });
+    card.querySelector('[data-act="rerun"]')?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
+      if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流，无法直接重跑", "err"); return; }
+      const r = await api("/api/prompt", { method: "POST", body: { name: "重跑·" + it.name, prompt: meta.prompt } });
+      r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
+    });
+    card.querySelector('[data-act="del"]')?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm(`把「${it.name}」移入回收站？`)) return;
+      const r = await api("/api/media/trash", { method: "POST", body: { paths: [it.path] } });
+      if (r.ok) { toast("已移入回收站（data/trash）", "ok"); galleryRefresh(true); }
+      else toast(r.error, "err");
+    });
     grid.appendChild(card);
   }
 }
+
+/* 创作页复用灯箱 */
+export function openLightboxPublic(list, idx) { openLightbox(list, idx); }
 
 let hoverTimer = null;
 function hoverPreview(card, it) {
