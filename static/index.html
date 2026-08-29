@@ -16,17 +16,17 @@
       <div class="brand-name">ComfyAgent</div>
     </div>
     <div class="nav-items">
-      <a class="nav-item active" data-view="create" href="#create"><span class="ico">✦</span><span class="txt">创作</span></a>
-      <a class="nav-item" data-view="gallery" href="#gallery"><span class="ico">▦</span><span class="txt">画廊</span></a>
-      <a class="nav-item" data-view="editor" href="#editor"><span class="ico">⑃</span><span class="txt">工作流</span></a>
-      <a class="nav-item" data-view="runs" href="#runs"><span class="ico">◷</span><span class="txt">任务</span></a>
-      <a class="nav-item" data-view="launcher" href="#launcher"><span class="ico">⏻</span><span class="txt">启动器</span></a>
-      <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">◈</span><span class="txt">知识库</span></a>
-      <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✧</span><span class="txt">助手</span></a>
+      <a class="nav-item active" data-view="create" href="#create"><span class="ico">✦</span><span class="txt" data-i18n="nav.create">创作</span></a>
+      <a class="nav-item" data-view="gallery" href="#gallery"><span class="ico">▦</span><span class="txt" data-i18n="nav.gallery">画廊</span></a>
+      <a class="nav-item" data-view="editor" href="#editor"><span class="ico">⑃</span><span class="txt" data-i18n="nav.editor">工作流</span></a>
+      <a class="nav-item" data-view="runs" href="#runs"><span class="ico">◷</span><span class="txt" data-i18n="nav.runs">任务</span></a>
+      <a class="nav-item" data-view="launcher" href="#launcher"><span class="ico">⏻</span><span class="txt" data-i18n="nav.launcher">启动器</span></a>
+      <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">◈</span><span class="txt" data-i18n="nav.obsidian">知识库</span></a>
+      <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✧</span><span class="txt" data-i18n="nav.agent">助手</span></a>
     </div>
     <div class="nav-foot">
-      <a class="nav-item small" data-view="settings" href="#settings"><span class="ico">⚙</span><span class="txt">设置</span></a>
-      <a class="nav-item small" id="nav-about" href="javascript:void(0)"><span class="ico">◉</span><span class="txt">关于</span></a>
+      <a class="nav-item small" data-view="settings" href="#settings"><span class="ico">⚙</span><span class="txt" data-i18n="nav.settings">设置</span></a>
+      <a class="nav-item small" id="nav-about" href="javascript:void(0)"><span class="ico">◉</span><span class="txt" data-i18n="nav.about">关于</span></a>
       <div class="comfy-state"><i id="comfy-dot" class="dot off"></i><span id="comfy-dot-text">检测中…</span></div>
     </div>
   </nav>
@@ -37,13 +37,13 @@
     <section id="view-create" class="view active">
       <div class="create-wrap">
         <h1 class="create-title">今天想<em>创作</em>什么？</h1>
-        <div class="create-sub">本地 ComfyUI · 生成全程在你的显卡上进行</div>
+        <div class="create-sub" data-i18n="create.sub">本地 ComfyUI · 生成全程在你的显卡上进行</div>
         <div class="mode-tabs" id="c-mode">
-          <button class="seg-btn active" data-mode="image"><span class="ico">🖼</span> 图像生成</button>
-          <button class="seg-btn" data-mode="video"><span class="ico">🎬</span> 视频生成</button>
+          <button class="seg-btn active" data-mode="image"><span class="ico">🖼</span> <span data-i18n="create.mode.image">图像生成</span></button>
+          <button class="seg-btn" data-mode="video"><span class="ico">🎬</span> <span data-i18n="create.mode.video">视频生成</span></button>
         </div>
         <div class="style-row-wrap">
-          <span class="opt-label">风格 SOP</span>
+          <span class="opt-label" data-i18n="create.style">风格 SOP</span>
           <div class="style-row" id="c-styles"></div>
           <div class="style-arrows">
             <button id="style-prev" title="向左">‹</button>
@@ -51,18 +51,18 @@
           </div>
         </div>
         <div class="composer card-lift">
-          <textarea id="c-prompt" class="composer-input" rows="3"
+          <textarea id="c-prompt" class="composer-input" rows="3" data-i18n-ph="create.ph"
             placeholder="描述你想要的画面…中文会自动转成英文提示词（Flux/H3 对英文跟随更准）"></textarea>
           <div id="c-en-preview" class="en-preview" hidden></div>
           <div class="composer-bar">
             <div class="composer-opts">
-              <button id="c-translate" class="chip active" title="提交前把中文自动翻译成英文提示词">✦ 中文→英文</button>
+              <button id="c-translate" class="chip active" data-i18n="create.translate" title="提交前把中文自动翻译成英文提示词">✦ 中文→英文</button>
               <div class="opt-group" id="c-wf-box">
-                <span class="opt-label">工作流</span>
+                <span class="opt-label" data-i18n="common.workflow">工作流</span>
                 <select id="c-wf" class="opt-select"></select>
               </div>
               <div class="opt-group" id="c-size-box">
-                <span class="opt-label">尺寸</span>
+                <span class="opt-label" data-i18n="common.size">尺寸</span>
                 <div class="seg" id="c-size">
                   <button class="seg-btn active" data-w="832" data-h="1216">3:4</button>
                   <button class="seg-btn" data-w="1216" data-h="832">16:9</button>
@@ -70,7 +70,7 @@
                 </div>
               </div>
               <div class="opt-group">
-                <span class="opt-label">数量</span>
+                <span class="opt-label" data-i18n="common.count">数量</span>
                 <div class="seg" id="c-count">
                   <button class="seg-btn active" data-n="1">1</button>
                   <button class="seg-btn" data-n="2">2</button>
@@ -78,22 +78,22 @@
                 </div>
               </div>
               <div class="opt-group seed-box">
-                <span class="opt-label">种子</span>
+                <span class="opt-label" data-i18n="common.seed">种子</span>
                 <input id="c-seed" class="opt-input" type="number" placeholder="随机">
                 <button id="c-dice" class="dice" title="随机种子">🎲</button>
               </div>
             </div>
-            <button id="c-go" class="btn-go"><span>✦ 生 成</span></button>
+            <button id="c-go" class="btn-go"><span data-i18n="create.go">✦ 生 成</span></button>
           </div>
         </div>
         <div class="composer-hint" id="c-hint"></div>
         <div class="inspire">
-          <span class="inspire-label">灵感</span>
+          <span class="inspire-label" data-i18n="common.inspire">灵感</span>
           <div class="inspire-chips" id="c-inspire"></div>
         </div>
         <div class="feed-head">
-          <h2>最新创作</h2>
-          <a class="feed-more" href="#gallery">进入画廊 →</a>
+          <h2 data-i18n="create.feed">最新创作</h2>
+          <a class="feed-more" href="#gallery" data-i18n="create.feed.more">进入画廊 →</a>
         </div>
         <div id="create-feed" class="feed"></div>
       </div>
@@ -102,39 +102,43 @@
     <!-- ============ 画廊 ============ -->
     <section id="view-gallery" class="view">
       <header class="page-head">
-        <h1>画廊</h1>
+        <h1 data-i18n="gallery.title">画廊</h1>
         <div class="head-tools">
-          <input id="g-search" class="input" placeholder="搜索文件名…">
+          <input id="g-search" class="input" data-i18n-ph="common.search" placeholder="搜索文件名…">
           <div class="chips" id="g-kind">
-            <button class="chip active" data-k="all">全部</button>
-            <button class="chip" data-k="video">视频</button>
-            <button class="chip" data-k="image">图片</button>
+            <button class="chip active" data-k="all" data-i18n="gallery.all">全部</button>
+            <button class="chip" data-k="video" data-i18n="gallery.video">视频</button>
+            <button class="chip" data-k="image" data-i18n="gallery.image">图片</button>
           </div>
           <select id="g-folder" class="input select"><option>全部</option></select>
-          <select id="g-sort" class="input select"><option value="new">最新优先</option><option value="old">最早优先</option><option value="big">文件最大</option></select>
-          <button id="g-refresh" class="btn ghost">↻</button>
+          <select id="g-sort" class="input select">
+            <option value="new" data-i18n="gallery.sort.new">最新优先</option>
+            <option value="old" data-i18n="gallery.sort.old">最早优先</option>
+            <option value="big" data-i18n="gallery.sort.big">文件最大</option>
+          </select>
+          <button id="g-refresh" class="btn ghost" data-i18n="common.refresh">↻</button>
           <span id="g-count" class="muted"></span>
         </div>
       </header>
       <div id="gallery-grid" class="masonry"></div>
       <div id="gallery-empty" class="empty" hidden>
         <div class="empty-ico">📭</div>
-        <p>还没有成果物。去<a href="#create">创作</a>页生成第一个，或让助手「画：xxx」。</p>
+        <p data-i18n="gallery.empty">还没有成果物。去创作页生成第一个，或让助手「画：xxx」。</p>
       </div>
     </section>
 
     <!-- ============ 工作流编辑器 ============ -->
     <section id="view-editor" class="view">
       <header class="page-head">
-        <h1>工作流</h1>
+        <h1 data-i18n="editor.title">工作流</h1>
         <div class="head-tools">
-          <input id="wf-name" class="input grow" placeholder="工作流名称">
-          <button id="wf-save" class="btn">保存</button>
-          <button id="wf-run" class="btn primary">▶ 运行</button>
+          <input id="wf-name" class="input grow" data-i18n-ph="editor.name.ph" placeholder="工作流名称">
+          <button id="wf-save" class="btn" data-i18n="editor.save">保存</button>
+          <button id="wf-run" class="btn primary" data-i18n="editor.run">▶ 运行</button>
           <button id="wf-interrupt" class="btn danger ghost">⏹</button>
-          <button id="wf-import" class="btn ghost">导入</button>
+          <button id="wf-import" class="btn ghost" data-i18n="editor.import">导入</button>
           <input id="wf-file" type="file" accept=".json,.png" multiple hidden>
-          <button id="wf-export" class="btn ghost">导出API</button>
+          <button id="wf-export" class="btn ghost" data-i18n="editor.export">导出API</button>
         </div>
       </header>
       <div class="editor-body">
@@ -148,7 +152,7 @@
             <button class="tool" id="cv-zin" title="放大">+</button>
             <button class="tool" id="cv-zout" title="缩小">−</button>
           </div>
-          <div id="canvas-hint" class="canvas-hint">双击空白添加节点 · 拖动输出口到输入口连线 · 点击已连输入口断开 · Delete 删除选中</div>
+          <div id="canvas-hint" class="canvas-hint" data-i18n="editor.hint">双击空白添加节点 · 拖动输出口到输入口连线 · 点击已连输入口断开 · Delete 删除选中</div>
         </div>
         <aside id="inspector">
           <div id="inspector-empty" class="muted pad">点击一个节点查看/编辑参数</div>
@@ -160,10 +164,10 @@
     <!-- ============ 任务 ============ -->
     <section id="view-runs" class="view">
       <header class="page-head">
-        <h1>任务</h1>
+        <h1 data-i18n="runs.title">任务</h1>
         <div class="head-tools">
-          <button id="q-interrupt" class="btn danger ghost">⏹ 中断当前</button>
-          <button id="q-clear" class="btn danger ghost">🧹 清空队列</button>
+          <button id="q-interrupt" class="btn danger ghost" data-i18n="runs.interrupt">⏹ 中断当前</button>
+          <button id="q-clear" class="btn danger ghost" data-i18n="runs.clear">🧹 清空队列</button>
         </div>
       </header>
       <div id="progress-panel" class="card pad" hidden>
@@ -171,68 +175,68 @@
         <div class="progress-bar"><div id="prog-fill"></div></div>
       </div>
       <div class="runs-cols">
-        <div class="card pad"><h3>排队中 <span id="q-pending-n" class="badge"></span></h3><div id="q-pending"></div></div>
-        <div class="card pad"><h3>执行中 <span id="q-running-n" class="badge"></span></h3><div id="q-running"></div></div>
+        <div class="card pad"><h3><span data-i18n="runs.pending">排队中</span> <span id="q-pending-n" class="badge"></span></h3><div id="q-pending"></div></div>
+        <div class="card pad"><h3><span data-i18n="runs.running">执行中</span> <span id="q-running-n" class="badge"></span></h3><div id="q-running"></div></div>
       </div>
-      <h3 class="sec-title">最近完成</h3>
+      <h3 class="sec-title" data-i18n="runs.done">最近完成</h3>
       <div id="runs-list"></div>
     </section>
 
     <!-- ============ 启动器 ============ -->
     <section id="view-launcher" class="view">
       <header class="page-head">
-        <h1>启动器</h1>
+        <h1 data-i18n="launcher.title">启动器</h1>
         <div class="head-tools">
           <span id="lc-state" class="badge">检测中…</span>
-          <button id="lc-start" class="btn primary">▶ 启动 ComfyUI</button>
-          <button id="lc-restart" class="btn">↻ 重启</button>
-          <button id="lc-stop" class="btn danger ghost">⏹ 停止</button>
+          <button id="lc-start" class="btn primary" data-i18n="launcher.start">▶ 启动 ComfyUI</button>
+          <button id="lc-restart" class="btn" data-i18n="launcher.restart">↻ 重启</button>
+          <button id="lc-stop" class="btn danger ghost" data-i18n="launcher.stop">⏹ 停止</button>
         </div>
       </header>
       <div class="runs-cols">
         <div class="card pad">
-          <h3>启动配置</h3>
-          <div class="field"><label>ComfyUI 目录</label><input id="lc-dir" class="input" style="width:100%"></div>
-          <div class="field"><label>Python 解释器</label><input id="lc-py" class="input" style="width:100%"></div>
-          <div class="field"><label>启动参数（空格分隔，保存后下次启动生效）</label><input id="lc-args" class="input" style="width:100%"></div>
-          <div class="row"><button id="lc-save" class="btn sm primary">保存配置</button><span id="lc-msg" class="muted"></span></div>
+          <h3 data-i18n="launcher.cfg">启动配置</h3>
+          <div class="field"><label data-i18n="launcher.dir">ComfyUI 目录</label><input id="lc-dir" class="input" style="width:100%"></div>
+          <div class="field"><label data-i18n="launcher.py">Python 解释器</label><input id="lc-py" class="input" style="width:100%"></div>
+          <div class="field"><label data-i18n="launcher.args">启动参数（空格分隔，保存后下次启动生效）</label><input id="lc-args" class="input" style="width:100%"></div>
+          <div class="row"><button id="lc-save" class="btn sm primary" data-i18n="launcher.save">保存配置</button><span id="lc-msg" class="muted"></span></div>
         </div>
         <div class="card pad">
-          <h3>环境诊断</h3>
-          <div id="lc-diag" class="muted">读取中…</div>
+          <h3 data-i18n="launcher.diag">环境诊断</h3>
+          <div id="lc-diag" class="muted">…</div>
         </div>
       </div>
-      <h3 class="sec-title">ComfyUI 日志</h3>
+      <h3 class="sec-title" data-i18n="launcher.log">ComfyUI 日志</h3>
       <div class="card pad">
         <div class="row" style="justify-content:space-between;margin-bottom:10px">
-          <span class="muted">data/comfy.log（从创作台启动时才开始记录）</span>
-          <button class="btn sm ghost" id="lc-log-refresh">↻ 刷新</button>
+          <span class="muted" data-i18n="launcher.log.note">data/comfy.log（从创作台启动时才开始记录）</span>
+          <button class="btn sm ghost" id="lc-log-refresh" data-i18n="common.refresh">↻ 刷新</button>
         </div>
         <pre id="lc-log" style="max-height:240px;overflow-y:auto;font-family:var(--mono);font-size:11px;color:var(--text-2);white-space:pre-wrap">（点击刷新加载）</pre>
       </div>
-      <h3 class="sec-title">模型管理</h3>
+      <h3 class="sec-title" data-i18n="launcher.models">模型管理</h3>
       <div id="lc-models"></div>
-      <h3 class="sec-title">自定义节点</h3>
+      <h3 class="sec-title" data-i18n="launcher.nodes">自定义节点</h3>
       <div class="card pad" id="lc-nodes"></div>
     </section>
 
     <!-- ============ Obsidian ============ -->
     <section id="view-obsidian" class="view">
-      <header class="page-head"><h1>知识库</h1></header>
+      <header class="page-head"><h1 data-i18n="obsidian.title">知识库</h1></header>
       <div id="obs-status" class="card pad"></div>
       <div class="head-tools margin-top">
-        <button id="obs-sync" class="btn">同步工作流到知识库</button>
-        <button id="obs-refresh" class="btn ghost">↻ 刷新</button>
+        <button id="obs-sync" class="btn" data-i18n="obsidian.sync">同步工作流到知识库</button>
+        <button id="obs-refresh" class="btn ghost" data-i18n="common.refresh">↻ 刷新</button>
       </div>
-      <h3 class="sec-title">归档记录</h3>
+      <h3 class="sec-title" data-i18n="obsidian.archives">归档记录</h3>
       <div id="obs-archives" class="card"></div>
-      <h3 class="sec-title">知识库笔记</h3>
+      <h3 class="sec-title" data-i18n="obsidian.notes">知识库笔记</h3>
       <div id="obs-notes" class="card"></div>
     </section>
 
     <!-- ============ 助手 ============ -->
     <section id="view-agent" class="view">
-      <header class="page-head"><h1>助手</h1></header>
+      <header class="page-head"><h1 data-i18n="agent.title">助手</h1></header>
       <div id="chat" class="card">
         <div id="chat-log"></div>
         <div class="chat-quick">
@@ -243,34 +247,45 @@
           <button class="chip" data-q="打开知识库">知识库</button>
         </div>
         <div class="chat-input-row">
-          <input id="chat-input" class="input grow" placeholder="例如：画：雪夜竹林剑客 832x1216 ／ 跑 Flux 文生图 ×3 ／ 归档最近 10 个">
-          <button id="chat-send" class="btn primary">发送</button>
+          <input id="chat-input" class="input grow" data-i18n-ph="agent.ph" placeholder="例如：画：雪夜竹林剑客 832x1216 ／ 跑 Flux 文生图 ×3 ／ 归档最近 10 个">
+          <button id="chat-send" class="btn primary" data-i18n="agent.send">发送</button>
         </div>
       </div>
     </section>
 
     <!-- ============ 设置 ============ -->
     <section id="view-settings" class="view">
-      <header class="page-head"><h1>设置</h1></header>
+      <header class="page-head"><h1 data-i18n="settings.title">设置</h1></header>
       <div class="card pad form">
-        <label>ComfyUI 地址<input id="s-comfy" class="input"></label>
-        <label>成果目录（output）<input id="s-output" class="input"></label>
-        <label>Obsidian 库路径（vault）<input id="s-vault" class="input"></label>
-        <label>服务端口（重启生效）<input id="s-port" class="input" type="number"></label>
-        <label>智谱 API Key（选填，给助手加智能）<input id="s-zhipu" class="input" type="password" placeholder="留空保持不变"></label>
-        <label>智谱模型<input id="s-zhipu-model" class="input"></label>
+        <label data-i18n="settings.comfy">ComfyUI 地址<input id="s-comfy" class="input"></label>
+        <label data-i18n="settings.output">成果目录（output）<input id="s-output" class="input"></label>
+        <label data-i18n="settings.vault">Obsidian 库路径（vault）<input id="s-vault" class="input"></label>
+        <label data-i18n="settings.port">服务端口（重启生效）<input id="s-port" class="input" type="number"></label>
+        <label data-i18n="settings.zhipu">智谱 API Key（选填，给助手加智能）<input id="s-zhipu" class="input" type="password" placeholder="留空保持不变"></label>
+        <label data-i18n="settings.zhipu.model">智谱模型<input id="s-zhipu-model" class="input"></label>
+        <label data-i18n="settings.gitee.repo">Gitee 仓库（owner/repo，用于检查更新）<input id="s-gitee-repo" class="input"></label>
+        <label data-i18n="settings.gitee.token">Gitee 私人令牌（私有仓检查更新用，选填）<input id="s-gitee-token" class="input" type="password" placeholder="留空保持不变"></label>
+        <label data-i18n="settings.lang">界面语言 Language
+          <select id="s-lang" class="input select">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </select>
+        </label>
         <div class="row">
-          <button id="s-save" class="btn primary">保存设置</button>
-          <button id="s-test" class="btn ghost">测试 ComfyUI 连接</button>
+          <button id="s-save" class="btn primary" data-i18n="settings.save">保存设置</button>
+          <button id="s-test" class="btn ghost" data-i18n="settings.test">测试 ComfyUI 连接</button>
+          <button id="s-update" class="btn" data-i18n="settings.update">检查更新</button>
+          <button id="s-openrel" class="btn ghost" data-i18n="settings.openrel">打开下载页</button>
           <span id="s-msg" class="muted"></span>
         </div>
+        <div id="s-update-info" class="muted" hidden></div>
       </div>
       <div class="card pad form" id="env-card" style="margin-top:16px">读取环境信息…</div>
-      <h3 class="sec-title">运行日志（最近 200 行）</h3>
+      <h3 class="sec-title" data-i18n="settings.log">运行日志（最近 200 行）</h3>
       <div class="card pad">
         <div class="row" style="justify-content:space-between;margin-bottom:10px">
           <span class="muted">data/app.log</span>
-          <button class="btn sm ghost" id="log-refresh">↻ 刷新</button>
+          <button class="btn sm ghost" id="log-refresh" data-i18n="misc.refreshing">↻ 刷新</button>
         </div>
         <pre id="log-view" style="max-height:260px;overflow-y:auto;font-family:var(--mono);font-size:11px;color:var(--text-2);white-space:pre-wrap">（点击刷新加载）</pre>
       </div>
@@ -290,15 +305,15 @@
     <div id="lb-info" class="lb-info"></div>
     <div id="lb-summary" class="lb-summary"></div>
     <div class="lb-actions">
-      <button class="btn" id="lb-import">导入编辑器</button>
-      <button class="btn" id="lb-rerun">重新生成</button>
-      <button class="btn" id="lb-archive">归档到知识库</button>
-      <button class="btn ghost" id="lb-reveal">所在文件夹</button>
-      <button class="btn ghost" id="lb-download">下载</button>
-      <button class="btn danger ghost" id="lb-trash">删除</button>
+      <button class="btn" id="lb-import" data-i18n="lb.import">导入编辑器</button>
+      <button class="btn" id="lb-rerun" data-i18n="lb.rerun">重新生成</button>
+      <button class="btn" id="lb-archive" data-i18n="lb.archive">归档到知识库</button>
+      <button class="btn ghost" id="lb-reveal" data-i18n="lb.reveal">所在文件夹</button>
+      <button class="btn ghost" id="lb-download" data-i18n="lb.download">下载</button>
+      <button class="btn danger ghost" id="lb-trash" data-i18n="lb.delete">删除</button>
     </div>
     <div class="lb-note">
-      <textarea id="lb-note-text" class="input" rows="2" placeholder="归档手记（可选）"></textarea>
+      <textarea id="lb-note-text" class="input" rows="2" data-i18n-ph="lb.note.ph" placeholder="归档手记（可选）"></textarea>
     </div>
   </aside>
 </div>
@@ -312,26 +327,26 @@
 <!-- 全局硬件状态条 -->
 <footer id="hw-bar">
   <span id="hw-gpu-name" class="hw-name">GPU</span>
-  <div class="hw-seg"><span class="hw-label">显存</span><div class="hw-bar"><i id="hw-vram-fill"></i></div><span id="hw-vram-text">—</span></div>
-  <div class="hw-seg"><span class="hw-label">利用率</span><span id="hw-util-text">—</span></div>
-  <div class="hw-seg"><span class="hw-label">温度</span><span id="hw-temp-text">—</span></div>
-  <div class="hw-seg"><span class="hw-label">内存</span><div class="hw-bar"><i id="hw-ram-fill"></i></div><span id="hw-ram-text">—</span></div>
-  <div class="hw-seg"><span class="hw-label">队列</span><span id="hw-queue-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label" data-i18n="hw.vram">显存</span><div class="hw-bar"><i id="hw-vram-fill"></i></div><span id="hw-vram-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label" data-i18n="hw.util">利用率</span><span id="hw-util-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label" data-i18n="hw.temp">温度</span><span id="hw-temp-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label" data-i18n="hw.ram">内存</span><div class="hw-bar"><i id="hw-ram-fill"></i></div><span id="hw-ram-text">—</span></div>
+  <div class="hw-seg"><span class="hw-label" data-i18n="hw.queue">队列</span><span id="hw-queue-text">—</span></div>
 </footer>
 
 <!-- 批量操作条 -->
 <div id="batch-bar" hidden>
   <span class="n">已选 <span id="batch-n">0</span> 项</span>
-  <button class="btn sm" id="b-archive">◈ 批量归档</button>
-  <button class="btn sm danger ghost" id="b-trash">🗑 批量删除</button>
-  <button class="btn sm ghost" id="b-cancel">取消</button>
+  <button class="btn sm" id="b-archive" data-i18n="batch.archive">◈ 批量归档</button>
+  <button class="btn sm danger ghost" id="b-trash" data-i18n="batch.trash">🗑 批量删除</button>
+  <button class="btn sm ghost" id="b-cancel" data-i18n="batch.cancel">取消</button>
 </div>
 
 <!-- 首次运行向导 -->
 <div id="wizard" hidden>
   <div class="wizard-card">
-    <h2>欢迎使用 ComfyAgent 👋</h2>
-    <div class="wsub">花 30 秒完成初始设置，随时可在「设置」页修改</div>
+    <h2 data-i18n="wizard.title">欢迎使用 ComfyAgent 👋</h2>
+    <div class="wsub" data-i18n="wizard.sub">花 30 秒完成初始设置，随时可在「设置」页修改</div>
     <div class="wstep" id="w1">
       <div class="wnum">1</div>
       <div style="flex:1">
@@ -365,8 +380,8 @@
       </div>
     </div>
     <div class="row" style="justify-content:flex-end;margin-top:18px">
-      <button class="btn ghost" id="wizard-skip">稍后再说</button>
-      <button class="btn primary" id="wizard-done">完成并进入创作台</button>
+      <button class="btn ghost" id="wizard-skip" data-i18n="wizard.skip">稍后再说</button>
+      <button class="btn primary" id="wizard-done" data-i18n="wizard.done">完成并进入创作台</button>
     </div>
   </div>
 </div>
@@ -388,7 +403,7 @@
 <!-- 命令面板 Ctrl+K -->
 <div id="cmdk" hidden>
   <div class="cmdk-box">
-    <input id="cmdk-input" class="input" placeholder="输入命令：跳转页面 / 运行工作流 / 中断 / 清空队列…">
+    <input id="cmdk-input" class="input" data-i18n-ph="cmdk.ph" placeholder="输入命令：跳转页面 / 运行工作流 / 中断 / 清空队列…">
     <div id="cmdk-list"></div>
   </div>
 </div>

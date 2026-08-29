@@ -1,5 +1,6 @@
-/* misc.js — Obsidian 知识库页 + 智能助手页 + 设置页 */
+/* misc.js — Obsidian 知识库页 + 智能助手页 + 设置页 + 语言/更新 */
 import { $, $$, api, toast, goto } from "./app.js";
+import { getLang, setLang } from "./i18n.js";
 
 export function initMisc() {
   initObsidian();
@@ -175,6 +176,25 @@ function initAgent() {
 /* ================= 设置 ================= */
 function initSettings() {
   loadForm();
+  $("#s-lang").addEventListener("change", (e) => setLang(e.target.value));
+  $("#s-update").addEventListener("click", async () => {
+    const info = $("#s-update-info");
+    info.hidden = false;
+    info.textContent = "检查中…";
+    const r = await api("/api/update/check");
+    if (!r.ok) { info.textContent = r.error; return; }
+    if (r.newer) {
+      info.innerHTML = `发现新版本 <b>v${r.latest}</b>（当前 v${r.local}）。到下载页获取最新 zip，替换后重启即可。 <a href="${r.url}" target="_blank">打开 Release ↗</a>`;
+    } else {
+      info.textContent = `已是最新版本 v${r.local}${r.latest ? `（线上 v${r.latest}）` : ""}`;
+    }
+  });
+  $("#s-openrel").addEventListener("click", async () => {
+    const r = await api("/api/settings");
+    const repo = r.ok ? r.settings.gitee_repo : "";
+    window.open(`https://gitee.com/${repo || "gu-dongwei/comfy-agent"}/releases`, "_blank");
+  });
+  $("#s-lang").addEventListener("change", (e) => setLang(e.target.value));
   $("#s-save").addEventListener("click", async () => {
     const body = {
       comfy_url: $("#s-comfy").value.trim(),
@@ -182,8 +202,10 @@ function initSettings() {
       vault_path: $("#s-vault").value.trim(),
       port: parseInt($("#s-port").value) || 8190,
       zhipu_model: $("#s-zhipu-model").value.trim(),
+      gitee_repo: $("#s-gitee-repo").value.trim(),
     };
     if ($("#s-zhipu").value.trim()) body.zhipu_key = $("#s-zhipu").value.trim();
+    if ($("#s-gitee-token").value.trim()) body.gitee_token = $("#s-gitee-token").value.trim();
     const r = await api("/api/settings", { method: "POST", body });
     $("#s-msg").textContent = r.ok ? r.msg : r.error;
     toast(r.ok ? "设置已保存" : r.error, r.ok ? "ok" : "err");
@@ -207,6 +229,9 @@ async function loadForm() {
   $("#s-port").value = s.port || 8190;
   $("#s-zhipu-model").value = s.zhipu_model || "glm-4-flash";
   $("#s-zhipu").placeholder = s.has_zhipu_key ? "已配置（留空保持不变）" : "sk-…";
+  $("#s-gitee-repo").value = s.gitee_repo || "gu-dongwei/comfy-agent";
+  $("#s-gitee-token").placeholder = s.has_gitee_token ? "已配置（留空保持不变）" : "私有仓检查更新需要";
+  $("#s-lang").value = getLang();
   // 环境卡（迭代27）
   const st = await api("/api/status");
   if (st.ok) {
