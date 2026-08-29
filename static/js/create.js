@@ -74,12 +74,12 @@ export function initCreate() {
     $("#c-translate").classList.toggle("active");
     if (!$("#c-translate").classList.contains("active")) $("#c-en-preview").hidden = true;
   });
-  // 英文预览悬停复制
+  // 英文预览悬停复制（内联反馈，不弹 toast）
   $("#c-en-preview").addEventListener("click", async (e) => {
     if (!e.target.classList.contains("en-copy")) return;
     const t = e.target.dataset.copy || "";
-    (await copyText(t)) ? toast("英文提示词已复制", "ok") : toast("复制失败", "err");
-    e.target.textContent = "✓ 已复制";
+    const ok = await copyText(t);
+    e.target.textContent = ok ? "✓ 已复制" : "复制失败";
     setTimeout(() => { e.target.textContent = "复制"; }, 1500);
   });
   $("#c-go").addEventListener("click", create);

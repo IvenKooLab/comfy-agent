@@ -502,7 +502,7 @@ textarea.input { height: auto; padding: 9px 12px; }
 #hw-queue-text { color: var(--warn); }
 
 /* ============ toast ============ */
-#toasts { position: fixed; top: 16px; right: 16px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+#toasts { position: fixed; top: 16px; left: 212px; z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .toast {
   background: rgba(23, 26, 38, .92); border: 1px solid var(--line-2); border-left: 3px solid var(--brand);
   padding: 11px 15px; border-radius: 12px; font-size: 12.5px; box-shadow: var(--shadow-2);
