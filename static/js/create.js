@@ -88,15 +88,17 @@ async function create() {
   if (ms) { w = +ms[1]; h = +ms[2]; text = (submitText.slice(0, ms.start) + submitText.slice(ms.end)).trim(); }
   const seedRaw = $("#c-seed").value.trim();
   const seed = seedRaw === "" ? null : (+seedRaw || 0);
+  // 尺寸只对"Latent 建尺寸"类工作流生效；H3 等视频工作流用自带尺寸（640×352）
+  const hasLatentSize = Object.values(wf.api || {}).some((n) => /Latent/i.test(n.class_type || ""));
   const go = $("#c-go");
   go.disabled = true; go.querySelector("span").textContent = "提交中…";
   try {
     const r = await api("/api/prompt", {
       method: "POST",
       body: { name: "创作·" + promptText.slice(0, 16), prompt: wf.api, times: selCount, seed,
-              overrides: { text, width: w, height: h } },
+              overrides: { text, ...(hasLatentSize ? { width: w, height: h } : {}) } },
     });
-    r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
+    r.ok ? toast(r.msg + (hasLatentSize ? "" : "（视频按工作流自带尺寸）"), "ok") : toast(r.msg || r.error, "err");
     if (r.ok) $("#c-seed").value = "";
   } finally {
     go.disabled = false; go.querySelector("span").textContent = "✦ 生 成";

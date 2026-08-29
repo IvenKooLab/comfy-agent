@@ -66,7 +66,7 @@ a { color: var(--cyan); text-decoration: none; }
 
 /* ---------- 主区域 ---------- */
 #main { flex: 1; overflow: hidden; position: relative; }
-.view { display: none; height: 100%; overflow-y: auto; padding: 26px 30px; }
+.view { display: none; height: 100%; overflow-y: auto; padding: 26px 30px 52px; }
 .view.active { display: block; }
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
 .page-head h1 { font-size: 21px; font-weight: 800; letter-spacing: .2px; }
@@ -257,7 +257,7 @@ a { color: var(--cyan); text-decoration: none; }
 .lb-note textarea { width: 100%; resize: vertical; }
 
 /* ---------- 编辑器 ---------- */
-.editor-body { display: flex; gap: 12px; height: calc(100vh - 118px); }
+.editor-body { display: flex; gap: 12px; height: calc(100vh - 156px); }
 #wf-list { width: 216px; flex: none; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; padding-right: 2px; }
 .wf-item {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md);
@@ -363,7 +363,7 @@ a { color: var(--cyan); text-decoration: none; }
 .obs-uri:hover { text-decoration: underline; }
 
 /* ---------- 助手 ---------- */
-#chat { display: flex; flex-direction: column; height: calc(100vh - 138px); padding: 0; overflow: hidden; }
+#chat { display: flex; flex-direction: column; height: calc(100vh - 176px); padding: 0; overflow: hidden; }
 #chat-log { flex: 1; overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
 .msg { max-width: 72%; padding: 11px 15px; border-radius: 16px; font-size: 13.5px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
 .msg.user { align-self: flex-end; background: var(--grad); color: #fff; border-bottom-right-radius: 5px; box-shadow: 0 4px 16px rgba(99, 102, 241, .3); }
@@ -386,6 +386,25 @@ a { color: var(--cyan); text-decoration: none; }
 .toast.err { border-left-color: var(--err); }
 .toast.ok { border-left-color: var(--ok); }
 @keyframes toastIn { from { transform: translateX(30px); opacity: 0; } }
+
+/* ---------- 全局硬件状态条 ---------- */
+#hw-bar {
+  position: fixed; bottom: 0; left: 196px; right: 0; height: 36px; z-index: 50;
+  display: flex; align-items: center; gap: 26px; padding: 0 22px;
+  background: rgba(9, 10, 15, .88); border-top: 1px solid var(--line);
+  font-size: 11.5px; color: var(--text-2); backdrop-filter: blur(10px);
+  font-variant-numeric: tabular-nums;
+}
+.hw-name { font-weight: 700; color: var(--text); font-size: 11px; letter-spacing: .3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+.hw-seg { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.hw-label { color: var(--text-3); font-size: 10.5px; letter-spacing: 1px; }
+.hw-bar { width: 110px; height: 6px; background: var(--bg-soft); border-radius: 99px; overflow: hidden; }
+.hw-bar i { display: block; height: 100%; width: 0; background: var(--grad); border-radius: 99px; transition: width .6s; }
+#hw-util-text { color: var(--cyan); min-width: 38px; }
+#hw-temp-text { min-width: 34px; }
+#hw-temp-text.hot { color: var(--err); font-weight: 700; }
+#hw-queue-text { color: var(--warn); }
 
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .1); border-radius: 5px; }

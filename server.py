@@ -732,6 +732,48 @@ def sync_workflows_to_vault():
     return {"ok": True, "count": len(synced), "dir": "ComfyAgent/workflows"}
 
 
+# ---------------------------------------------------------------- hardware monitor
+
+_NVIDIA_SMI = shutil.which("nvidia-smi")
+_hw_cache = {"ts": 0, "data": None}
+
+
+def get_hardware():
+    """GPU/内存实时状态：nvidia-smi(利用率/温度/显存) + ComfyUI system_stats(内存)。1.5s 缓存。"""
+    now = time.time()
+    if _hw_cache["data"] and now - _hw_cache["ts"] < 1.5:
+        return _hw_cache["data"]
+    out = {"gpu": None, "ram": None, "queue": HUB.state.get("queue_remaining") or 0,
+           "comfy_online": COMFY.online}
+    try:
+        st = COMFY.http("/system_stats", timeout=4)
+        sysi = st.get("system", {})
+        out["ram"] = {"total": sysi.get("ram_total"), "free": sysi.get("ram_free")}
+        dev = (st.get("devices") or [{}])[0]
+        out["gpu"] = {"name": dev.get("name"), "vram_total": dev.get("vram_total"),
+                      "vram_free": dev.get("vram_free"), "util": None, "temp": None, "source": "torch"}
+    except Exception:
+        pass
+    if _NVIDIA_SMI:
+        try:
+            r = subprocess.run(
+                [_NVIDIA_SMI, "--query-gpu=name,utilization.gpu,temperature.gpu,memory.used,memory.total",
+                 "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=5, creationflags=0x08000000)
+            line = r.stdout.strip().splitlines()[0]
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 5:
+                g = {"name": parts[0], "util": float(parts[1]), "temp": float(parts[2]),
+                     "vram_used": float(parts[3]) * 1048576, "vram_total": float(parts[4]) * 1048576,
+                     "source": "nvidia-smi"}
+                out["gpu"] = g
+        except Exception:
+            pass
+    _hw_cache["ts"] = now
+    _hw_cache["data"] = out
+    return out
+
+
 # ---------------------------------------------------------------- prompt enhance (zh -> en)
 
 _ZH_RE = re.compile(r"[\u4e00-\u9fff]")
@@ -899,6 +941,9 @@ def agent_execute(text):
         if ms:
             size = (int(ms.group(1)), int(ms.group(2)))
             prompt_text = prompt_text[:ms.start()].strip()
+        enh = enhance_prompt(prompt_text)
+        if enh.get("ok") and enh.get("english"):
+            prompt_text = enh["english"]
         wf = BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
         overrides = {"text": prompt_text}
         if size:
@@ -985,6 +1030,13 @@ def submit_workflow(wf, times=1, seed=None, overrides=None):
                 if k in ins and isinstance(ins[k], (str, int, float)):
                     ins[k] = v
                     applied += 1
+                elif k == "text":
+                    # H3 等视频工作流的文本键叫 prompt/caption
+                    for alt in ("prompt", "caption"):
+                        if alt in ins and isinstance(ins[alt], str):
+                            ins[alt] = v
+                            applied += 1
+                            break
         if applied == 0 and "text" in overrides:
             # 常见场景：把 text 塞给第一个 CLIPTextEncode
             for nid, node in api.items():
@@ -1159,6 +1211,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True, "comfy_online": st is not None, "system_stats": st,
                                    "media_count": len(gal), "latest_mtime": gal[0]["mtime"] if gal else 0,
                                    "ws_state": HUB.state, "ffmpeg": bool(FFMPEG)})
+
+        if path == "/api/hardware":
+            return self.send_json({"ok": True, **get_hardware()})
 
         # ---- ComfyUI 代理
         if path == "/api/queue":
