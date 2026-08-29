@@ -26,12 +26,18 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 打包成 exe（PyInstaller）时：静态资源在 _MEIPASS，数据目录放 exe 旁边（可持久化）
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+    STATIC_DIR = os.path.join(sys._MEIPASS, "static")
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    STATIC_DIR = os.path.join(BASE_DIR, "static")
 DATA_DIR = os.path.join(BASE_DIR, "data")
-STATIC_DIR = os.path.join(BASE_DIR, "static")
 WORKFLOW_DIR = os.path.join(DATA_DIR, "workflows")
 CACHE_DIR = os.path.join(DATA_DIR, "cache")
 THUMB_DIR = os.path.join(CACHE_DIR, "thumbs")
@@ -1277,6 +1283,9 @@ def main():
     print(f"* ComfyAgent running at http://127.0.0.1:{port}  (ComfyUI: {SETTINGS['comfy_url']})")
     print(f"* gallery root: {SETTINGS['output_dir']}")
     print(f"* obsidian vault: {SETTINGS['vault_path']}")
+    # exe 双击启动 / 带 --open 参数时自动打开浏览器
+    if getattr(sys, "frozen", False) or "--open" in sys.argv:
+        threading.Timer(1.2, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

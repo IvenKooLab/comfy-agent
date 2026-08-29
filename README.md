@@ -17,9 +17,23 @@
 
 ## 快速开始
 
+### 方式一：exe 免安装版（推荐）
+
+仓库里直接下载 `dist/ComfyAgent-win64.zip`（约 8MB）：
+
+1. 解压到任意目录
+2. 双击 `ComfyAgent.exe` —— 自动启动服务并打开浏览器（http://127.0.0.1:8190）
+3. 数据（设置/工作流库/缩略图缓存/回收站）都在 exe 旁边的 `data/` 目录，删目录即卸载
+
+> 前提：本机有 ComfyUI（默认 127.0.0.1:8188）和 ffmpeg（视频海报帧用，没有会降级但能用）。
+> 杀软提示：PyInstaller 打包的程序偶有误报，火绒/Defender 加信任即可。
+
+自己构建：`pip install pyinstaller` 后运行 `bash build_exe.sh`（或参考其中的命令）。
+
+### 方式二：源码运行
+
 ```bash
-# 双击 start.bat，或：
-python server.py
+python server.py --open   # 或双击 start.bat
 # 打开 http://127.0.0.1:8190
 ```
 

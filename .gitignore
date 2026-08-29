@@ -3,3 +3,6 @@ data/trash/
 __pycache__/
 *.pyc
 server_run.log
+build/
+dist/*
+!dist/ComfyAgent-win64.zip
