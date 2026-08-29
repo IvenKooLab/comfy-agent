@@ -1508,6 +1508,7 @@ def resume_stale_runs():
 
 def watchdog_loop():
     """看门狗：ComfyUI 掉线自动重启；重启成功后自动续跑中断任务。"""
+    startup_probed = False
     while True:
         time.sleep(8)
         try:
@@ -1517,6 +1518,12 @@ def watchdog_loop():
         was = _watch["last_online"]
         if was is None:
             _watch["last_online"] = online
+            if not online and not startup_probed and SETTINGS.get("comfy_watchdog", True):
+                # 应用启动时 ComfyUI 就不在线 → 直接自动拉起（补盲区）
+                startup_probed = True
+                _watch["last_restart"] = time.time()
+                r = comfy_launch()
+                HUB.publish({"type": "watchdog", "data": {"phase": "restart", "ok": r.get("ok"), "msg": r.get("msg", r.get("error", ""))}})
             continue
         if was and not online:
             HUB.publish({"type": "watchdog", "data": {"phase": "down"}})
