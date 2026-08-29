@@ -14,7 +14,7 @@ const GROUP_ICON = {
 
 export function initTemplates() {
   $("#tpl-search").addEventListener("input", (e) => { q = e.target.value.trim().toLowerCase(); shown = 24; renderCards(); });
-  $("#tpl-more").addEventListener("click", () => { shown += 24; renderCards(); });
+  $("#tpl-more")?.addEventListener("click", () => { shown += 24; renderCards(); });
   new MutationObserver(() => {
     if ($("#view-templates").classList.contains("active") && !groups.length) load();
   }).observe($("#view-templates"), { attributes: true, attributeFilter: ["class"] });
