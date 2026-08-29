@@ -22,10 +22,13 @@ export function initTemplates() {
 
 async function load() {
   $("#tpl-body").innerHTML = `<div class="skeleton" style="height:200px"></div>`;
-  const r = await api("/api/templates/index");
   const box = $("#tpl-body");
+  const r = await api("/api/templates/index");
   if (!r.ok) {
-    box.innerHTML = `<div class="empty"><div class="empty-ico">📡</div><p>${r.error}</p></div>`;
+    box.innerHTML = `<div class="empty"><div class="empty-ico">📡</div><p>${r.error}</p>
+      <button class="btn" id="tpl-retry" style="margin-top:12px">↻ 重试</button></div>`;
+    box.querySelector("#tpl-retry").addEventListener("click", load);
+    setTimeout(() => { if (!groups.length) load(); }, 5000); // 网络抖动自动重试一次
     return;
   }
   groups = r.groups;
