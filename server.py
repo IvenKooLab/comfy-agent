@@ -1559,9 +1559,10 @@ class Handler(BaseHTTPRequestHandler):
             s.pop("client_id", None)
             return self.send_json({"ok": True, "settings": s})
         if path == "/api/settings" and method == "POST":
-            for k in ("port", "comfy_url", "output_dir", "vault_path", "zhipu_model",
-                      "comfy_dir", "comfy_python", "comfy_launch_args", "gitee_repo", "gitee_token",
+            for k in ("port", "comfy_url", "output_dir", "vault_path",
+                      "comfy_dir", "comfy_python", "comfy_launch_args",
                       "llm_provider", "llm_base_url", "llm_model"):
+            # gitee_repo/gitee_token 内置不外露；zhipu_key/llm_key/gitee_token 走下方专用分支
                 if k in body:
                     SETTINGS[k] = body[k]
             if body.get("zhipu_key"):
