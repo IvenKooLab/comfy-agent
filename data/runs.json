@@ -1,5 +1,98 @@
 [
   {
+    "prompt_id": "c92997cf-834b-403f-9d28-66245abc7171",
+    "name": "风格SOP验证·国漫史诗",
+    "seed": 99,
+    "submitted": "2026-08-29 18:06:45",
+    "status": "queued",
+    "graph": {
+      "1": {
+        "class_type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "flux1-dev-fp8.safetensors"
+        }
+      },
+      "2": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "1",
+            1
+          ],
+          "text": "A white-robed swordsman stands atop a jagged immortal peak piercing a boundless sea of clouds, glancing back over his shoulder with calm piercing eyes, long hair and flowing sleeves caught in the high wind, golden morning light breaking through drifting clouds, cinematic wide composition, guoman 3d animation style, epic xianxia atmosphere, volumetric god rays"
+        }
+      },
+      "3": {
+        "class_type": "FluxGuidance",
+        "inputs": {
+          "conditioning": [
+            "2",
+            0
+          ],
+          "guidance": 3.5
+        }
+      },
+      "4": {
+        "class_type": "EmptySD3LatentImage",
+        "inputs": {
+          "width": 832,
+          "height": 1216,
+          "batch_size": 1
+        }
+      },
+      "5": {
+        "class_type": "KSampler",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "positive": [
+            "3",
+            0
+          ],
+          "negative": [
+            "3",
+            0
+          ],
+          "seed": 99,
+          "steps": 28,
+          "cfg": 1.0,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "denoise": 1.0,
+          "latent_image": [
+            "4",
+            0
+          ]
+        }
+      },
+      "6": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "5",
+            0
+          ],
+          "vae": [
+            "1",
+            2
+          ]
+        }
+      },
+      "7": {
+        "class_type": "SaveImage",
+        "inputs": {
+          "images": [
+            "6",
+            0
+          ],
+          "filename_prefix": "stylecheck"
+        }
+      }
+    }
+  },
+  {
     "prompt_id": "9ac199c2-499f-4730-addc-6310559305e6",
     "name": "修复验证·云海白衣剑客",
     "seed": 7,

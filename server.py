@@ -774,6 +774,90 @@ def get_hardware():
     return out
 
 
+# ---------------------------------------------------------------- style SOPs
+
+# 风格 SOP：每个风格 = GLM 增强方向词(direction) + 令牌块(tokens) + 参数覆盖(params)
+QUALITY_TAIL = "masterpiece, best quality, ultra detailed, professional color grading, sharp focus, 8k"
+STYLE_SOPS = {
+    "guoman_epic": {
+        "name": "国漫史诗", "emoji": "⚔️",
+        "desc": "《凡人修仙传》式 3D 国漫，仙侠史诗感",
+        "direction": "3D Chinese animation (guoman) like epic xianxia donghua: stylized realistic characters, painterly skin and fabric textures, grand immortal-mountains atmosphere",
+        "tokens": "guoman 3d animation style, epic xianxia atmosphere, stylized character design, cinematic wide composition, volumetric god rays, ",
+    },
+    "guofeng_ink": {
+        "name": "国风水墨", "emoji": "🖌️",
+        "desc": "水墨留白，雾山云海，东方意境",
+        "direction": "traditional Chinese ink-wash painting (shui-mo) with generous negative space, misty mountains, subtle color accents on rice paper texture",
+        "tokens": "chinese ink wash painting, xieyi brushwork, misty negative space, rice paper texture, muted indigo accents, ",
+    },
+    "cinematic_film": {
+        "name": "电影质感", "emoji": "🎬",
+        "desc": "写实电影感，浅景深，专业调色",
+        "direction": "cinematic film still: anamorphic lens, shallow depth of field, motivated practical lighting, teal-and-orange professional color grading, filmic grain",
+        "tokens": "cinematic film still, anamorphic bokeh, shallow depth of field, dramatic rim lighting, film grain, color graded, ",
+    },
+    "cyber_neon": {
+        "name": "赛博霓虹", "emoji": "🌃",
+        "desc": "雨夜霓虹，高对比科幻都市",
+        "direction": "cyberpunk aesthetic: rain-soaked neon streets, holographic signage, high contrast cyan-magenta palette, reflective wet surfaces",
+        "tokens": "cyberpunk, neon signage glow, rain reflections, cyan and magenta palette, night city haze, ",
+    },
+    "storybook": {
+        "name": "插画绘本", "emoji": "📖",
+        "desc": "温暖童书插画，柔和手绘质感",
+        "direction": "warm children's storybook illustration: soft hand-painted textures, gentle rounded shapes, cozy narrative mood",
+        "tokens": "storybook illustration, soft hand-painted texture, warm pastel palette, cozy whimsical mood, ",
+    },
+    "ghibli_warm": {
+        "name": "温暖手绘", "emoji": "🍃",
+        "desc": "吉卜力式自然光手绘，治愈日常",
+        "direction": "hand-drawn animation style inspired by studio ghibli: lush painted backgrounds, natural light, gentle nostalgic warmth",
+        "tokens": "ghibli inspired hand-drawn style, lush painted background, cumulus clouds, natural soft light, nostalgic warmth, ",
+    },
+    "thick_paint": {
+        "name": "厚涂油画", "emoji": "🎨",
+        "desc": "印象派厚涂笔触，颜料质感",
+        "direction": "impressionist oil painting with thick impasto brushstrokes, visible palette-knife texture, rich layered colors",
+        "tokens": "thick impasto oil painting, visible brushstrokes, palette knife texture, rich layered pigments, ",
+    },
+    "figure_3d": {
+        "name": "3D 手办", "emoji": "🧸",
+        "desc": "收藏级手办渲染，棚拍布光",
+        "direction": "collectible 3D figure render: glossy anime-style figurine on a display base, studio softbox lighting, product photography",
+        "tokens": "3d collectible figure, glossy anime figurine, studio product lighting, display base, octane render, ",
+    },
+    "chibi_sticker": {
+        "name": "Q版贴纸", "emoji": "🐣",
+        "desc": "圆润 Q 版，透明贴纸风",
+        "direction": "cute chibi sticker art: oversized head, tiny body, bold clean outline, flat vivid colors, die-cut sticker with white border",
+        "tokens": "chibi sticker, big head tiny body, bold clean outline, flat vivid colors, white die-cut border, ",
+    },
+    "poster_minimal": {
+        "name": "极简海报", "emoji": "◻️",
+        "desc": "大留白版式，几何图形构成",
+        "direction": "minimalist graphic poster: bold geometric shapes, generous empty space, limited 3-color palette, flat design",
+        "tokens": "minimalist poster design, bold geometric shapes, generous negative space, limited palette, flat vector look, ",
+    },
+    "portrait_photo": {
+        "name": "写真人像", "emoji": "📷",
+        "desc": "85mm 人像，自然肤色质感",
+        "direction": "professional portrait photography: 85mm lens, natural skin texture with pores, soft window light, creamy bokeh background",
+        "tokens": "professional portrait photo, 85mm f1.4, natural skin texture, soft window light, creamy bokeh, ",
+    },
+    "vaporwave": {
+        "name": "蒸汽波", "emoji": "🌴",
+        "desc": "80 年代复古合成器美学",
+        "direction": "vaporwave retro aesthetic: 1980s synthwave sunset grid, chrome text vibes, pastel pink and cyan gradient sky",
+        "tokens": "vaporwave aesthetic, retro 80s synthwave, chrome gradients, pink cyan sunset grid, vhs grain, ",
+    },
+}
+
+
+def get_style(sid):
+    return STYLE_SOPS.get(sid or "", None)
+
+
 # ---------------------------------------------------------------- prompt enhance (zh -> en)
 
 _ZH_RE = re.compile(r"[\u4e00-\u9fff]")
@@ -832,25 +916,54 @@ def enhance_prompt_zhipu(text, key, model):
     return data["choices"][0]["message"]["content"].strip()
 
 
-def enhance_prompt(text):
-    """中文→英文增强。返回 {ok, english, engine, note?}；已是英文则原样 passthrough。"""
+_IMG_FORMULA = ("主体(the subject) → 动作/姿态 → 环境 → 光线 → 镜头/构图 → 艺术风格，"
+                "写成一段连贯的自然语言长描述（Flux 的 T5 编码器吃密集描述，不要关键词堆砌）")
+_VIDEO_FORMULA = ("一个连续镜头（5 秒内）：主体 → 主体动作/表情变化 → 运镜方式（缓慢推近/横移/固定机位）"
+                  " → 环境与光线 → 环境音描述。遵守 h3lite 提示词规范：单一场景、动作幅度小、不写对白。")
+
+
+def enhance_prompt(text, style_id=None, mode="image"):
+    """中文→英文增强（风格感知）。返回 {ok, english, engine, note?}；已是英文则加风格令牌。"""
     text = (text or "").strip()
     if not text:
         return {"ok": False, "error": "空提示词"}
-    if not _ZH_RE.search(text):
-        return {"ok": True, "english": text, "engine": "passthrough"}
+    style = get_style(style_id)
     key = SETTINGS.get("zhipu_key", "")
     if key:
         try:
-            return {"ok": True, "english": enhance_prompt_zhipu(text, key, SETTINGS.get("zhipu_model", "glm-4-flash")),
-                    "engine": "glm"}
+            if mode == "video":
+                formula, extra = _VIDEO_FORMULA, ""
+            else:
+                formula, extra = _IMG_FORMULA, ""
+            style_line = f"\n风格方向（务必贯彻）：{style['direction']}" if style else ""
+            body = json.dumps({
+                "model": SETTINGS.get("zhipu_model", "glm-4-flash"),
+                "messages": [
+                    {"role": "system", "content": (
+                        f"你是{'视频' if mode == 'video' else '图像'}生成提示词专家。把用户的中文描述翻译并重写为"
+                        f"一段 40-90 词的英文提示词。结构公式：{formula}{style_line}\n"
+                        "只输出英文提示词本身，不要解释或引号。")},
+                    {"role": "user", "content": text},
+                ], "temperature": 0.3,
+            }).encode()
+            req = urllib.request.Request("https://open.bigmodel.cn/api/paas/v4/chat/completions", data=body,
+                                         headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                data = json.loads(r.read())
+            en = data["choices"][0]["message"]["content"].strip()
+            if style and style["tokens"].split(",")[0].strip().lower() not in en.lower():
+                en = en.rstrip(".") + ", " + style["tokens"].rstrip(", ")
+            return {"ok": True, "english": en, "engine": "glm", "style": style_id}
         except Exception as e:
             note = f"GLM 增强失败({e})，用免费翻译兜底"
     else:
         note = None
     try:
         en = polish_english(translate_mymemory(text))
-        return {"ok": True, "english": en, "engine": "mymemory", "note": note}
+        if style:
+            en = en.rstrip(",;") + ", " + style["tokens"].rstrip(", ")
+        en = en.rstrip(",") + ", " + QUALITY_TAIL
+        return {"ok": True, "english": en, "engine": "mymemory", "note": note, "style": style_id}
     except Exception as e:
         return {"ok": False, "error": f"翻译失败：{e}" + ("；" + note if note else "") + "（将按原文提交）"}
 
@@ -941,7 +1054,14 @@ def agent_execute(text):
         if ms:
             size = (int(ms.group(1)), int(ms.group(2)))
             prompt_text = prompt_text[:ms.start()].strip()
-        enh = enhance_prompt(prompt_text)
+        # 「用国漫史诗画：xxx」→ 风格感知（迭代24）
+        style_id = None
+        for sid, s in STYLE_SOPS.items():
+            if s["name"] in prompt_text:
+                style_id = sid
+                prompt_text = prompt_text.replace(s["name"], "").strip("，,：: ")
+                break
+        enh = enhance_prompt(prompt_text, style_id=style_id)
         if enh.get("ok") and enh.get("english"):
             prompt_text = enh["english"]
         wf = BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
@@ -1017,11 +1137,20 @@ AGENT_HELP = ("我可以：\n"
 
 # ---------------------------------------------------------------- prompt submit
 
-def submit_workflow(wf, times=1, seed=None, overrides=None):
-    """提交工作流到 ComfyUI，返回 {ok, msg, prompt_ids}。支持批量变 seed 与参数覆盖。"""
+def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
+    """提交工作流到 ComfyUI，返回 {ok, msg, prompt_ids}。支持批量变 seed、参数覆盖与风格参数。"""
     api = json.loads(json.dumps(wf.get("api", {})))  # deep copy
     if not api:
         return {"ok": False, "msg": "工作流为空"}
+    if params:
+        # 风格 SOP 参数：steps → KSampler 系，guidance → Guidance 系
+        for nid, node in api.items():
+            ct = node.get("class_type", "")
+            ins = node.get("inputs", {})
+            if "KSampler" in ct and "steps" in params and "steps" in ins:
+                ins["steps"] = int(params["steps"])
+            if "Guidance" in ct and "guidance" in params and "guidance" in ins:
+                ins["guidance"] = float(params["guidance"])
     if overrides:
         applied = 0
         for nid, node in api.items():
@@ -1209,9 +1338,22 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/status":
             st = COMFY.probe()
             gal = scan_gallery()
+            version = "3.1.0"
+            try:
+                version = open(os.path.join(BASE_DIR, "VERSION"), encoding="utf-8").read().strip() or version
+            except Exception:
+                pass
             return self.send_json({"ok": True, "comfy_online": st is not None, "system_stats": st,
                                    "media_count": len(gal), "latest_mtime": gal[0]["mtime"] if gal else 0,
-                                   "ws_state": HUB.state, "ffmpeg": bool(FFMPEG)})
+                                   "ws_state": HUB.state, "ffmpeg": bool(FFMPEG), "version": f"v{version}"})
+        if path == "/api/logs":
+            try:
+                logp = os.path.join(DATA_DIR, "app.log")
+                with open(logp, encoding="utf-8", errors="replace") as f:
+                    lines = f.readlines()[-200:]
+                return self.send_json({"ok": True, "lines": "".join(lines) or "（暂无日志）"})
+            except Exception:
+                return self.send_json({"ok": True, "lines": "（暂无日志）"})
 
         if path == "/api/hardware":
             return self.send_json({"ok": True, **get_hardware()})
@@ -1258,7 +1400,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/prompt" and method == "POST":
             wf = {"name": body.get("name") or "未命名", "api": body.get("prompt") or body.get("api")}
             res = submit_workflow(wf, times=int(body.get("times", 1) or 1),
-                                  seed=body.get("seed"), overrides=body.get("overrides"))
+                                  seed=body.get("seed"), overrides=body.get("overrides"),
+                                  params=body.get("params"))
             return self.send_json(res)
         if path == "/api/runs":
             runs = [{k: v for k, v in r.items() if k != "graph"} | {"has_graph": bool(r.get("graph"))}
@@ -1410,8 +1553,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True, "uri": obsidian_uri(rel)})
 
         # ---- Agent
+        if path == "/api/styles":
+            return self.send_json({"ok": True, "styles": [
+                {"id": k, **{kk: vv for kk, vv in v.items()}} for k, v in STYLE_SOPS.items()]})
         if path == "/api/enhance_prompt" and method == "POST":
-            return self.send_json(enhance_prompt(body.get("text", "")))
+            return self.send_json(enhance_prompt(body.get("text", ""),
+                                                 style_id=body.get("style"),
+                                                 mode=body.get("mode", "image")))
         if path == "/api/agent" and method == "POST":
             return self.send_json({"ok": True, **agent_execute(body.get("text", ""))})
 
@@ -1419,6 +1567,20 @@ class Handler(BaseHTTPRequestHandler):
 
 
 # ---------------------------------------------------------------- main
+
+def _thumb_lru_cleanup(max_files=400):
+    """缩略图缓存 LRU 清理：超过 max_files 删最旧的（迭代21）。"""
+    try:
+        files = [os.path.join(THUMB_DIR, f) for f in os.listdir(THUMB_DIR)]
+        files = [f for f in files if os.path.isfile(f)]
+        if len(files) > max_files:
+            files.sort(key=os.path.getmtime)
+            for f in files[:len(files) - max_files]:
+                os.remove(f)
+            print(f"* thumb LRU: cleaned {len(files) - max_files}")
+    except Exception:
+        pass
+
 
 def create_server():
     """初始化配置/线程并返回 HTTPServer（供控制台模式和桌面壳共用）。"""
@@ -1428,6 +1590,7 @@ def create_server():
     COMFY = ComfyClient(SETTINGS["comfy_url"])
     threading.Thread(target=ws_monitor_loop, daemon=True).start()
     threading.Thread(target=queue_poll_loop, daemon=True).start()
+    threading.Thread(target=lambda: (time.sleep(6), _thumb_lru_cleanup()), daemon=True).start()
     port = int(SETTINGS.get("port", 8190))
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     httpd.daemon_threads = True

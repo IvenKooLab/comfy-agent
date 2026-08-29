@@ -96,12 +96,24 @@ def _quit(_=None, __=None):
     os._exit(0)
 
 
+def _open_path(path):
+    try:
+        if os.path.isdir(path):
+            os.startfile(path)
+    except Exception:
+        pass
+
+
 def _tray_run():
     global _icon
+    out_dir = backend.SETTINGS.get("output_dir", "")
+    data_dir = os.path.join(BASE_DIR, "data")
     _icon = pystray.Icon(
         "ComfyAgent", _tray_icon(), "ComfyAgent · AI 创作台",
         menu=pystray.Menu(
             pystray.MenuItem("打开创作台", lambda *_: _show_window(), default=True),
+            pystray.MenuItem("打开成果目录", lambda *_: _open_path(out_dir)),
+            pystray.MenuItem("打开数据目录", lambda *_: _open_path(data_dir)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("退出", lambda *_: _quit()),
         ),

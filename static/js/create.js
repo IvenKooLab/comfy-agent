@@ -1,11 +1,20 @@
 /* create.js — 创作首页：Composer + 最新创作流 */
 import { $, $$, api, toast, mediaUrl, fmtTime, goto } from "./app.js";
 
+const PARAMS_KEY = "comfyagent_params";
+function loadParams() { try { return JSON.parse(localStorage.getItem(PARAMS_KEY) || "{}"); } catch { return {}; } }
+function saveParams(patch) {
+  const p = loadParams();
+  localStorage.setItem(PARAMS_KEY, JSON.stringify({ ...p, ...patch }));
+}
+
 let workflows = [];
 let selSize = { w: 832, h: 1216 };
 let selCount = 1;
 let mode = "image";   // 'image' | 'video'
 let feedItems = [];
+let styles = [];
+let selStyle = localStorage.getItem("comfyagent_style") || "guoman_epic";
 
 const INSPIRE = {
   image: [
@@ -23,6 +32,16 @@ const VIDEO_HINT = "H3 W4A8 快线 · 640×352 · ≈5秒 · 4步 · 原生音�
 const IMAGE_HINT = "Flux 文生图 · 20步 · 约1-2分钟/张（视队列而定）";
 
 export function initCreate() {
+  // 恢复上次参数（迭代17）
+  const saved = loadParams();
+  if (saved.size) {
+    selSize = saved.size;
+    $$("#c-size .seg-btn").forEach((b) => b.classList.toggle("active", +b.dataset.w === selSize.w && +b.dataset.h === selSize.h));
+  }
+  if (saved.count) {
+    selCount = saved.count;
+    $$("#c-count .seg-btn").forEach((b) => b.classList.toggle("active", +b.dataset.n === selCount));
+  }
   // 模式切换（图/视频）
   $$("#c-mode .seg-btn").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.mode === mode) return;
@@ -35,11 +54,13 @@ export function initCreate() {
     $$("#c-size .seg-btn").forEach((x) => x.classList.remove("active"));
     b.classList.add("active");
     selSize = { w: +b.dataset.w, h: +b.dataset.h };
+    saveParams({ size: selSize });
   }));
   $$("#c-count .seg-btn").forEach((b) => b.addEventListener("click", () => {
     $$("#c-count .seg-btn").forEach((x) => x.classList.remove("active"));
     b.classList.add("active");
     selCount = +b.dataset.n;
+    saveParams({ count: selCount });
   }));
   $("#c-dice").addEventListener("click", () => { $("#c-seed").value = Math.floor(Math.random() * 2 ** 31); });
   $("#c-translate").addEventListener("click", () => {
@@ -50,11 +71,34 @@ export function initCreate() {
   $("#c-prompt").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) create();
   });
+  loadStyles();
   loadWorkflows();
   refreshFeed();
   document.addEventListener("sse", (e) => {
     if (e.detail?.type === "execution_success") setTimeout(refreshFeed, 1500);
   });
+}
+
+async function loadStyles() {
+  const r = await api("/api/styles");
+  if (!r.ok) return;
+  styles = r.styles;
+  if (!styles.find((s) => s.id === selStyle)) selStyle = styles[0]?.id;
+  const box = $("#c-styles");
+  box.innerHTML = "";
+  for (const s of styles) {
+    const c = document.createElement("button");
+    c.className = "style-chip" + (s.id === selStyle ? " active" : "");
+    c.innerHTML = `<span class="em">${s.emoji}</span>${s.name}`;
+    c.title = s.desc;
+    c.addEventListener("click", () => {
+      selStyle = s.id;
+      localStorage.setItem("comfyagent_style", s.id);
+      box.querySelectorAll(".style-chip").forEach((x) => x.classList.remove("active"));
+      c.classList.add("active");
+    });
+    box.appendChild(c);
+  }
 }
 
 function applyMode() {
@@ -78,8 +122,11 @@ function applyMode() {
     o.textContent = wf.name;
     sel.appendChild(o);
   }
-  sel.value = mode === "video" ? "h3-t2v" : "builtin-flux";
+  const remembered = loadParams()["wf_" + mode];
+  sel.value = remembered && fits.find((w) => (w.id || w.name) === remembered)
+    ? remembered : (mode === "video" ? "h3-t2v" : "builtin-flux");
   if (!sel.value) sel.selectedIndex = 0;
+  sel.onchange = () => saveParams({ ["wf_" + mode]: sel.value });
   $("#c-size-box").style.display = mode === "video" ? "none" : "";
   $("#c-hint").innerHTML = `<span class="dot2"></span>${mode === "video" ? VIDEO_HINT : IMAGE_HINT}`;
 }
@@ -94,20 +141,25 @@ async function loadWorkflows() {
 async function create() {
   const promptText = $("#c-prompt").value.trim();
   if (!promptText) { toast("先描述一下你想要的画面", "err"); $("#c-prompt").focus(); return; }
+  if (mode === "video" && selCount > 2 && !confirm(`视频模式一次排 ${selCount} 条约需 ${Math.ceil(8.5 * selCount)} 分钟，确定？`)) return;
   const sel = $("#c-wf");
   const wf = workflows.find((w) => (w.id || w.name) === sel.value);
   if (!wf) { toast("没有可用工作流", "err"); return; }
-  // 中文 → 英文增强（可开关）
+  // 中文 → 英文增强（风格感知，可开关）
   let submitText = promptText;
-  if ($("#c-translate").classList.contains("active") && /[\u4e00-\u9fff]/.test(promptText)) {
+  let styleParams = null;
+  const styleObj = styles.find((s) => s.id === selStyle);
+  if ($("#c-translate").classList.contains("active")) {
     const btn = $("#c-go");
     btn.disabled = true; btn.querySelector("span").textContent = "翻译中…";
     try {
-      const en = await api("/api/enhance_prompt", { method: "POST", body: { text: promptText } });
+      const en = await api("/api/enhance_prompt", {
+        method: "POST", body: { text: promptText, style: selStyle, mode },
+      });
       if (en.ok && en.english) {
         submitText = en.english;
         const pv = $("#c-en-preview");
-        pv.innerHTML = `<span class="en-tag">EN（${en.engine}）→</span>${en.english}`;
+        pv.innerHTML = `<span class="en-tag">EN（${en.engine}${styleObj ? " · " + styleObj.name : ""}）→</span>${en.english}`;
         pv.hidden = false;
         if (en.note) toast(en.note, "err");
       } else {
@@ -116,7 +168,11 @@ async function create() {
     } finally {
       btn.disabled = false; btn.querySelector("span").textContent = "✦ 生 成";
     }
+  } else if (styleObj && mode === "image") {
+    // 关闭翻译也要吃到风格令牌（英文原样 + 追加）
+    submitText = promptText.replace(/[.。]?\s*$/, ", ") + styleObj.tokens.replace(/,\s*$/, "");
   }
+  if (styleObj && mode === "image") styleParams = { steps: 28, guidance: 3.5 };
   // 提示词里若带 WxH 则覆盖尺寸
   let { w, h } = selSize;
   const ms = submitText.match(/(\d{3,4})\s*[xX×]\s*(\d{3,4})/);
@@ -132,7 +188,8 @@ async function create() {
     const r = await api("/api/prompt", {
       method: "POST",
       body: { name: "创作·" + promptText.slice(0, 16), prompt: wf.api, times: selCount, seed,
-              overrides: { text, ...(hasLatentSize ? { width: w, height: h } : {}) } },
+              overrides: { text, ...(hasLatentSize ? { width: w, height: h } : {}) },
+              params: styleParams },
     });
     r.ok ? toast(r.msg + (hasLatentSize ? "" : "（视频按工作流自带尺寸）"), "ok") : toast(r.msg || r.error, "err");
     if (r.ok) $("#c-seed").value = "";

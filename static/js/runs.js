@@ -16,10 +16,14 @@ export function initRuns() {
   setInterval(refresh, 3000);
 }
 
+/* 行内进度：SSE progress 按 prompt_id 记账，渲染到执行中的行 */
+const rowProgress = {};   // pid -> {value, max, node}
+
 export function runsOnSSE(ev) {
   if (!$("#view-runs").classList.contains("active")) return;
   const t = ev.type, d = ev.data || {};
   if (t === "progress") {
+    if (d.prompt_id) rowProgress[d.prompt_id] = { value: d.value, max: d.max, node: d.node };
     $("#progress-panel").hidden = false;
     const pct = d.max ? Math.round((d.value / d.max) * 100) : 0;
     $("#prog-node").textContent = `节点 ${d.node ?? ""} · 采样进度`;
@@ -31,7 +35,10 @@ export function runsOnSSE(ev) {
     $("#prog-node").textContent = `执行节点 ${d.node}…`;
   }
   if (t === "execution_start" || t === "status") refresh();
-  if (t === "execution_success" || t === "execution_error" || t === "execution_interrupted") setTimeout(refresh, 800);
+  if (t === "execution_success" || t === "execution_error" || t === "execution_interrupted") {
+    delete rowProgress[d.data?.prompt_id];
+    setTimeout(refresh, 800);
+  }
 }
 
 const isVideoRun = (name) => /H3|视频|video/i.test(name || "");
@@ -97,8 +104,11 @@ async function renderHistory() {
       return `<img src="${tSrc}" loading="lazy" title="${esc(o.filename)}" data-full="${src}">`;
     }).join("");
     const retryable = info.graph ? `<button class="btn ghost run-retry" data-pid="${h.prompt_id}">↻ 重试</button>` : "";
+    const prog = rowProgress[h.prompt_id];
+    const progHtml = (st === "running" && prog?.max)
+      ? `<div class="row-progress"><i style="width:${Math.round(prog.value / prog.max * 100)}%"></i></div>` : "";
     row.innerHTML = `<span class="run-status ${st}">${stTxt}</span>
-      <span class="run-name">${esc(name)}</span>
+      <span class="run-name">${esc(name)}${progHtml}</span>
       <span class="run-meta">${esc(meta)}</span>
       ${retryable}
       <div class="run-outs">${outs}</div>`;

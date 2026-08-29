@@ -87,11 +87,14 @@ function connectSSE() {
 }
 
 let comfyOnline = null;
+let offlineToasted = false;
 export function setComfyDot(on) {
   if (on === comfyOnline) return;
   comfyOnline = on;
   $("#comfy-dot").className = "dot " + (on ? "on" : "off");
   $("#comfy-dot-text").textContent = on ? "ComfyUI 在线" : "ComfyUI 离线";
+  if (!on && !offlineToasted) { toast("ComfyUI 掉线，自动重连中…（生成任务会排队等它回来）", "err"); offlineToasted = true; }
+  if (on) offlineToasted = false;
 }
 
 /* ---------- 硬件状态条（2s 轮询） ---------- */
@@ -143,6 +146,63 @@ document.addEventListener("keydown", (e) => {
 });
 const isTypingTarget = (t) => ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName);
 
+/* ---------- 命令面板 Ctrl+K ---------- */
+let cmdkItems = [];
+function initCmdk() {
+  const box = $("#cmdk"), input = $("#cmdk-input"), list = $("#cmdk-list");
+  const open = async () => {
+    box.hidden = false; input.value = ""; renderCmdk("");
+    input.focus();
+  };
+  const close = () => { box.hidden = true; };
+  const buildItems = async () => {
+    const items = [];
+    const labels = { create: "去创作", gallery: "去画廊", editor: "去工作流", runs: "去任务", obsidian: "去知识库", agent: "去助手", settings: "去设置" };
+    for (const v of views) items.push({ label: labels[v], key: "页面", run: () => goto(v) });
+    try {
+      const r = await api("/api/workflows");
+      for (const wf of (r.workflows || [])) items.push({
+        label: `运行「${wf.name}」`, key: "工作流",
+        run: async () => {
+          const rr = await api("/api/prompt", { method: "POST", body: { name: wf.name, prompt: wf.api, times: 1 } });
+          toast(rr.msg || rr.error, rr.ok ? "ok" : "err");
+          if (rr.ok) goto("runs");
+        },
+      });
+    } catch { }
+    items.push({ label: "⏹ 中断当前任务", key: "动作", run: async () => { await api("/api/interrupt", { method: "POST", body: {} }); toast("已发送中断", "ok"); } });
+    items.push({ label: "🧹 清空队列", key: "动作", run: async () => { await api("/api/clear_queue", { method: "POST", body: {} }); toast("队列已清空", "ok"); } });
+    return items;
+  };
+  const renderCmdk = (q) => {
+    q = q.trim().toLowerCase();
+    list.innerHTML = "";
+    cmdkItems.filter((i) => !q || i.label.toLowerCase().includes(q)).slice(0, 12).forEach((i, idx) => {
+      const el = document.createElement("div");
+      el.className = "cmdk-item" + (idx === 0 ? " hot" : "");
+      el.innerHTML = `<span>${i.label}</span><span class="k">${i.key}</span>`;
+      el.addEventListener("click", () => { close(); i.run(); });
+      list.appendChild(el);
+    });
+  };
+  document.addEventListener("keydown", async (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      if (box.hidden) { open(); cmdkItems = await buildItems(); renderCmdk(input.value); }
+      else close();
+    }
+    if (e.key === "Escape" && !box.hidden) close();
+  });
+  input.addEventListener("input", () => renderCmdk(input.value));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const first = list.querySelector(".cmdk-item");
+      if (first) { close(); first.click(); }
+    }
+  });
+  box.addEventListener("click", (e) => { if (e.target.id === "cmdk") close(); });
+}
+
 /* ---------- 启动 ---------- */
 async function boot() {
   initCreate();
@@ -153,6 +213,7 @@ async function boot() {
   applyHash();
   connectSSE();
   hwLoop();
+  initCmdk();
   $("#nav-about")?.addEventListener("click", () => { $("#about-modal").hidden = false; });
   try {
     const st = await api("/api/status");
