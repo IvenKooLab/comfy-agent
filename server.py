@@ -2309,17 +2309,31 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 模板库
         if path == "/api/templates/preview":
             name = re.sub(r"[^A-Za-z0-9_.-]", "", q.get("name", ""))
-            ext = "webp" if q.get("ext", "webp") == "webp" else "png"
+            ext = "png" if q.get("ext", "webp") == "png" else "webp"
+            rel = f"{name}-1.{ext}"
+            data = None
+            # 1) ComfyUI 本地 /templates/（模板包已下载时即时可用）
             try:
-                with urllib.request.urlopen(COMFY.base + f"/templates/{name}-1.{ext}", timeout=20) as r:
+                with urllib.request.urlopen(COMFY.base + f"/templates/{rel}", timeout=15) as r:
                     data = r.read()
+            except Exception:
+                data = None
+            # 2) 镜像链 + 24h 缓存
+            if not data:
+                try:
+                    p = tpl_fetch(rel, timeout=25)
+                    with open(p, "rb") as f:
+                        data = f.read()
+                except Exception:
+                    data = None
+            if data:
                 self.send_response(200)
                 self.send_header("Content-Type", "image/webp")
                 self.send_header("Content-Length", str(len(data)))
                 self.send_header("Cache-Control", "max-age=86400")
                 self.end_headers()
                 self.wfile.write(data)
-            except Exception:
+            else:
                 self.send_response(404)
                 self.end_headers()
             return
