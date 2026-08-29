@@ -6,6 +6,7 @@ import { initMisc } from "./misc.js";
 import { initCreate, refreshFeed } from "./create.js";
 import { initLauncher } from "./launcher.js";
 import { initPipeline } from "./pipeline.js";
+import { initTemplates } from "./templates.js";
 import { applyI18n } from "./i18n.js";
 
 export const $ = (sel) => document.querySelector(sel);
@@ -51,7 +52,7 @@ export function mediaUrl(path, extra = {}) {
 }
 
 /* ---------- 路由 ---------- */
-const views = ["create", "gallery", "editor", "runs", "pipeline", "launcher", "obsidian", "agent", "settings"];
+const views = ["create", "gallery", "editor", "templates", "runs", "pipeline", "launcher", "obsidian", "agent", "settings"];
 export function goto(view) {
   if (!views.includes(view)) return;
   location.hash = "#" + view;
@@ -222,6 +223,7 @@ async function boot() {
     initCreate();
     initGallery();
     initEditor();
+    initTemplates();
     initRuns();
     initLauncher();
     initPipeline();
