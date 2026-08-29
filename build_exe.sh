@@ -2,6 +2,14 @@
 # ComfyAgent 产品版构建：桌面壳 exe（WebView2 原生窗口 + 托盘，无控制台）
 set -e
 cd "$(dirname "$0")"
+
+# 0) 构建前精确清理会锁 dist 的进程（exe + 其拉起的 ComfyUI 子进程，均按端口定位 PID）
+for PORT in 8188 8190; do
+  for PID in $(netstat -ano | grep ":$PORT " | grep LISTENING | awk '{print $5}' | sort -u); do
+    taskkill //F //T //PID $PID >/dev/null 2>&1 || true
+  done
+done
+sleep 2
 PY="D:/tools/ComfyUI-aki-v3/python/python.exe"
 
 # 1) 图标（无则生成）
