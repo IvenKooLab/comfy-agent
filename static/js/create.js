@@ -1,5 +1,6 @@
 /* create.js — 创作首页：Composer + 最新创作流 */
 import { $, $$, api, toast, mediaUrl, fmtTime, goto } from "./app.js";
+import { copyText } from "./gallery.js";
 
 const PARAMS_KEY = "comfyagent_params";
 function loadParams() { try { return JSON.parse(localStorage.getItem(PARAMS_KEY) || "{}"); } catch { return {}; } }
@@ -72,6 +73,14 @@ export function initCreate() {
   $("#c-translate").addEventListener("click", () => {
     $("#c-translate").classList.toggle("active");
     if (!$("#c-translate").classList.contains("active")) $("#c-en-preview").hidden = true;
+  });
+  // 英文预览悬停复制
+  $("#c-en-preview").addEventListener("click", async (e) => {
+    if (!e.target.classList.contains("en-copy")) return;
+    const t = e.target.dataset.copy || "";
+    (await copyText(t)) ? toast("英文提示词已复制", "ok") : toast("复制失败", "err");
+    e.target.textContent = "✓ 已复制";
+    setTimeout(() => { e.target.textContent = "复制"; }, 1500);
   });
   $("#c-go").addEventListener("click", create);
   $("#c-prompt").addEventListener("keydown", (e) => {
@@ -165,7 +174,7 @@ async function create() {
       if (en.ok && en.english) {
         submitText = en.english;
         const pv = $("#c-en-preview");
-        pv.innerHTML = `<span class="en-tag">EN（${en.engine}${styleObj ? " · " + styleObj.name : ""}）→</span>${en.english}`;
+        pv.innerHTML = `<span class="en-tag">EN（${en.engine}${styleObj ? " · " + styleObj.name : ""}）→</span>${en.english}<button class="kv-copy en-copy" data-copy="${en.english.replace(/"/g, "&quot;")}">复制</button>`;
         pv.hidden = false;
         if (en.note) toast(en.note, "err");
       } else {

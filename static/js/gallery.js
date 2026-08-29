@@ -10,6 +10,20 @@ let selected = new Set();
 let folders = ["全部"];
 let renderLimit = 40;      // 分页渲染：每屏 40 张，滚动到底自动加载
 const PAGE = 40;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch { }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch { return false; }
+}
+export { copyText };
 
 /* —— 筛选持久化 —— */
 function saveFilter() { localStorage.setItem("comfyagent_filter", JSON.stringify(filter)); }
@@ -66,6 +80,22 @@ export function initGallery() {
     }
   });
   $("#lb-archive").addEventListener("click", doArchive);
+  // 参数行：悬停复制 + 长文本展开（委托，一次绑定）
+  $("#lb-summary").addEventListener("click", async (e) => {
+    const cp = e.target.closest(".kv-copy");
+    if (cp) {
+      (await copyText(cp.dataset.copy)) ? toast("已复制到剪贴板", "ok") : toast("复制失败", "err");
+      cp.textContent = "✓ 已复制";
+      setTimeout(() => { cp.textContent = "复制"; }, 1500);
+      return;
+    }
+    const ex = e.target.closest(".kv-expand");
+    if (ex) {
+      const kvEl = ex.closest(".kv");
+      const clamped = kvEl.classList.toggle("clamp");
+      ex.textContent = clamped ? "展开" : "收起";
+    }
+  });
   $("#lb-reveal").addEventListener("click", async () => {
     const it = visible()[lbIndex];
     if (it) await api("/api/media/reveal", { method: "POST", body: { path: it.path } });
@@ -298,16 +328,26 @@ async function renderLightbox(list) {
     lbMeta = meta;
     const s = meta.summary;
     if (s && (s.model || s.prompt || s.seed != null)) {
-      const kv = (k, v) => v == null || v === "" ? "" : `<div class="kv"><span>${k}</span><span>${v}</span></div>`;
       $("#lb-summary").innerHTML =
         kv("模型", s.model) + kv("采样", `${s.sampler ?? "-"} · ${s.steps ?? "-"}步 · cfg ${s.cfg ?? "-"}`) +
-        kv("种子", s.seed) + kv("尺寸", s.dimensions) + kv("提示词", s.prompt) + kv("负向", s.negative);
+        kv("种子", s.seed) + kv("尺寸", s.dimensions) + kv("提示词", s.prompt, true) + kv("负向", s.negative, true);
     } else {
       $("#lb-summary").innerHTML = `<div class="muted">未嵌入生成参数</div>`;
     }
   } else {
     $("#lb-summary").innerHTML = `<div class="muted">（元数据读取失败）</div>`;
   }
+}
+
+/* 参数行构造：长文本可展开，悬停浮现复制按钮 */
+function kv(label, value, expandable = false) {
+  if (value == null || value === "") return "";
+  const v = String(value);
+  return `<div class="kv${expandable && v.length > 90 ? " clamp" : ""}">
+    <span>${label}</span><span class="kv-val">${esc(v)}</span>
+    <button class="kv-copy" data-copy="${esc(v)}" title="复制">复制</button>
+    ${expandable && v.length > 90 ? '<button class="kv-expand" data-exp="1">展开</button>' : ""}
+  </div>`;
 }
 
 async function doArchive() {
