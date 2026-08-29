@@ -376,14 +376,12 @@ function initSettings() {
       output_dir: $("#s-output").value.trim(),
       vault_path: $("#s-vault").value.trim(),
       port: parseInt($("#s-port").value) || 8190,
-      gitee_repo: $("#s-gitee-repo").value.trim(),
       llm_provider: $("#s-llm-provider").value,
       llm_base_url: $("#s-llm-base").value.trim(),
       llm_model: ($("#s-llm-model-manual").style.display !== "none" && $("#s-llm-model-manual").value.trim())
         || $("#s-llm-model").value,
     };
     if ($("#s-llm-key").value.trim()) body.llm_key = $("#s-llm-key").value.trim();
-    if ($("#s-gitee-token").value.trim()) body.gitee_token = $("#s-gitee-token").value.trim();
     const r = await api("/api/settings", { method: "POST", body });
     $("#s-msg").textContent = r.ok ? r.msg : r.error;
     toast(r.ok ? "设置已保存" : r.error, r.ok ? "ok" : "err");
@@ -405,8 +403,6 @@ async function loadForm() {
   $("#s-output").value = s.output_dir || "";
   $("#s-vault").value = s.vault_path || "";
   $("#s-port").value = s.port || 8190;
-  $("#s-gitee-repo").value = s.gitee_repo || "gu-dongwei/comfy-agent";
-  $("#s-gitee-token").placeholder = s.has_gitee_token ? "已配置（留空保持不变）" : "私有仓检查更新需要";
   $("#s-llm-base").value = s.llm_base || s.llm_base_url || "";
   $("#s-llm-key").placeholder = s.has_llm_key ? "已配置（留空保持不变）" : "sk-…";
   if (s.llm_model) { const m = $("#s-llm-model"); m.innerHTML = `<option>${s.llm_model}</option>`; m.value = s.llm_model; }
