@@ -47,6 +47,14 @@ bash build_exe.sh
 
 架构与迭代史见 [CHANGELOG.md](CHANGELOG.md)。
 
+## 贡献
+
+欢迎 Issue 与 PR（中英文均可）：
+
+1. Fork 本仓库 → 新建分支 → 提交改动 → 发起 PR
+2. 描述清楚「解决什么问题 / 怎么验证」即可
+3. 改动涉及后端时请保持零第三方依赖原则（Python 标准库）
+
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 Iven Gu
