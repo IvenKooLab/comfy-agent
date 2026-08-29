@@ -5,6 +5,7 @@ import { initRuns, runsOnSSE } from "./runs.js";
 import { initMisc } from "./misc.js";
 import { initCreate, refreshFeed } from "./create.js";
 import { initLauncher } from "./launcher.js";
+import { applyI18n } from "./i18n.js";
 
 export const $ = (sel) => document.querySelector(sel);
 export const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -206,6 +207,7 @@ function initCmdk() {
 
 /* ---------- 启动 ---------- */
 async function boot() {
+  applyI18n();
   initCreate();
   initGallery();
   initEditor();

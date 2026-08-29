@@ -59,6 +59,8 @@ DEFAULT_SETTINGS = {
     "comfy_dir": r"D:\tools\ComfyUI-aki-v3\ComfyUI",
     "comfy_python": r"D:\tools\ComfyUI-aki-v3\python\python.exe",
     "comfy_launch_args": "--listen 127.0.0.1 --port 8188 --reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory",
+    "gitee_repo": "gu-dongwei/comfy-agent",
+    "gitee_token": "",
 }
 
 MEDIA_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
@@ -1415,16 +1417,20 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/settings" and method == "GET":
             s = dict(SETTINGS)
             s["has_zhipu_key"] = bool(s.get("zhipu_key"))
+            s["has_gitee_token"] = bool(s.get("gitee_token"))
             s.pop("zhipu_key", None)
+            s.pop("gitee_token", None)
             s.pop("client_id", None)
             return self.send_json({"ok": True, "settings": s})
         if path == "/api/settings" and method == "POST":
             for k in ("port", "comfy_url", "output_dir", "vault_path", "zhipu_model",
-                      "comfy_dir", "comfy_python", "comfy_launch_args"):
+                      "comfy_dir", "comfy_python", "comfy_launch_args", "gitee_repo", "gitee_token"):
                 if k in body:
                     SETTINGS[k] = body[k]
             if body.get("zhipu_key"):
                 SETTINGS["zhipu_key"] = body["zhipu_key"]
+            if body.get("gitee_token"):
+                SETTINGS["gitee_token"] = body["gitee_token"]
             save_settings(SETTINGS)
             _gallery_cache["ts"] = 0
             return self.send_json({"ok": True, "msg": "已保存（端口改动需重启服务）"})
@@ -1645,6 +1651,42 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/obsidian/open":
             rel = q.get("path", "")
             return self.send_json({"ok": True, "uri": obsidian_uri(rel)})
+
+        if path == "/api/update/check":
+            def _local_version():
+                try:
+                    return open(os.path.join(BASE_DIR, "VERSION"), encoding="utf-8").read().strip()
+                except Exception:
+                    return "0"
+            local = _local_version()
+            repo = SETTINGS.get("gitee_repo", "")
+            token = SETTINGS.get("gitee_token", "")
+            if not repo:
+                return self.send_json({"ok": False, "error": "未配置 gitee_repo"})
+            url = f"https://gitee.com/api/v5/repos/{repo}/releases/latest"
+            if token:
+                url += f"?access_token={token}"
+            try:
+                with urllib.request.urlopen(url, timeout=15) as r:
+                    rel = json.loads(r.read())
+                latest = (rel.get("tag_name") or "").lstrip("vV")
+                newer = False
+                try:
+                    newer = tuple(int(x) for x in latest.split(".")) > tuple(int(x) for x in local.split("."))
+                except Exception:
+                    newer = latest != local
+                return self.send_json({"ok": True, "local": local, "latest": latest, "newer": newer,
+                                       "url": rel.get("html_url") or f"https://gitee.com/{repo}/releases",
+                                       "notes": (rel.get("body") or "")[:500],
+                                       "published": rel.get("published_at", "")})
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    return self.send_json({"ok": False, "error": "仓库还没有 Release。发布方法：Gitee 仓库页 → 创建发行版 → 上传 ComfyAgent-win64.zip 附件，tag 填版本号（如 3.2.0）"})
+                if e.code == 401:
+                    return self.send_json({"ok": False, "error": "私有仓库需要在设置里配置 Gitee 私人令牌"})
+                return self.send_json({"ok": False, "error": f"检查失败：HTTP {e.code}"})
+            except Exception as e:
+                return self.send_json({"ok": False, "error": f"检查失败：{e}"})
 
         # ---- 启动器
         if path == "/api/launcher/info":
