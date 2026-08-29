@@ -5,6 +5,7 @@ import { initRuns, runsOnSSE } from "./runs.js";
 import { initMisc } from "./misc.js";
 import { initCreate, refreshFeed } from "./create.js";
 import { initLauncher } from "./launcher.js";
+import { initPipeline } from "./pipeline.js";
 import { applyI18n } from "./i18n.js";
 
 export const $ = (sel) => document.querySelector(sel);
@@ -50,7 +51,7 @@ export function mediaUrl(path, extra = {}) {
 }
 
 /* ---------- 路由 ---------- */
-const views = ["create", "gallery", "editor", "runs", "launcher", "obsidian", "agent", "settings"];
+const views = ["create", "gallery", "editor", "runs", "pipeline", "launcher", "obsidian", "agent", "settings"];
 export function goto(view) {
   if (!views.includes(view)) return;
   location.hash = "#" + view;
@@ -78,6 +79,12 @@ function connectSSE() {
     try { ev = JSON.parse(e.data); } catch { return; }
     const t = ev.type, d = ev.data || {};
     if (t === "comfy_status") setComfyDot(!!d.online);
+    if (t === "watchdog") {
+      const phase = d.phase;
+      if (phase === "down") toast("看门狗：ComfyUI 掉线，准备自动重启…", "err");
+      if (phase === "restart") toast(d.ok ? "看门狗：已重启 ComfyUI" : "看门狗：重启失败 " + (d.msg || ""), d.ok ? "ok" : "err");
+      if (phase === "resumed") toast(`看门狗：已自动续跑 ${d.count} 个中断任务`, "ok");
+    }
     if (t === "execution_success" || t === "execution_error" || t === "execution_cached") {
       setTimeout(() => galleryRefresh(true), 1500);
     }
@@ -136,7 +143,7 @@ function hwLoop() {
 window.APP_VERSION = "ComfyAgent v3.0.0";
 
 /* ---------- 全局快捷键 ---------- */
-const VIEW_KEYS = { "1": "create", "2": "gallery", "3": "editor", "4": "runs", "5": "launcher", "6": "obsidian", "7": "agent" };
+const VIEW_KEYS = { "1": "create", "2": "gallery", "3": "editor", "4": "runs", "5": "pipeline", "6": "launcher", "7": "obsidian", "8": "agent" };
 document.addEventListener("keydown", (e) => {
   if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
   if (VIEW_KEYS[e.key]) goto(VIEW_KEYS[e.key]);
@@ -217,6 +224,7 @@ async function boot() {
     initEditor();
     initRuns();
     initLauncher();
+    initPipeline();
     initMisc();
     applyHash();
     connectSSE();

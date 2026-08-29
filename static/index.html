@@ -20,6 +20,7 @@
       <a class="nav-item" data-view="gallery" href="#gallery"><span class="ico">▦</span><span class="txt" data-i18n="nav.gallery">画廊</span></a>
       <a class="nav-item" data-view="editor" href="#editor"><span class="ico">⑃</span><span class="txt" data-i18n="nav.editor">工作流</span></a>
       <a class="nav-item" data-view="runs" href="#runs"><span class="ico">◷</span><span class="txt" data-i18n="nav.runs">任务</span></a>
+      <a class="nav-item" data-view="pipeline" href="#pipeline"><span class="ico">⛓</span><span class="txt">产线</span></a>
       <a class="nav-item" data-view="launcher" href="#launcher"><span class="ico">⏻</span><span class="txt" data-i18n="nav.launcher">启动器</span></a>
       <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">◈</span><span class="txt" data-i18n="nav.obsidian">知识库</span></a>
       <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✧</span><span class="txt" data-i18n="nav.agent">助手</span></a>
@@ -68,6 +69,10 @@
                   <button class="seg-btn" data-w="1216" data-h="832">16:9</button>
                   <button class="seg-btn" data-w="1024" data-h="1024">1:1</button>
                 </div>
+              </div>
+              <div class="opt-group" id="c-char-box" style="display:none">
+                <span class="opt-label">角色</span>
+                <select id="c-char" class="opt-select"></select>
               </div>
               <div class="opt-group">
                 <span class="opt-label" data-i18n="common.count">数量</span>
@@ -180,6 +185,56 @@
       </div>
       <h3 class="sec-title" data-i18n="runs.done">最近完成</h3>
       <div id="runs-list"></div>
+    </section>
+
+    <!-- ============ 产线 ============ -->
+    <section id="view-pipeline" class="view">
+      <header class="page-head">
+        <h1>产线</h1>
+        <div class="head-tools">
+          <button id="pl-import" class="btn">📥 导入分镜脚本</button>
+          <button id="pl-new" class="btn">＋ 新建批次</button>
+        </div>
+      </header>
+      <div style="display:flex;gap:12px;align-items:stretch;height:calc(100vh - 400px);min-height:420px">
+        <aside class="card pad" id="pl-list" style="width:250px;flex:none;overflow-y:auto"></aside>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:12px">
+          <div class="card pad" id="pl-detail-head" hidden>
+            <div class="row" style="justify-content:space-between">
+              <input id="pl-name" class="input grow" placeholder="批次名">
+              <select id="pl-wf" class="input select"></select>
+              <button id="pl-save" class="btn">保存</button>
+              <button id="pl-run" class="btn primary">▶ 排队全部</button>
+              <button id="pl-concat" class="btn">🎬 拼接成片</button>
+              <button id="pl-del" class="btn danger ghost">删除</button>
+            </div>
+          </div>
+          <div class="card pad" id="pl-import-box" hidden>
+            <div class="muted" style="margin-bottom:8px">粘贴分集脚本（自动识别 <b>### SHOT编号【画风】</b> + text 代码块），或每行一段：<code>镜头名 | 提示词</code></div>
+            <textarea id="pl-import-text" class="input" rows="8" style="width:100%;font-family:var(--mono);font-size:11px"></textarea>
+            <div class="row margin-top">
+              <button id="pl-parse" class="btn primary">解析 → 镜头清单</button>
+              <span id="pl-parse-info" class="muted"></span>
+            </div>
+          </div>
+          <div class="card pad" id="pl-items" style="flex:1;overflow:auto">
+            <div class="muted">左侧选择批次，或导入分镜脚本新建</div>
+          </div>
+        </div>
+      </div>
+      <h3 class="sec-title">角色资产库</h3>
+      <div class="row margin-top" style="align-items:flex-start">
+        <div class="card pad" style="width:320px;flex:none">
+          <div id="char-list"></div>
+          <button class="btn sm ghost" id="char-new" style="width:100%;margin-top:8px">＋ 新建角色</button>
+        </div>
+        <div class="card pad" id="char-editor" style="flex:1" hidden>
+          <div class="field"><label>角色名</label><input id="char-name" class="input" style="width:100%"></div>
+          <div class="field"><label>角色锁定串（会追加到提示词尾部，保证角色一致性）</label><textarea id="char-lock" class="input" rows="3" style="width:100%"></textarea></div>
+          <div class="field"><label>参考图（output 相对路径，可空）</label><input id="char-ref" class="input" style="width:100%"></div>
+          <div class="row"><button id="char-save" class="btn sm primary">保存角色</button><button id="char-del" class="btn sm danger ghost">删除</button></div>
+        </div>
+      </div>
     </section>
 
     <!-- ============ 启动器 ============ -->
@@ -323,6 +378,15 @@
         <div id="s-update-info" class="muted" hidden></div>
       </div>
       <div class="card pad form" id="env-card" style="margin-top:16px">读取环境信息…</div>
+      <div class="card pad form" style="margin-top:16px">
+        <h3 style="font-size:13px;margin-bottom:10px">可靠性（看门狗与备份）</h3>
+        <label style="flex-direction:row;align-items:center;gap:8px"><input id="s-watchdog" type="checkbox" style="width:auto"> ComfyUI 掉线自动重启（看门狗）</label>
+        <label style="flex-direction:row;align-items:center;gap:8px"><input id="s-autorequeue" type="checkbox" style="width:auto"> 重启后自动续跑中断任务（按图快照同种子重提）</label>
+        <div class="row">
+          <button id="s-backup" class="btn sm">📦 立即备份</button>
+          <span id="s-backup-info" class="muted"></span>
+        </div>
+      </div>
       <h3 class="sec-title" data-i18n="settings.log">运行日志（最近 200 行）</h3>
       <div class="card pad">
         <div class="row" style="justify-content:space-between;margin-bottom:10px">
@@ -380,6 +444,7 @@
 <div id="batch-bar" hidden>
   <span class="n">已选 <span id="batch-n">0</span> 项</span>
   <button class="btn sm" id="b-archive" data-i18n="batch.archive">◈ 批量归档</button>
+  <button class="btn sm" id="b-concat" hidden>🎬 拼接成片</button>
   <button class="btn sm danger ghost" id="b-trash" data-i18n="batch.trash">🗑 批量删除</button>
   <button class="btn sm ghost" id="b-cancel" data-i18n="batch.cancel">取消</button>
 </div>

@@ -1,0 +1,25 @@
+{
+ "id": "b20260829202715",
+ "name": "E001 冒烟批次",
+ "workflow_id": "h3-t2v",
+ "created": "2026-08-29 20:27",
+ "updated": "2026-08-29 20:27",
+ "items": [
+  {
+   "name": "S01E01_SHOT01·V3·2D 前世记忆",
+   "prompt": "integrated_multimodal_description: [Shot 1] Premium Chinese comic animation style, 2D guoman aesthetic with clean bold linework and cel shading, expressive stylized eyes, dynamic screentone-free coloring, the visual quality of top-tier domestic comic adaptation shorts. Vertical 9:16 framing. A young Chinese man around 25 with messy short black hair, thin metal-framed glasses and dark circles under sharp eyes, wearing a crumpled blue-grey checked shirt, sits alone at a desk in a dim open-plan office at 2 a.m., surrounded by empty energy-drink cans; the monitor casts blurred light on his tired face. He rubs his temples, keeps typing, then stops and stares at the screen with an exhausted blank expression. The camera pushes in with small amplitude at slow speed toward his face. Muted earth tones with ink-wash accents. no text overlays, no subtitles, no watermark, no readable text in scene, no extra fingers, no deformed hands.\noverall_soundscape: A quiet air-conditioning hum and computer fan whir fill the room; his fingers tap the keyboard, the chair creaks, and an empty can clinks as his elbow knocks it.\nnon_diegetic_music: A sparse tired lo-fi piano motif at slow tempo, very low volume."
+  },
+  {
+   "name": "S01E01_SHOT02·V3·2D 前世记忆",
+   "prompt": "integrated_multimodal_description: [Shot 1] Premium Chinese comic animation style, 2D guoman aesthetic with clean bold linework and cel shading, expressive stylized eyes, the visual quality of top-tier domestic comic adaptation shorts. Vertical 9:16. The same young Chinese man with metal-framed glasses and blue-grey checked shirt suddenly tightens; one hand clutches his chest over the shirt, knuckles white, his breathing turns shallow and fast. On the desk a small pill bottle rolls and falls. His glasses slide down; sweat beads on his temple under the cold monitor glow. The camera holds static, then makes a subtle push-in toward his clenched hand. Restrained coloring, ink-wash accents. no readable text, no watermark, no extra fingers, no deformed hands.\noverall_soundscape: A deep amplified heartbeat thumps unevenly; the plastic pill bottle rattles across the desk and thuds on the floor, his breath comes in short strained gasps under the air-conditioning hum.\nnon_diegetic_music: N/A."
+  },
+  {
+   "name": "S01E01_SHOT03·V3·2D 前世记忆",
+   "prompt": "integrated_multimodal_description: [Shot 1] Premium Chinese comic animation style, 2D guoman aesthetic with clean bold linework and cel shading, the visual quality of top-tier domestic comic adaptation shorts. First-person POV, vertical 9:16. From the man's point of view, the dim office blurs and doubles: the monitor light smears, the desk tilts as if he is falling forward, and darkness crowds in from the edges of vision. A pure white flare blooms from the center and swells until it washes out the whole frame. The camera drifts and slowly rotates downward, mimicking a collapsing head. Soft highlight roll-off, ink-wash accents. no readable text, no watermark.\noverall_soundscape: A sharp high-pitched ringing rises and swallows all ambient sound; a distant muffled thud, then sudden complete silence under the white light.\nnon_diegetic_music: One long sustained low cello note that fades into silence."
+  },
+  {
+   "name": "S01E01_SHOT04·V2·3D 现世",
+   "prompt": "integrated_multimodal_description: [Shot 1] High-quality Chinese 3D animation style similar to mainstream xianxia donghua films such as A Record of a Mortal's Journey to Immortality, semi-realistic stylized character design, detailed hair strands, painterly textured backgrounds, cinematic lighting, natural skin texture. Vertical 9:16. Extreme close-up: the sharp dark eyes of a young Chinese man around 18 snap open, both eyes clearly visible; his pupils contract as he stares upward at a crude wooden beam ceiling of a shabby servant hut, straw dust drifting in a shaft of grey daylight. His messy black fringe sticks to a cold-sweaty forehead. The camera holds a static extreme close-up, then tilts slightly down as his eyes dart, taking in the strange place. No readable text, no watermark, no extra fingers, no deformed hands.\noverall_soundscape: A whip cuts through air and cracks somewhere nearby; muffled shouts of men filter through thin walls, straw rustles under his body, and his own ragged breathing fills the foreground.\nnon_diegetic_music: N/A."
+  }
+ ]
+}

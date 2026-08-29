@@ -32,6 +32,9 @@ const INSPIRE = {
 const VIDEO_HINT = "H3 W4A8 快线 · 640×352 · ≈5秒 · 4步 · 原生音频 · 约8.5分钟/条（视频尺寸由工作流锁定）";
 const IMAGE_HINT = "Flux 文生图 · 20步 · 约1-2分钟/张（视队列而定）";
 
+let characters = [];
+let selChar = "";
+
 export function initCreate() {
   // 恢复上次参数（迭代17）
   const saved = loadParams();
@@ -43,6 +46,7 @@ export function initCreate() {
     selCount = saved.count;
     $$("#c-count .seg-btn").forEach((b) => b.classList.toggle("active", +b.dataset.n === selCount));
   }
+  loadCharacters();
   // 模式切换（图/视频）
   $$("#c-mode .seg-btn").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.mode === mode) return;
@@ -160,8 +164,11 @@ async function create() {
   const sel = $("#c-wf");
   const wf = workflows.find((w) => (w.id || w.name) === sel.value);
   if (!wf) { toast("没有可用工作流", "err"); return; }
+  // 角色锁定串：追加到描述后一起增强，保证角色一致性
+  const charObj = characters.find((c) => c.id === $("#c-char").value);
+  const baseText = promptText + (charObj && charObj.lock ? "，" + charObj.lock : "");
   // 中文 → 英文增强（风格感知，可开关）
-  let submitText = promptText;
+  let submitText = baseText;
   let styleParams = null;
   const styleObj = styles.find((s) => s.id === selStyle);
   if ($("#c-translate").classList.contains("active")) {
@@ -267,4 +274,19 @@ function gCard(it, list) {
     r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
   });
   return card;
+}
+
+/* ---------- 角色资产库联动 ---------- */
+async function loadCharacters() {
+  const r = await api("/api/characters");
+  if (!r.ok) return;
+  characters = r.characters;
+  const box = $("#c-char-box");
+  if (!characters.length) { box.style.display = "none"; return; }
+  box.style.display = "";
+  const sel = $("#c-char");
+  const keep = loadParams().char || "";
+  sel.innerHTML = `<option value="">无</option>` + characters.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+  if (keep && characters.find((c) => c.id === keep)) sel.value = keep;
+  sel.onchange = () => saveParams({ char: sel.value });
 }

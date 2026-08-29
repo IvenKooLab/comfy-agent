@@ -55,6 +55,7 @@ export function initGallery() {
   $("#b-archive").addEventListener("click", () => batchArchive());
   $("#b-trash").addEventListener("click", () => batchTrash());
   $("#b-cancel").addEventListener("click", () => { selected.clear(); syncBatchBar(); render(); });
+  $("#b-concat").addEventListener("click", batchConcat);
   // 灯箱
   $("#lb-close").addEventListener("click", closeLightbox);
   $(".lb-backdrop").addEventListener("click", closeLightbox);
@@ -276,6 +277,18 @@ function syncBatchBar() {
   const bar = $("#batch-bar");
   bar.hidden = selected.size === 0;
   $("#batch-n").textContent = selected.size;
+  const vids = [...selected].filter((p) => /\.(mp4|webm|mov|mkv)$/i.test(p)).length;
+  $("#b-concat").hidden = vids < 2;
+  $("#b-concat").textContent = `🎬 拼接成片（${vids}段）`;
+}
+
+async function batchConcat() {
+  const vids = [...selected].filter((p) => /\.(mp4|webm|mov|mkv)$/i.test(p));
+  if (vids.length < 2) return;
+  if (!confirm(`按选择顺序拼接 ${vids.length} 段视频？`)) return;
+  const r = await api("/api/concat", { method: "POST", body: { paths: vids, name: "拼接成片" } });
+  if (r.ok) { toast(r.msg + "（已进画廊）", "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
+  else toast(r.error, "err");
 }
 async function batchArchive() {
   const paths = [...selected];

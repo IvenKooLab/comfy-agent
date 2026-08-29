@@ -539,3 +539,8 @@ textarea.input { height: auto; padding: 9px 12px; }
 .note-item:hover { background: var(--brand-soft); color: #fff; }
 .note-item .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .note-item .meta { flex: none; color: var(--text-4); font-size: 11px; }
+
+/* ---------- 产线 ---------- */
+.pl-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.pl-item .input { flex: 1; height: 30px; font-size: 12px; }
+.pl-prompt { font-size: 11px; color: var(--text-3); padding: 2px 4px 10px; word-break: break-all; border-bottom: 1px dashed var(--line-1); }

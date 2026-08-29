@@ -65,6 +65,8 @@ DEFAULT_SETTINGS = {
     "llm_base_url": "https://open.bigmodel.cn/api/paas/v4",
     "llm_key": "",
     "llm_model": "glm-4-flash",
+    "comfy_watchdog": True,
+    "comfy_autorequeue": True,
 }
 
 # LLM 厂商预设（OpenAI 兼容协议）；models 为兜底列表，优先用 /models 动态拉取
@@ -107,9 +109,47 @@ def load_settings():
     return s
 
 
+def write_text_atomic(path, text):
+    """原子写文本：先写 .tmp 再 os.replace，断电/崩溃不会留下半截文件。"""
+    d = os.path.dirname(path)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+
 def save_settings(s):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(s, f, ensure_ascii=False, indent=2)
+    write_text_atomic(SETTINGS_FILE, json.dumps(s, ensure_ascii=False, indent=2))
+
+
+def backup_now(reason="manual"):
+    """打包核心数据（工作流库/批次/角色/设置/任务记录）到 data/backups，保留最近 20 份。"""
+    import zipfile
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    bdir = os.path.join(DATA_DIR, "backups")
+    os.makedirs(bdir, exist_ok=True)
+    dst = os.path.join(bdir, f"backup_{ts}_{reason}.zip")
+    with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as z:
+        for sub in ("workflows", "batches", "characters"):
+            root = os.path.join(DATA_DIR, sub)
+            if os.path.isdir(root):
+                for dp, _, fs in os.walk(root):
+                    for f in fs:
+                        fp = os.path.join(dp, f)
+                        z.write(fp, os.path.relpath(fp, DATA_DIR))
+        for f in (SETTINGS_FILE, RUNS_FILE, ARCHIVE_LOG):
+            if os.path.isfile(f):
+                z.write(f, os.path.relpath(f, DATA_DIR))
+    zips = sorted([os.path.join(bdir, f) for f in os.listdir(bdir) if f.startswith("backup_")],
+                  key=os.path.getmtime)
+    for old in zips[:-20]:
+        try:
+            os.remove(old)
+        except OSError:
+            pass
+    return {"file": os.path.basename(dst), "count": len(zips[-20:])}
 
 
 SETTINGS = None  # set in main()
@@ -1436,6 +1476,206 @@ def vault_note_content(rel):
         return f.read(8000)
 
 
+# ---------------------------------------------------------------- watchdog & auto-resume
+
+_watch = {"last_online": None, "last_restart": 0.0}
+
+
+def resume_stale_runs():
+    """ComfyUI 重启后，把中断的排队/执行中任务按图快照重新提交（同 seed 保证可复现）。"""
+    runs = load_runs()
+    n = 0
+    for r in runs:
+        if r.get("status") in ("queued", "running") and r.get("graph"):
+            res = submit_workflow({"name": "续跑·" + r.get("name", ""), "api": r["graph"]},
+                                  times=1, seed=r.get("seed"))
+            if res.get("ok"):
+                n += 1
+                r["status"] = "superseded"
+                r["resumed_as"] = (res.get("prompt_ids") or [None])[0]
+    if n:
+        write_json_file(RUNS_FILE, runs[:300])
+    return n
+
+
+def watchdog_loop():
+    """看门狗：ComfyUI 掉线自动重启；重启成功后自动续跑中断任务。"""
+    while True:
+        time.sleep(8)
+        try:
+            online = COMFY.probe() is not None
+        except Exception:
+            online = False
+        was = _watch["last_online"]
+        if was is None:
+            _watch["last_online"] = online
+            continue
+        if was and not online:
+            HUB.publish({"type": "watchdog", "data": {"phase": "down"}})
+            time.sleep(10)
+            still_down = True
+            try:
+                still_down = COMFY.probe() is None
+            except Exception:
+                pass
+            if still_down and time.time() - _watch["last_restart"] > 180 and SETTINGS.get("comfy_watchdog", True):
+                _watch["last_restart"] = time.time()
+                r = comfy_launch()
+                HUB.publish({"type": "watchdog", "data": {"phase": "restart", "ok": r.get("ok"), "msg": r.get("msg", r.get("error", ""))}})
+                if r.get("ok"):
+                    for _ in range(60):  # 最多等 10 分钟上线
+                        time.sleep(10)
+                        try:
+                            if COMFY.probe():
+                                break
+                        except Exception:
+                            pass
+                    if SETTINGS.get("comfy_autorequeue", True):
+                        try:
+                            n = resume_stale_runs()
+                            HUB.publish({"type": "watchdog", "data": {"phase": "resumed", "count": n}})
+                        except Exception:
+                            pass
+        if not was and online:
+            HUB.publish({"type": "watchdog", "data": {"phase": "up"}})
+        _watch["last_online"] = online
+
+
+# ---------------------------------------------------------------- batches (产线批次)
+
+BATCH_DIR = os.path.join(DATA_DIR, "batches")
+CHAR_DIR = os.path.join(DATA_DIR, "characters")
+
+
+def _batch_path(bid):
+    return os.path.join(BATCH_DIR, safe_name(bid) + ".json")
+
+
+def _list_batches():
+    out = []
+    if os.path.isdir(BATCH_DIR):
+        for fn in sorted(os.listdir(BATCH_DIR)):
+            if fn.endswith(".json"):
+                b = read_json_file(os.path.join(BATCH_DIR, fn), None)
+                if b:
+                    out.append({"id": b.get("id"), "name": b.get("name"), "created": b.get("created"),
+                                "total": len(b.get("items", [])),
+                                "done": sum(1 for i in b.get("items", []) if i.get("status") == "success"),
+                                "failed": sum(1 for i in b.get("items", []) if i.get("status") == "error")})
+    return out
+
+
+def _load_batch(bid):
+    return read_json_file(_batch_path(bid), None)
+
+
+def _save_batch(b):
+    write_text_atomic(_batch_path(b["id"]), json.dumps(b, ensure_ascii=False, indent=1))
+
+
+def parse_script_text(text):
+    """解析分集脚本：提取 ### SHOT编号【画风】 + ```text 块 的逐镜提示词。"""
+    items = []
+    pattern = re.compile(r"###\s*(\S+?)\s*[【\[]([^】\]]*)[】\]]\s*```[^\n]*\n(.*?)```", re.S)
+    for m in pattern.finditer(text or ""):
+        shot_id, style_tag, block = m.group(1), m.group(2).strip(), m.group(3).strip()
+        items.append({"name": shot_id + (f"·{style_tag}" if style_tag else ""), "prompt": block})
+    # 兜底：管道表格行（| SHOT01 | ... |）
+    if not items:
+        for line in (text or "").splitlines():
+            mm = re.match(r"\|\s*(SHOT\w+|\S*E\d+S?\d*\w*)\s*\|", line, re.I)
+            if mm and "|" in line[mm.end():]:
+                cells = [c.strip() for c in line.strip("|").split("|")]
+                items.append({"name": cells[0], "prompt": " / ".join(c for c in cells[1:] if c)})
+    return items
+
+
+def run_batch(bid, only_index=None):
+    b = _load_batch(bid)
+    if not b:
+        return {"ok": False, "msg": "批次不存在"}
+    wf = None
+    for w in list_workflows():
+        if w.get("id") == b.get("workflow_id"):
+            wf = w
+            break
+    if not wf:
+        wf = BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
+    queued = 0
+    for i, item in enumerate(b.get("items", [])):
+        if only_index is not None and i != only_index:
+            continue
+        if only_index is None and item.get("status") == "success":
+            continue
+        res = submit_workflow({"name": f"{b['name']}·{item['name']}", "api": wf["api"]},
+                              times=1, seed=None,
+                              overrides={"text": item.get("prompt", "")},
+                              params=item.get("params"))
+        if res.get("ok"):
+            item["status"] = "queued"
+            item["prompt_id"] = (res.get("prompt_ids") or [None])[0]
+            queued += 1
+        else:
+            item["status"] = "error"
+            item["error"] = (res.get("msg") or "")[:200]
+    b["updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    _save_batch(b)
+    return {"ok": True, "msg": f"已排队 {queued}/{len(b.get('items', []))} 个镜头", "batch": b}
+
+
+def batch_sync_status():
+    """用 ComfyUI history 刷新所有批次里 queued/running 的状态。"""
+    try:
+        h = COMFY.http("/history?max_items=100", timeout=10)
+    except Exception:
+        return
+    hmap = {}
+    for pid, item in (h or {}).items():
+        st = (item.get("status") or {}).get("status_str")
+        outs = []
+        for o in (item.get("outputs") or {}).values():
+            for key in ("images", "gifs", "videos"):
+                for im in (o.get(key) or []):
+                    outs.append(((o.get("subfolder", "") + "/" if o.get("subfolder") else "") + im.get("filename", "")))
+        hmap[pid] = (st, outs)
+    if not os.path.isdir(BATCH_DIR):
+        return
+    for fn in os.listdir(BATCH_DIR):
+        if not fn.endswith(".json"):
+            continue
+        b = read_json_file(os.path.join(BATCH_DIR, fn), None)
+        if not b:
+            continue
+        changed = False
+        for item in b.get("items", []):
+            pid = item.get("prompt_id")
+            if pid and pid in hmap and item.get("status") in ("queued", "running", None):
+                stt, outs = hmap[pid]
+                item["status"] = "success" if stt == "success" else ("error" if stt == "error" else item.get("status"))
+                if outs:
+                    item["output"] = outs[0]
+                changed = True
+        if changed:
+            write_json_file(_batch_path(b.get("id")), b)
+
+
+# ---------------------------------------------------------------- characters (角色资产库)
+
+def _char_path(cid):
+    return os.path.join(CHAR_DIR, safe_name(cid) + ".json")
+
+
+def list_characters():
+    out = []
+    if os.path.isdir(CHAR_DIR):
+        for fn in sorted(os.listdir(CHAR_DIR)):
+            if fn.endswith(".json"):
+                c = read_json_file(os.path.join(CHAR_DIR, fn), None)
+                if c:
+                    out.append(c)
+    return out
+
+
 # ---------------------------------------------------------------- HTTP handler
 
 class Handler(BaseHTTPRequestHandler):
@@ -1559,10 +1799,11 @@ class Handler(BaseHTTPRequestHandler):
             s.pop("client_id", None)
             return self.send_json({"ok": True, "settings": s})
         if path == "/api/settings" and method == "POST":
+            # gitee_repo/gitee_token 内置不外露；zhipu_key/llm_key/gitee_token 走下方专用分支
             for k in ("port", "comfy_url", "output_dir", "vault_path",
                       "comfy_dir", "comfy_python", "comfy_launch_args",
-                      "llm_provider", "llm_base_url", "llm_model"):
-            # gitee_repo/gitee_token 内置不外露；zhipu_key/llm_key/gitee_token 走下方专用分支
+                      "llm_provider", "llm_base_url", "llm_model",
+                      "comfy_watchdog", "comfy_autorequeue"):
                 if k in body:
                     SETTINGS[k] = body[k]
             if body.get("zhipu_key"):
@@ -1867,6 +2108,93 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 return self.send_json({"ok": True, "lines": "（暂无日志：还没从创作台启动过 ComfyUI）"})
 
+        # ---- 产线批次 / 角色库 / 拼接 / 备份
+        if path == "/api/batches" and method == "GET":
+            return self.send_json({"ok": True, "batches": _list_batches()})
+        if path == "/api/batches/get" and method == "POST":
+            b = _load_batch(body.get("id", ""))
+            return self.send_json({"ok": bool(b), "batch": b}) if b else self.send_json({"ok": False, "error": "批次不存在"}, 404)
+        if path == "/api/batches/save" and method == "POST":
+            bid = body.get("id") or ("b" + datetime.now().strftime("%Y%m%d%H%M%S"))
+            b = {"id": bid, "name": body.get("name") or bid,
+                 "workflow_id": body.get("workflow_id") or "h3-t2v",
+                 "created": body.get("created") or datetime.now().strftime("%Y-%m-%d %H:%M"),
+                 "updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                 "items": body.get("items") or []}
+            _save_batch(b)
+            return self.send_json({"ok": True, "id": bid, "msg": "批次已保存"})
+        if path == "/api/batches/delete" and method == "POST":
+            p = _batch_path(body.get("id", ""))
+            if os.path.exists(p):
+                os.remove(p)
+                return self.send_json({"ok": True, "msg": "已删除"})
+            return self.send_json({"ok": False, "error": "不存在"}, 404)
+        if path == "/api/batches/parse" and method == "POST":
+            return self.send_json({"ok": True, "items": parse_script_text(body.get("text", ""))})
+        if path == "/api/batches/run" and method == "POST":
+            return self.send_json(run_batch(body.get("id", "")))
+        if path == "/api/batches/retry" and method == "POST":
+            b = _load_batch(body.get("id", ""))
+            idx = int(body.get("index", -1))
+            if not b or idx < 0 or idx >= len(b.get("items", [])):
+                return self.send_json({"ok": False, "error": "参数错误"}, 400)
+            item = b["items"][idx]
+            item["status"] = None
+            _save_batch(b)
+            b2 = run_batch(body.get("id", ""), only_index=idx)
+            b = _load_batch(body.get("id", "")) or b
+            return self.send_json({"ok": b2.get("ok", False), "msg": b2.get("msg", "已重新排队"), "batch": b})
+        if path == "/api/batches/sync" and method == "POST":
+            batch_sync_status()
+            return self.send_json({"ok": True})
+        if path == "/api/concat" and method == "POST":
+            if not FFMPEG:
+                return self.send_json({"ok": False, "error": "未找到 ffmpeg"})
+            paths = [resolve_media(p) for p in (body.get("paths") or [])]
+            paths = [p for p in paths if p and os.path.isfile(p)]
+            if len(paths) < 2:
+                return self.send_json({"ok": False, "error": "至少需要两段视频"})
+            name = safe_name(body.get("name") or "成片") or "成片"
+            outdir = os.path.join(SETTINGS["output_dir"], "成片")
+            os.makedirs(outdir, exist_ok=True)
+            out = os.path.join(outdir, f"{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4")
+            lst = out + ".txt"
+            with open(lst, "w", encoding="utf-8") as f:
+                for p in paths:
+                    f.write("file '" + p.replace("'", "'\\''") + "'\n")
+            r = subprocess.run([FFMPEG, "-v", "error", "-f", "concat", "-safe", "0", "-i", lst,
+                                "-c", "copy", "-y", out], capture_output=True, text=True,
+                               timeout=300, creationflags=0x08000000)
+            if r.returncode != 0 or not os.path.isfile(out):
+                r = subprocess.run([FFMPEG, "-v", "error", "-f", "concat", "-safe", "0", "-i", lst,
+                                    "-c:v", "libx264", "-preset", "fast", "-c:a", "aac", "-y", out],
+                                   capture_output=True, text=True, timeout=600, creationflags=0x08000000)
+            os.remove(lst)
+            if r.returncode == 0 and os.path.isfile(out):
+                return self.send_json({"ok": True, "output": "成片/" + os.path.basename(out),
+                                       "msg": f"已拼接 {len(paths)} 段 → {os.path.basename(out)}"})
+            return self.send_json({"ok": False, "error": "拼接失败：" + (r.stderr or "")[-200:]})
+        if path == "/api/characters" and method == "GET":
+            return self.send_json({"ok": True, "characters": list_characters()})
+        if path == "/api/characters/save" and method == "POST":
+            cid = body.get("id") or ("c" + datetime.now().strftime("%Y%m%d%H%M%S"))
+            c = {"id": cid, "name": body.get("name") or cid,
+                 "lock": body.get("lock", ""), "ref": body.get("ref", ""),
+                 "updated": datetime.now().strftime("%Y-%m-%d %H:%M")}
+            write_text_atomic(_char_path(cid), json.dumps(c, ensure_ascii=False, indent=1))
+            return self.send_json({"ok": True, "character": c, "msg": f"角色「{c['name']}」已保存"})
+        if path == "/api/characters/delete" and method == "POST":
+            p = _char_path(body.get("id", ""))
+            if os.path.exists(p):
+                os.remove(p)
+                return self.send_json({"ok": True, "msg": "已删除"})
+            return self.send_json({"ok": False, "error": "不存在"}, 404)
+        if path == "/api/backup" and method == "POST":
+            return self.send_json({"ok": True, **backup_now(body.get("reason", "manual"))})
+        if path == "/api/backups":
+            bdir = os.path.join(DATA_DIR, "backups")
+            files = sorted([f for f in os.listdir(bdir) if f.startswith("backup_")], reverse=True) if os.path.isdir(bdir) else []
+            return self.send_json({"ok": True, "backups": files[:20]})
         # ---- LLM 厂商
         if path == "/api/llm/providers":
             return self.send_json({"ok": True, "presets": [
@@ -1915,7 +2243,8 @@ def create_server():
     COMFY = ComfyClient(SETTINGS["comfy_url"])
     threading.Thread(target=ws_monitor_loop, daemon=True).start()
     threading.Thread(target=queue_poll_loop, daemon=True).start()
-    threading.Thread(target=lambda: (time.sleep(6), _thumb_lru_cleanup()), daemon=True).start()
+    threading.Thread(target=watchdog_loop, daemon=True).start()
+    threading.Thread(target=lambda: (time.sleep(6), _thumb_lru_cleanup(), backup_now("startup")), daemon=True).start()
     port = int(SETTINGS.get("port", 8190))
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     httpd.daemon_threads = True
