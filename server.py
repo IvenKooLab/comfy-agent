@@ -1303,6 +1303,118 @@ def launcher_info():
     }
 
 
+# ---------------------------------------------------------------- comfyui version maintenance
+
+def comfy_git_info():
+    cdir = SETTINGS.get("comfy_dir", "")
+    if not os.path.isdir(os.path.join(cdir, ".git")):
+        return {"git": False}
+
+    def g(*a, timeout=30):
+        return subprocess.run(["git", *a], cwd=cdir, capture_output=True, text=True,
+                              timeout=timeout, creationflags=0x08000000)
+
+    head = (g("rev-parse", "--short", "HEAD").stdout or "").strip()
+    branch = (g("rev-parse", "--abbrev-ref", "HEAD").stdout or "").strip()
+    lines = (g("status", "--porcelain").stdout or "").splitlines()
+    dirty_tracked = len([l for l in lines if not l.startswith("??")])
+    ui_ver = None
+    try:
+        ui_ver = COMFY.http("/system_stats", timeout=4).get("system", {}).get("comfyui_version")
+    except Exception:
+        pass
+    return {"git": True, "head": head, "branch": branch, "dirty_tracked": dirty_tracked, "ui_version": ui_ver}
+
+
+def comfy_check_remote():
+    """fetch 远端并计算落后多少个提交。返回 {ok, behind, remote_head, error?}"""
+    info = comfy_git_info()
+    if not info.get("git"):
+        return {"ok": False, "error": "ComfyUI 目录不是 git 仓库"}
+    cdir = SETTINGS.get("comfy_dir", "")
+
+    def g(*a, timeout=180):
+        return subprocess.run(["git", *a], cwd=cdir, capture_output=True, text=True,
+                              timeout=timeout, creationflags=0x08000000)
+
+    ls = g("ls-remote", "origin", "HEAD", timeout=30)
+    if ls.returncode != 0:
+        return {"ok": False, "error": "无法连接远端（网络问题或被墙）：" + ls.stderr.strip()[:120]}
+    remote_sha = (ls.stdout or "").split()[0] if ls.stdout else ""
+    f = g("fetch", "origin", "--quiet", timeout=180)
+    if f.returncode != 0:
+        return {"ok": False, "error": "fetch 失败：" + f.stderr.strip()[:120]}
+    cnt = g("rev-list", "--count", f"HEAD..{remote_sha}")
+    behind = int(cnt.stdout.strip() or 0) if cnt.returncode == 0 else 0
+    return {"ok": True, "behind": behind, "remote_head": remote_sha[:7], **{k: info[k] for k in ("head", "branch", "ui_version")}}
+
+
+def comfy_do_update():
+    """一键更新：stash 本地改动 → ff-only pull → 恢复改动。"""
+    info = comfy_git_info()
+    if not info.get("git"):
+        return {"ok": False, "msg": "ComfyUI 目录不是 git 仓库，无法一键更新"}
+    cdir = SETTINGS.get("comfy_dir", "")
+
+    def g(*a, timeout=240):
+        return subprocess.run(["git", *a], cwd=cdir, capture_output=True, text=True,
+                              timeout=timeout, creationflags=0x08000000)
+
+    stashed = False
+    if info.get("dirty_tracked", 0) > 0:
+        g("stash", "push", "-q", "-m", "comfyagent-auto-stash")
+        stashed = True
+    pull = g("pull", "--ff-only", timeout=240)
+    if pull.returncode != 0:
+        if stashed:
+            g("stash", "pop")
+        return {"ok": False, "msg": "更新失败（已恢复本地改动）：" + (pull.stderr or pull.stdout).strip()[:200]}
+    new_head = (g("rev-parse", "--short", "HEAD").stdout or "").strip()
+    popped = ""
+    if stashed:
+        pop = g("stash", "pop")
+        popped = "本地改动已恢复" if pop.returncode == 0 else "注意：本地改动恢复有冲突，在 git stash list 里"
+    return {"ok": True, "msg": f"ComfyUI 已更新：{info.get('head')} → {new_head}。{popped}",
+            "note": "需要重启 ComfyUI 生效（启动器页可一键重启）", "head": new_head}
+
+
+# ---------------------------------------------------------------- obsidian vault visualization
+
+def vault_scan():
+    """扫描整个 vault：笔记列表 + 字数 + wiki 双链。"""
+    v = SETTINGS.get("vault_path", "")
+    notes = []
+    if not os.path.isdir(v):
+        return notes
+    for dirpath, dirnames, filenames in os.walk(v):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for fn in filenames:
+            if not fn.endswith(".md"):
+                continue
+            fp = os.path.join(dirpath, fn)
+            try:
+                st = os.stat(fp)
+                with open(fp, encoding="utf-8", errors="replace") as f:
+                    text = f.read()
+            except OSError:
+                continue
+            rel = os.path.relpath(fp, v).replace("\\", "/")
+            links = re.findall(r"\[\[([^\]|#]+)", text)
+            notes.append({"path": rel, "name": fn[:-3], "mtime": int(st.st_mtime),
+                          "words": len(text), "links": [l.strip() for l in links]})
+    notes.sort(key=lambda x: -x["mtime"])
+    return notes
+
+
+def vault_note_content(rel):
+    v = os.path.abspath(SETTINGS.get("vault_path", ""))
+    fp = os.path.abspath(os.path.join(v, rel))
+    if not fp.lower().startswith(v.lower()) or not fp.endswith(".md") or not os.path.isfile(fp):
+        return None
+    with open(fp, encoding="utf-8", errors="replace") as f:
+        return f.read(8000)
+
+
 # ---------------------------------------------------------------- HTTP handler
 
 class Handler(BaseHTTPRequestHandler):
@@ -1630,6 +1742,19 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         # ---- Obsidian
+        if path == "/api/obsidian/note":
+            content = vault_note_content(q.get("path", ""))
+            if content is None:
+                return self.send_json({"ok": False, "error": "笔记不存在或路径非法"}, 404)
+            return self.send_json({"ok": True, "content": content})
+        if path == "/api/obsidian/vault":
+            notes = vault_scan()
+            week_ago = time.time() - 7 * 86400
+            stats = {"count": len(notes),
+                     "words": sum(n["words"] for n in notes),
+                     "links": sum(len(n["links"]) for n in notes),
+                     "recent7": sum(1 for n in notes if n["mtime"] >= week_ago)}
+            return self.send_json({"ok": True, "notes": notes[:300], "stats": stats})
         if path == "/api/obsidian/status":
             return self.send_json({"ok": True, **obsidian_status()})
         if path == "/api/obsidian/archive" and method == "POST":
@@ -1693,6 +1818,12 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 启动器
         if path == "/api/launcher/info":
             return self.send_json({"ok": True, **launcher_info()})
+        if path == "/api/comfy/git":
+            return self.send_json({"ok": True, **comfy_git_info()})
+        if path == "/api/comfy/check_remote":
+            return self.send_json(comfy_check_remote())
+        if path == "/api/comfy/update" and method == "POST":
+            return self.send_json(comfy_do_update())
         if path == "/api/comfy/launch" and method == "POST":
             return self.send_json(comfy_launch())
         if path == "/api/comfy/stop" and method == "POST":
