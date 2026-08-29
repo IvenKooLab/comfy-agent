@@ -1220,8 +1220,10 @@ def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
                 ins["guidance"] = float(params["guidance"])
     if overrides:
         applied = 0
+        image_name = overrides.pop("__image__", None)
         for nid, node in api.items():
             ins = node.get("inputs", {})
+            ct = node.get("class_type", "")
             for k, v in overrides.items():
                 if k in ins and isinstance(ins[k], (str, int, float)):
                     ins[k] = v
@@ -1233,6 +1235,11 @@ def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
                             ins[alt] = v
                             applied += 1
                             break
+            if image_name:
+                # i2v 首帧：只改 LoadImage 的源图选择；first_frame 等连线输入保持不动
+                # （i2v 模板里 first_frame 是 ["LoadImage节点", 0] 连线，覆盖会破坏图）
+                if ct == "LoadImage" and "image" in ins:
+                    ins["image"] = image_name
         if applied == 0 and "text" in overrides:
             # 常见场景：把 text 塞给第一个 CLIPTextEncode
             for nid, node in api.items():
@@ -1590,6 +1597,27 @@ def parse_script_text(text):
     return items
 
 
+def copy_to_input(src_rel, tag="frame"):
+    """把画廊里的图复制进 ComfyUI input 目录（作 i2v 关键帧/参考图）。返回 input 文件名。"""
+    full = resolve_media(src_rel)
+    if not full or not os.path.isfile(full):
+        return None
+    cdir = SETTINGS.get("comfy_dir", "")
+    input_dir = os.path.join(cdir, "input")
+    if not os.path.isdir(input_dir):
+        return None
+    base = safe_name(os.path.splitext(os.path.basename(src_rel))[0])[:40] or tag
+    name = f"agent_{tag}_{base}{os.path.splitext(full)[1]}"
+    dst = os.path.join(input_dir, name)
+    i = 1
+    while os.path.exists(dst):
+        name = f"agent_{tag}_{base}_{i}{os.path.splitext(full)[1]}"
+        dst = os.path.join(input_dir, name)
+        i += 1
+    shutil.copy2(full, dst)
+    return name
+
+
 def run_batch(bid, only_index=None):
     b = _load_batch(bid)
     if not b:
@@ -1607,9 +1635,19 @@ def run_batch(bid, only_index=None):
             continue
         if only_index is None and item.get("status") == "success":
             continue
+        overrides = {"text": item.get("prompt", "")}
+        # 关键帧：镜头指定了首帧图 → 复制进 input 目录并注入图输入
+        if item.get("first_frame"):
+            input_name = copy_to_input(item["first_frame"], tag="ff")
+            if input_name:
+                overrides["__image__"] = input_name
+            else:
+                item["status"] = "error"
+                item["error"] = f"关键帧图无效：{item['first_frame']}"
+                continue
         res = submit_workflow({"name": f"{b['name']}·{item['name']}", "api": wf["api"]},
                               times=1, seed=None,
-                              overrides={"text": item.get("prompt", "")},
+                              overrides=overrides,
                               params=item.get("params"))
         if res.get("ok"):
             item["status"] = "queued"
@@ -2161,6 +2199,11 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 return self.send_json({"ok": True, "lines": "（暂无日志：还没从创作台启动过 ComfyUI）"})
 
+        if path == "/api/input_image" and method == "POST":
+            name = copy_to_input(body.get("path", ""), tag=body.get("tag", "frame"))
+            if name:
+                return self.send_json({"ok": True, "input_name": name})
+            return self.send_json({"ok": False, "error": "图片不存在或 ComfyUI input 目录无效"}, 400)
         # ---- 产线批次 / 角色库 / 拼接 / 备份
         if path == "/api/batches" and method == "GET":
             return self.send_json({"ok": True, "batches": _list_batches()})
