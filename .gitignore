@@ -3,6 +3,7 @@ data/trash/
 data/settings.json
 data/app.log
 data/comfy.log
+data/backups/
 __pycache__/
 *.pyc
 server_run.log
@@ -10,3 +11,4 @@ dev_app.log
 build/
 dist/*
 !dist/ComfyAgent-win64.zip
+push_github.log
