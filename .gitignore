@@ -1,5 +1,8 @@
 data/cache/
 data/trash/
+data/settings.json
+data/app.log
+data/comfy.log
 __pycache__/
 *.pyc
 server_run.log

@@ -1,0 +1,11 @@
+{
+  "port": 8190,
+  "comfy_url": "http://127.0.0.1:8188",
+  "output_dir": "D:\tools\ComfyUI-aki-v3\ComfyUI\output",
+  "vault_path": "E:\work\obsidian\TungwaiKu",
+  "comfy_dir": "D:\tools\ComfyUI-aki-v3\ComfyUI",
+  "comfy_python": "D:\tools\ComfyUI-aki-v3\python\python.exe",
+  "comfy_launch_args": "--listen 127.0.0.1 --port 8188 --reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory",
+  "gitee_repo": "gu-dongwei/comfy-agent",
+  "zhipu_model": "glm-4-flash"
+}
