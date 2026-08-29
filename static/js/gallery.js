@@ -81,11 +81,12 @@ export function initGallery() {
   });
   $("#lb-archive").addEventListener("click", doArchive);
   // 参数行：悬停复制 + 长文本展开（委托，一次绑定）
+  // 复制反馈用按钮内联状态（✓ 已复制），不弹全局 toast——避免遮挡灯箱关闭按钮
   $("#lb-summary").addEventListener("click", async (e) => {
     const cp = e.target.closest(".kv-copy");
     if (cp) {
-      (await copyText(cp.dataset.copy)) ? toast("已复制到剪贴板", "ok") : toast("复制失败", "err");
-      cp.textContent = "✓ 已复制";
+      const ok = await copyText(cp.dataset.copy);
+      cp.textContent = ok ? "✓ 已复制" : "复制失败";
       setTimeout(() => { cp.textContent = "复制"; }, 1500);
       return;
     }
