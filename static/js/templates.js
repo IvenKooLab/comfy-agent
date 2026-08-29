@@ -21,8 +21,8 @@ export function initTemplates() {
 }
 
 async function load() {
-  $("#tpl-body").innerHTML = `<div class="skeleton" style="height:200px"></div>`;
   const box = $("#tpl-body");
+  box.innerHTML = `<div class="skeleton" style="height:200px"></div>`;
   const r = await api("/api/templates/index");
   if (!r.ok) {
     box.innerHTML = `<div class="empty"><div class="empty-ico">📡</div><p>${r.error}</p>
@@ -31,6 +31,8 @@ async function load() {
     setTimeout(() => { if (!groups.length) load(); }, 5000); // 网络抖动自动重试一次
     return;
   }
+  // 恢复被骨架屏替换掉的卡片容器
+  box.innerHTML = `<div id="tpl-cards" class="tpl-grid"></div>`;
   groups = r.groups;
   renderGroups();
   renderCards();
@@ -66,8 +68,13 @@ function matchCount(gtitle) {
 }
 
 function renderCards() {
-  const grid = $("#tpl-cards");
-  if (!grid) return;
+  let grid = $("#tpl-cards");
+  if (!grid) { // 容器被骨架/错误态覆盖时自愈
+    const box = $("#tpl-body");
+    if (!box) return;
+    box.innerHTML = `<div id="tpl-cards" class="tpl-grid"></div>`;
+    grid = box.firstChild;
+  }
   const all = allTemplates();
   const list = all.filter((t) => {
     if (curGroup !== "all" && t.group !== curGroup) return false;
