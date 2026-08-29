@@ -19,6 +19,10 @@ export function initCreate() {
     selCount = +b.dataset.n;
   }));
   $("#c-dice").addEventListener("click", () => { $("#c-seed").value = Math.floor(Math.random() * 2 ** 31); });
+  $("#c-translate").addEventListener("click", () => {
+    $("#c-translate").classList.toggle("active");
+    if (!$("#c-translate").classList.contains("active")) $("#c-en-preview").hidden = true;
+  });
   $$(".inspire-chips .chip").forEach((c) => c.addEventListener("click", () => {
     $("#c-prompt").value = c.textContent.trim();
     $("#c-prompt").focus();
@@ -57,25 +61,45 @@ async function create() {
   const sel = $("#c-wf");
   const wf = workflows.find((w) => (w.id || w.name) === sel.value);
   if (!wf) { toast("没有可用工作流", "err"); return; }
+  // 中文 → 英文增强（可开关）
+  let submitText = promptText;
+  if ($("#c-translate").classList.contains("active") && /[\u4e00-\u9fff]/.test(promptText)) {
+    const btn = $("#c-go");
+    btn.disabled = true; btn.querySelector("span").textContent = "翻译中…";
+    try {
+      const en = await api("/api/enhance_prompt", { method: "POST", body: { text: promptText } });
+      if (en.ok && en.english) {
+        submitText = en.english;
+        const pv = $("#c-en-preview");
+        pv.innerHTML = `<span class="en-tag">EN（${en.engine}）→</span>${en.english}`;
+        pv.hidden = false;
+        if (en.note) toast(en.note, "err");
+      } else {
+        toast(en.error || "翻译失败，按原文提交", "err");
+      }
+    } finally {
+      btn.disabled = false; btn.querySelector("span").textContent = "✦ 生 成";
+    }
+  }
   // 提示词里若带 WxH 则覆盖尺寸
   let { w, h } = selSize;
-  const ms = promptText.match(/(\d{3,4})\s*[xX×]\s*(\d{3,4})/);
-  let text = promptText;
-  if (ms) { w = +ms[1]; h = +ms[2]; text = (promptText.slice(0, ms.start) + promptText.slice(ms.end)).trim(); }
+  const ms = submitText.match(/(\d{3,4})\s*[xX×]\s*(\d{3,4})/);
+  let text = submitText;
+  if (ms) { w = +ms[1]; h = +ms[2]; text = (submitText.slice(0, ms.start) + submitText.slice(ms.end)).trim(); }
   const seedRaw = $("#c-seed").value.trim();
   const seed = seedRaw === "" ? null : (+seedRaw || 0);
-  const btn = $("#c-go");
-  btn.disabled = true; btn.querySelector("span").textContent = "提交中…";
+  const go = $("#c-go");
+  go.disabled = true; go.querySelector("span").textContent = "提交中…";
   try {
     const r = await api("/api/prompt", {
       method: "POST",
-      body: { name: "创作·" + text.slice(0, 16), prompt: wf.api, times: selCount, seed,
+      body: { name: "创作·" + promptText.slice(0, 16), prompt: wf.api, times: selCount, seed,
               overrides: { text, width: w, height: h } },
     });
     r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
     if (r.ok) $("#c-seed").value = "";
   } finally {
-    btn.disabled = false; btn.querySelector("span").textContent = "✦ 生 成";
+    go.disabled = false; go.querySelector("span").textContent = "✦ 生 成";
   }
 }
 

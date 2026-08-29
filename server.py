@@ -732,7 +732,88 @@ def sync_workflows_to_vault():
     return {"ok": True, "count": len(synced), "dir": "ComfyAgent/workflows"}
 
 
-# ---------------------------------------------------------------- agent (rules)
+# ---------------------------------------------------------------- prompt enhance (zh -> en)
+
+_ZH_RE = re.compile(r"[\u4e00-\u9fff]")
+
+# MyMemory 直译的高频误修 → Flux 友好词表
+_TRANSLATION_FIXES = [
+    ("national comedy", "Chinese donghua (guoman) animation"),
+    ("national comic", "Chinese donghua animation"),
+    ("close-up of the movie", "cinematic close-up"),
+    ("movie feeling", "cinematic look"),
+    ("the sea of clouds", "a sea of clouds"),
+    ("looking back", "glancing back over the shoulder"),
+]
+_STYLE_BOOST = "cinematic lighting, highly detailed, guoman 3d animation style"
+
+
+def translate_mymemory(text):
+    q = urllib.parse.quote(text)
+    url = f"https://api.mymemory.translated.net/get?q={q}&langpair=zh-CN|en"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=12) as r:
+        d = json.loads(r.read())
+    en = (d.get("responseData") or {}).get("translatedText")
+    if not en or "IS AN INVALID" in en.upper() or "MYMEMORY WARNING" in en.upper():
+        raise ValueError("myMemory 无译文")
+    return en
+
+
+def polish_english(en):
+    low = en
+    for bad, good in _TRANSLATION_FIXES:
+        low = low.replace(bad, good)
+    # 去掉句尾多余的 "and"
+    low = re.sub(r",\s*and\s*$", "", low)
+    en = low.strip()
+    if not en.endswith("."):
+        en = en.rstrip(",;")
+    return en + ", " + _STYLE_BOOST
+
+
+def enhance_prompt_zhipu(text, key, model):
+    body = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": (
+                "你是 Flux 文生图提示词专家。把用户的中文画面描述翻译并重写为一段 40-80 词的高质量英文提示词："
+                "保留主体、动作、构图、光线、风格意图；补全必要细节（镜头类型、光线、氛围、风格）。"
+                "只输出英文提示词本身，不要任何解释或引号。")},
+            {"role": "user", "content": text},
+        ], "temperature": 0.3,
+    }).encode()
+    req = urllib.request.Request("https://open.bigmodel.cn/api/paas/v4/chat/completions", data=body,
+                                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        data = json.loads(r.read())
+    return data["choices"][0]["message"]["content"].strip()
+
+
+def enhance_prompt(text):
+    """中文→英文增强。返回 {ok, english, engine, note?}；已是英文则原样 passthrough。"""
+    text = (text or "").strip()
+    if not text:
+        return {"ok": False, "error": "空提示词"}
+    if not _ZH_RE.search(text):
+        return {"ok": True, "english": text, "engine": "passthrough"}
+    key = SETTINGS.get("zhipu_key", "")
+    if key:
+        try:
+            return {"ok": True, "english": enhance_prompt_zhipu(text, key, SETTINGS.get("zhipu_model", "glm-4-flash")),
+                    "engine": "glm"}
+        except Exception as e:
+            note = f"GLM 增强失败({e})，用免费翻译兜底"
+    else:
+        note = None
+    try:
+        en = polish_english(translate_mymemory(text))
+        return {"ok": True, "english": en, "engine": "mymemory", "note": note}
+    except Exception as e:
+        return {"ok": False, "error": f"翻译失败：{e}" + ("；" + note if note else "") + "（将按原文提交）"}
+
+
+
 
 def zhipu_chat(text, key, model):
     body = json.dumps({
@@ -1262,6 +1343,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True, "uri": obsidian_uri(rel)})
 
         # ---- Agent
+        if path == "/api/enhance_prompt" and method == "POST":
+            return self.send_json(enhance_prompt(body.get("text", "")))
         if path == "/api/agent" and method == "POST":
             return self.send_json({"ok": True, **agent_execute(body.get("text", ""))})
 

@@ -126,6 +126,13 @@ a { color: var(--cyan); text-decoration: none; }
   font-family: var(--font);
 }
 .composer-input::placeholder { color: var(--text-3); }
+.en-preview {
+  margin: 2px 16px 0; padding: 8px 12px; font-size: 12px; line-height: 1.6;
+  color: var(--cyan); background: rgba(34, 211, 238, .06);
+  border: 1px dashed rgba(34, 211, 238, .3); border-radius: 9px;
+  word-break: break-all;
+}
+.en-preview .en-tag { color: var(--text-3); margin-right: 6px; }
 .composer-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 10px 12px 12px; flex-wrap: wrap; }
 .composer-opts { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; }
 .opt-group { display: flex; flex-direction: column; gap: 6px; }
