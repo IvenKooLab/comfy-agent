@@ -9,7 +9,4 @@ __pycache__/
 server_run.log
 dev_app.log
 build/
-dist/*
-!dist/ComfyAgent-win64.zip
-push_github.log
-docs/竞品分析与路线图.md
+dist/
