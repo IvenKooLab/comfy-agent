@@ -61,4 +61,4 @@ bash build_exe.sh
 
 ## License
 
-[MIT](LICENSE) © 2026 Iven Gu
+[MIT](LICENSE) © 2026 IvenKooLab
