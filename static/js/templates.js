@@ -25,6 +25,7 @@ export function initTemplates() {
   });
   document.querySelector(".page-head .head-tools").prepend(favChip);
   $("#tpl-more")?.addEventListener("click", () => { shown += 24; renderCards(); });
+  load(); // 启动时预加载
   new MutationObserver(() => {
     if ($("#view-templates").classList.contains("active") && !groups.length) load();
   }).observe($("#view-templates"), { attributes: true, attributeFilter: ["class"] });
