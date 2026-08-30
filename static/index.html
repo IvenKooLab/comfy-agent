@@ -27,6 +27,7 @@
       <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✧</span><span class="txt" data-i18n="nav.agent">助手</span></a>
     </div>
     <div class="nav-foot">
+      <a class="nav-item small" data-view="help" href="#help"><span class="ico">❓</span><span class="txt">帮助</span></a>
       <a class="nav-item small" data-view="settings" href="#settings"><span class="ico">⚙</span><span class="txt" data-i18n="nav.settings">设置</span></a>
       <a class="nav-item small" id="nav-about" href="javascript:void(0)"><span class="ico">◉</span><span class="txt" data-i18n="nav.about">关于</span></a>
       <div class="comfy-state"><i id="comfy-dot" class="dot off"></i><span id="comfy-dot-text">检测中…</span></div>
@@ -391,6 +392,17 @@
           <button id="chat-send" class="btn primary" data-i18n="agent.send">发送</button>
         </div>
       </div>
+    </section>
+
+    <!-- ============ 帮助 ============ -->
+    <section id="view-help" class="view">
+      <header class="page-head">
+        <h1>使用指南</h1>
+        <div class="head-tools">
+          <input id="help-search" class="input" style="width:280px" placeholder="搜索帮助…">
+        </div>
+      </header>
+      <div id="help-content" style="max-width:720px"></div>
     </section>
 
     <!-- ============ 设置 ============ -->

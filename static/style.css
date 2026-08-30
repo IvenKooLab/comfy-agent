@@ -578,3 +578,15 @@ textarea.input { height: auto; padding: 9px 12px; }
 /* ---------- 场景库/集数 ---------- */
 #scene-list .note-item, #audio-list .note-item { font-size: 12px; }
 #audio-list audio { width: 100%; margin-top: 4px; }
+
+/* ---------- 帮助页 ---------- */
+.help-mod { font-size: 15px; font-weight: 700; margin: 22px 0 10px; color: var(--brand-2); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.help-item { margin-bottom: 14px; padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; }
+.help-q { font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 6px; }
+.help-a { font-size: 12.5px; color: var(--text-2); line-height: 1.8; white-space: pre-wrap; }
+
+/* ---------- 帮助页 ---------- */
+.help-mod { font-size: 15px; font-weight: 700; margin: 22px 0 10px; color: var(--brand-2); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.help-item { margin-bottom: 14px; padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; }
+.help-q { font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 6px; }
+.help-a { font-size: 12.5px; color: var(--text-2); line-height: 1.8; white-space: pre-wrap; }
