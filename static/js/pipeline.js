@@ -45,10 +45,16 @@ export function initPipeline() {
   $("#pl-run").addEventListener("click", runBatch);
   $("#pl-concat").addEventListener("click", concatBatch);
   $("#pl-del").addEventListener("click", delBatch);
+  $("#pl-bgm-vol").addEventListener("change", () => {}); // 占位保持布局
   $("#char-new").addEventListener("click", () => { curChar = null; $("#char-editor").hidden = false; $("#char-name").value = ""; $("#char-lock").value = ""; $("#char-ref").value = ""; updateRefPreview(null); });
-  $("#char-pick").addEventListener("click", () => openPicker("选择角色参考图（定妆照/三视图）", (path) => {
-    $("#char-ref").value = path;
+  $("#char-pick").addEventListener("click", () => openPicker("选择角色参考图（可多选，最多4张）", (path) => {
+    let refs = ($("#char-ref").dataset.refs || "").split("|").filter(Boolean);
+    if (!refs.includes(path)) refs.push(path);
+    refs = refs.slice(0, 4);
+    $("#char-ref").dataset.refs = refs.join("|");
+    $("#char-ref").value = refs[0] || "";
     updateRefPreview(path);
+    renderCharThumbs(refs);
   }));
   $("#char-pick-clear").addEventListener("click", () => { $("#char-ref").value = ""; updateRefPreview(null); });
   $("#char-save").addEventListener("click", saveChar);
@@ -102,6 +108,9 @@ async function openBatch(id) {
   if (r2.ok) cur = r2.batch;
   $("#pl-detail-head").hidden = false;
   $("#pl-name").value = cur.name;
+  const mins = (cur.items || []).filter((i) => i.duration).reduce((a, i) => a + i.duration, 0);
+  const done = (cur.items || []).filter((i) => i.status === "success").length;
+  $("#pl-ledger").textContent = `⏱ GPU 已用 ${mins.toFixed(1)} 分钟 · 成功 ${done}/${cur.items.length}`;
   await fillWfSelect();
   $("#pl-wf").value = cur.workflow_id || "h3-t2v";
   renderItems();
@@ -125,13 +134,14 @@ function renderItems() {
     const ff = it.first_frame
       ? `<button class="btn sm pl-ff set" data-i="${i}" title="${it.first_frame}">🖼 已设关键帧</button>`
       : `<button class="btn sm ghost pl-ff" data-i="${i}">🖼 关键帧</button>`;
+    const retryN = it.retry_count ? ` <span class="muted">↻${it.retry_count}</span>` : "";
     return `<div class="pl-item">
       <span class="run-status ${cls}">${txt}</span>
       <input class="input pl-item-name" data-i="${i}" value="${it.name.replace(/"/g, "&quot;")}">
       ${ff}
       <button class="btn sm ghost pl-retry" data-i="${i}" title="单独重试这一镜">↻</button>
     </div>
-    <div class="pl-prompt" data-i="${i}">${it.prompt.slice(0, 220)}${it.prompt.length > 220 ? "…" : ""}</div>`;
+    <textarea class="input pl-prompt-edit" data-i="${i}" rows="2">${it.prompt.replace(/"/g, "&quot;").replace(/</g, "&lt;")}</textarea>`;
   }).join("");
   box.querySelectorAll(".pl-item-name").forEach((inp) => inp.addEventListener("change", (e) => {
     cur.items[+e.target.dataset.i].name = e.target.value; saveBatch(true);
@@ -145,6 +155,11 @@ function renderItems() {
       renderItems();
       toast("关键帧已设置（提交时自动注入 i2v 首帧）", "ok");
     });
+  }));
+  box.querySelectorAll(".pl-prompt-edit").forEach((ta) => ta.addEventListener("change", (e) => {
+    cur.items[+e.target.dataset.i].prompt = e.target.value;
+    saveBatch(true);
+    toast("提示词已更新", "ok");
   }));
   box.querySelectorAll(".pl-retry").forEach((b) => b.addEventListener("click", async () => {
     const i = +b.dataset.i;
@@ -209,7 +224,9 @@ async function concatBatch() {
   if (!confirm(`把 ${outs.length} 段镜头按顺序拼接成片？`)) return;
   concatBusy = true;
   toast("拼接中…", "");
-  const r = await api("/api/concat", { method: "POST", body: { paths: outs, name: cur.name } });
+  const bgm = $("#pl-bgm") ? $("#pl-bgm").value.trim() : "";
+  const vol = $("#pl-bgm-vol") ? parseFloat($("#pl-bgm-vol").value) || 0.25 : 0.25;
+  const r = await api("/api/concat", { method: "POST", body: { paths: outs, name: cur.name, bgm, bgm_volume: vol } });
   concatBusy = false;
   r.ok ? toast(r.msg + "（已进画廊）", "ok") : toast(r.error, "err");
 }
@@ -243,6 +260,22 @@ function editChar(id) {
   $("#char-editor").hidden = false;
   $("#char-name").value = c.name; $("#char-lock").value = c.lock || ""; $("#char-ref").value = c.ref || "";
   updateRefPreview(c.ref);
+  renderCharThumbs(c.refs && c.refs.length ? c.refs : (c.ref ? [c.ref] : []));
+}
+
+function renderCharThumbs(refs) {
+  const box = $("#char-refs-thumbs");
+  if (!box) return;
+  box.innerHTML = (refs || []).map((r, i) =>
+    `<div style="position:relative"><img src="/api/media?path=${encodeURIComponent(r)}&thumb=1" style="height:60px;border-radius:8px">
+     <button class="btn sm danger ghost" data-i="${i}" style="position:absolute;top:-6px;right:-6px;padding:0 6px">✕</button></div>`).join("");
+  box.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    const refs = ($("#char-ref").dataset.refs || "").split("|").filter(Boolean);
+    refs.splice(+b.dataset.i, 1);
+    $("#char-ref").dataset.refs = refs.join("|");
+    $("#char-ref").value = refs[0] || "";
+    renderCharThumbs(refs);
+  }));
 }
 
 function updateRefPreview(path) {
@@ -252,7 +285,9 @@ function updateRefPreview(path) {
 }
 
 async function saveChar() {
-  const body = { name: $("#char-name").value.trim(), lock: $("#char-lock").value, ref: $("#char-ref").value.trim() };
+  const refs = ($("#char-ref").dataset.refs || "").split("|").filter(Boolean);
+  const body = { name: $("#char-name").value.trim(), lock: $("#char-lock").value,
+                 ref: refs[0] || $("#char-ref").value.trim(), refs };
   if (!body.name) { toast("角色名必填", "err"); return; }
   if (curChar) body.id = curChar.id;
   const r = await api("/api/characters/save", { method: "POST", body });

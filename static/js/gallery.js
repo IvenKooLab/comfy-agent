@@ -81,6 +81,26 @@ export function initGallery() {
     }
   });
   $("#lb-archive").addEventListener("click", doArchive);
+  // 图生文反推：视觉 LLM 从图生成英文提示词
+  $("#lb-i2p").addEventListener("click", async () => {
+    const it = visible()[lbIndex];
+    if (!it || it.kind !== "image") { toast("仅图片支持反推", "err"); return; }
+    const btn = $("#lb-i2p");
+    btn.disabled = true; btn.textContent = "反推中…";
+    try {
+      const r = await api("/api/image_to_prompt", { method: "POST", body: { path: it.path } });
+      if (r.ok && r.prompt) {
+        const box = $("#lb-summary");
+        box.innerHTML = `<div class="kv"><span>反推</span><span class="kv-val">${r.prompt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span></div>
+          <button class="kv-copy" id="lb-i2p-copy">复制</button>`;
+        box.querySelector("#lb-i2p-copy").addEventListener("click", () => {
+          navigator.clipboard.writeText(r.prompt).then(() => { btn.textContent = "✓ 已复制"; setTimeout(() => btn.textContent = "复制", 1200); });
+        });
+      } else toast(r.error, "err");
+    } finally {
+      btn.disabled = false; btn.textContent = "🔍 反推提示词";
+    }
+  });
   // 参数行：悬停复制 + 长文本展开（委托，一次绑定）
   // 复制反馈用按钮内联状态（✓ 已复制），不弹全局 toast——避免遮挡灯箱关闭按钮
   $("#lb-summary").addEventListener("click", async (e) => {

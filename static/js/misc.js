@@ -387,6 +387,8 @@ function initSettings() {
         || $("#s-llm-model").value,
       comfy_watchdog: $("#s-watchdog").checked,
       comfy_autorequeue: $("#s-autorequeue").checked,
+      lan_access: $("#s-lan").checked,
+      batch_auto_retry: parseInt($("#s-batch-retry").value) || 0,
     };
     if ($("#s-llm-key").value.trim()) body.llm_key = $("#s-llm-key").value.trim();
     const r = await api("/api/settings", { method: "POST", body });
@@ -415,6 +417,11 @@ async function loadForm() {
   if (s.llm_model) { const m = $("#s-llm-model"); m.innerHTML = `<option>${s.llm_model}</option>`; m.value = s.llm_model; }
   $("#s-watchdog").checked = s.comfy_watchdog !== false;
   $("#s-autorequeue").checked = s.comfy_autorequeue !== false;
+  const lan = $("#s-lan"), retry = $("#s-batch-retry");
+  if (lan) lan.checked = !!s.lan_access;
+  if (retry) retry.value = s.batch_auto_retry != null ? s.batch_auto_retry : 2;
+  $("#s-lan").checked = !!s.lan_access;
+  $("#s-batch-retry").value = s.batch_auto_retry != null ? s.batch_auto_retry : 2;
   $("#s-lang").value = getLang();
   // 环境卡（迭代27）
   const st = await api("/api/status");

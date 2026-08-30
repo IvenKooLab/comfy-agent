@@ -226,6 +226,13 @@
               <button id="pl-concat" class="btn">🎬 拼接成片</button>
               <button id="pl-del" class="btn danger ghost">删除</button>
             </div>
+            <div class="row margin-top" style="flex-wrap:wrap">
+              <span class="muted">BGM（可选）：</span>
+              <input id="pl-bgm" class="input" style="width:280px" placeholder="背景音乐文件路径（mp3/wav）">
+              <span class="muted">音量</span>
+              <input id="pl-bgm-vol" class="input" type="number" min="0" max="1" step="0.05" value="0.25" style="width:70px">
+              <span id="pl-ledger" class="muted"></span>
+            </div>
           </div>
           <div class="card pad" id="pl-import-box" hidden>
             <div class="muted" style="margin-bottom:8px">粘贴分集脚本（自动识别 <b>### SHOT编号【画风】</b> + text 代码块），或每行一段：<code>镜头名 | 提示词</code></div>
@@ -249,7 +256,8 @@
         <div class="card pad" id="char-editor" style="flex:1" hidden>
           <div class="field"><label>角色名</label><input id="char-name" class="input" style="width:100%"></div>
           <div class="field"><label>角色锁定串（会追加到提示词尾部，保证角色一致性）</label><textarea id="char-lock" class="input" rows="3" style="width:100%"></textarea></div>
-          <div class="field"><label>参考图（定妆照/三视图，从画廊选择）</label>
+          <div class="field"><label>参考图（定妆照/三视图，最多4张；点击缩略图可移除）</label>
+            <div id="char-refs-thumbs" class="row" style="gap:6px;margin-bottom:6px"></div>
             <div class="row">
               <input id="char-ref" class="input" style="flex:1" readonly placeholder="从画廊选择…">
               <button class="btn sm" id="char-pick">🖼 选择</button>
@@ -407,6 +415,8 @@
         <h3 style="font-size:13px;margin-bottom:10px">可靠性（看门狗与备份）</h3>
         <label style="flex-direction:row;align-items:center;gap:8px"><input id="s-watchdog" type="checkbox" style="width:auto"> ComfyUI 掉线自动重启（看门狗）</label>
         <label style="flex-direction:row;align-items:center;gap:8px"><input id="s-autorequeue" type="checkbox" style="width:auto"> 重启后自动续跑中断任务（按图快照同种子重提）</label>
+        <label style="flex-direction:row;align-items:center;gap:8px"><input id="s-batch-retry" type="number" min="0" max="5" style="width:70px"> 失败自动换种子重试次数</label>
+        <label style="flex-direction:row;align-items:center;gap:8px"><input id="s-lan" type="checkbox" style="width:auto"> 允许局域网设备访问（重启生效，注意安全）</label>
         <div class="row">
           <button id="s-backup" class="btn sm">📦 立即备份</button>
           <span id="s-backup-info" class="muted"></span>
@@ -439,6 +449,7 @@
       <button class="btn" id="lb-import" data-i18n="lb.import">导入编辑器</button>
       <button class="btn" id="lb-rerun" data-i18n="lb.rerun">重新生成</button>
       <button class="btn" id="lb-archive" data-i18n="lb.archive">归档到知识库</button>
+      <button class="btn" id="lb-i2p">🔍 反推提示词</button>
       <button class="btn ghost" id="lb-reveal" data-i18n="lb.reveal">所在文件夹</button>
       <button class="btn ghost" id="lb-download" data-i18n="lb.download">下载</button>
       <button class="btn danger ghost" id="lb-trash" data-i18n="lb.delete">删除</button>

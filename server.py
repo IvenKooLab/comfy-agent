@@ -68,6 +68,8 @@ DEFAULT_SETTINGS = {
     "llm_model": "glm-4-flash",
     "comfy_watchdog": True,
     "comfy_autorequeue": True,
+    "batch_auto_retry": 2,
+    "lan_access": False,
 }
 
 # LLM 厂商预设（OpenAI 兼容协议）；models 为兜底列表，优先用 /models 动态拉取
@@ -966,6 +968,40 @@ def polish_english(en):
     return en + ", " + _STYLE_BOOST
 
 
+def image_to_prompt(path):
+    """图生文反推：读图 → 视觉 LLM 生成英文提示词。"""
+    full = resolve_media(path)
+    if not full or not os.path.isfile(full):
+        return {"ok": False, "error": "图片不存在"}
+    import base64
+    ext = os.path.splitext(full)[1].lower().lstrip(".")
+    mime = "jpeg" if ext in ("jpg", "jpeg") else ext
+    with open(full, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+    data_url = f"data:image/{mime};base64,{b64}"
+    key = SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key") or ""
+    if not key:
+        return {"ok": False, "error": "未配置 API Key（图生文需要视觉模型）"}
+    base = (SETTINGS.get("llm_base_url") or LLM_PRESETS.get(SETTINGS.get("llm_provider"), {}).get("base", "")).rstrip("/")
+    model = SETTINGS.get("llm_model") or ""
+    body = json.dumps({"model": model, "temperature": 0.3, "messages": [
+        {"role": "user", "content": [
+            {"type": "image_url", "image_url": {"url": data_url}},
+            {"type": "text", "text": "Reverse-engineer this image into a detailed English generation prompt (40-90 words): subject, action, environment, lighting, camera, style. Output only the prompt."}]}]}).encode()
+    req = urllib.request.Request(base + "/chat/completions", data=body,
+                                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+    try:
+        with urllib.request.urlopen(req, timeout=90) as r:
+            resp = json.loads(r.read())
+        return {"ok": True, "prompt": resp["choices"][0]["message"]["content"].strip()}
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:150]
+        hint = "当前模型可能不支持视觉输入，可换 glm-4v-flash 或其他视觉型号" if e.code == 400 else detail
+        return {"ok": False, "error": f"反推失败：{hint}"}
+    except Exception as e:
+        return {"ok": False, "error": f"反推失败：{e}"}
+
+
 def _llm_chat(messages, temperature=0.3, timeout=60):
     """统一 LLM 通道：OpenAI 兼容协议，按设置里的厂商/BaseURL/Key/模型调用。"""
     provider = SETTINGS.get("llm_provider", "zhipu")
@@ -1049,7 +1085,7 @@ def agent_intent_llm(text):
     """助手意图理解：统一 LLM 通道，输出 JSON 动作。"""
     return _llm_chat([
         {"role": "system", "content": (
-            "你是 ComfyAgent 控制台助手，把用户中文指令转成 JSON 动作。可用动作："
+            "你是 ComfyAgent 控制台助手，把用户中文指令转成 JSON 动作。单个动作用单个对象；需要多步时输出 {\"actions\":[动作1,动作2]}。可用动作："
             '{"run":{"workflow":"名称","times":1,"seed":null,"text":"提示词覆盖"},'
             '{"interrupt":{}},{"clear_queue":{}},{"status":{}},'
             '{"archive":{"count":5,"title":""}},{"open":{"view":"gallery"}}。'
@@ -1148,6 +1184,14 @@ def agent_execute(text):
                 obj = json.loads(raw)
                 if "reply" in obj and len(obj) == 1:
                     reply = obj["reply"]
+                elif "actions" in obj and isinstance(obj["actions"], list):
+                    parts, acts = [], []
+                    for a in obj["actions"][:6]:
+                        r2 = agent_execute_coerce(a)
+                        parts.append(r2.get("reply", ""))
+                        acts.extend(r2.get("actions", []))
+                    reply = "\n".join(p for p in parts if p) or "已完成全部动作"
+                    return {"reply": reply, "actions": acts}
                 else:
                     return agent_execute_coerce(obj)
             except Exception as e:
@@ -1365,10 +1409,24 @@ def launcher_info():
         disk_info = {"free": disk.free, "total": disk.total}
     except Exception:
         disk_info = None
+    ai_env = {}
+    try:
+        cpy = SETTINGS.get("comfy_python", "")
+        if cpy and os.path.isfile(cpy):
+            r = subprocess.run([cpy, "-c", "import torch, importlib.metadata as im; print(torch.__version__); print(im.version('triton-windows', '未装')); print(im.version('sageattention', '未装'))"],
+                               capture_output=True, text=True, timeout=15, creationflags=0x08000000)
+            if r.returncode == 0 and r.stdout.strip():
+                lines = [l.strip() for l in r.stdout.strip().splitlines() if l.strip() and "Warning" not in l]
+                ai_env = {"torch": lines[0] if len(lines) > 0 else "未装",
+                          "triton-windows": lines[1] if len(lines) > 1 else "未装",
+                          "sageattention": lines[2] if len(lines) > 2 else "未装"}
+    except Exception:
+        pass
     return {
         "comfy_dir": cdir, "models": models, "nodes": nodes, "disk": disk_info,
         "python_version": sys.version.split()[0], "ffmpeg": bool(FFMPEG),
         "running": comfy_running(), "port": _comfy_port(),
+        "ai_env": ai_env,
     }
 
 
@@ -1617,12 +1675,7 @@ def copy_to_input(src_rel, tag="frame"):
     base = safe_name(os.path.splitext(os.path.basename(src_rel))[0])[:40] or tag
     name = f"agent_{tag}_{base}{os.path.splitext(full)[1]}"
     dst = os.path.join(input_dir, name)
-    i = 1
-    while os.path.exists(dst):
-        name = f"agent_{tag}_{base}_{i}{os.path.splitext(full)[1]}"
-        dst = os.path.join(input_dir, name)
-        i += 1
-    shutil.copy2(full, dst)
+    shutil.copy2(full, dst)  # 同名覆盖：幂等，重试不产生副本膨胀
     return name
 
 
@@ -1660,6 +1713,7 @@ def run_batch(bid, only_index=None):
         if res.get("ok"):
             item["status"] = "queued"
             item["prompt_id"] = (res.get("prompt_ids") or [None])[0]
+            item["started"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             queued += 1
         else:
             item["status"] = "error"
@@ -1700,7 +1754,33 @@ def batch_sync_status():
                 item["status"] = "success" if stt == "success" else ("error" if stt == "error" else item.get("status"))
                 if outs:
                     item["output"] = outs[0]
+                if item["status"] == "success":
+                    item["completed"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    if item.get("started") and not item.get("duration"):
+                        try:
+                            stp = datetime.strptime(item["started"], "%Y-%m-%d %H:%M:%S")
+                            item["duration"] = round((datetime.now() - stp).total_seconds() / 60, 1)
+                        except Exception:
+                            pass
                 changed = True
+                # 失败自动换种子重试（最多 batch_auto_retry 次）
+                if item["status"] == "error":
+                    max_retry = int(SETTINGS.get("batch_auto_retry", 2))
+                    if item.get("retry_count", 0) < max_retry:
+                        wf = next((w for w in list_workflows() if w.get("id") == b.get("workflow_id")), BUILTIN_WORKFLOWS["Flux 文生图（内置）"])
+                        ov = {"text": item.get("prompt", "")}
+                        if item.get("first_frame"):
+                            input_name = copy_to_input(item["first_frame"], tag="ff")
+                            if input_name:
+                                ov["__image__"] = input_name
+                        res = submit_workflow({"name": f"{b['name']}·{item['name']}·重试{item.get('retry_count', 0) + 1}", "api": wf["api"]},
+                                              times=1, seed=None, overrides=ov, params=item.get("params"))
+                        if res.get("ok"):
+                            item["retry_count"] = item.get("retry_count", 0) + 1
+                            item["status"] = "queued"
+                            item["prompt_id"] = (res.get("prompt_ids") or [None])[0]
+                            item["started"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            print(f"* batch auto-retry: {item['name']} 第{item['retry_count']}次")
         if changed:
             write_json_file(_batch_path(b.get("id")), b)
 
@@ -1902,7 +1982,7 @@ class Handler(BaseHTTPRequestHandler):
             for k in ("port", "comfy_url", "output_dir", "vault_path",
                       "comfy_dir", "comfy_python", "comfy_launch_args",
                       "llm_provider", "llm_base_url", "llm_model",
-                      "comfy_watchdog", "comfy_autorequeue"):
+                      "comfy_watchdog", "comfy_autorequeue", "batch_auto_retry", "lan_access"):
                 if k in body:
                     SETTINGS[k] = body[k]
             if body.get("zhipu_key"):
@@ -2277,6 +2357,18 @@ class Handler(BaseHTTPRequestHandler):
                                     "-c:v", "libx264", "-preset", "fast", "-c:a", "aac", "-y", out],
                                    capture_output=True, text=True, timeout=600, creationflags=0x08000000)
             os.remove(lst)
+            # BGM 混音（可选）：背景音乐循环铺底后混合
+            bgm = (body.get("bgm") or "").strip()
+            bgm_vol = float(body.get("bgm_volume", 0.25))
+            if bgm and os.path.isfile(bgm) and os.path.isfile(out):
+                final = out.replace(".mp4", "_bgm.mp4")
+                r2 = subprocess.run([FFMPEG, "-v", "error", "-i", out, "-stream_loop", "-1", "-i", bgm,
+                                     "-filter_complex", f"[1:a]volume={bgm_vol}[b];[0:a][b]amix=inputs=2:duration=first[aout]",
+                                     "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-y", final],
+                                    capture_output=True, text=True, timeout=600, creationflags=0x08000000)
+                if r2.returncode == 0 and os.path.isfile(final):
+                    os.remove(out)
+                    os.replace(final, out)
             if r.returncode == 0 and os.path.isfile(out):
                 return self.send_json({"ok": True, "output": "成片/" + os.path.basename(out),
                                        "msg": f"已拼接 {len(paths)} 段 → {os.path.basename(out)}"})
@@ -2285,8 +2377,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True, "characters": list_characters()})
         if path == "/api/characters/save" and method == "POST":
             cid = body.get("id") or ("c" + datetime.now().strftime("%Y%m%d%H%M%S"))
+            refs = [r for r in (body.get("refs") or []) if r]
             c = {"id": cid, "name": body.get("name") or cid,
-                 "lock": body.get("lock", ""), "ref": body.get("ref", ""),
+                 "lock": body.get("lock", ""), "ref": refs[0] if refs else body.get("ref", ""),
+                 "refs": refs,
                  "updated": datetime.now().strftime("%Y-%m-%d %H:%M")}
             write_text_atomic(_char_path(cid), json.dumps(c, ensure_ascii=False, indent=1))
             return self.send_json({"ok": True, "character": c, "msg": f"角色「{c['name']}」已保存"})
@@ -2297,9 +2391,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True, "msg": "已删除"})
             return self.send_json({"ok": False, "error": "不存在"}, 404)
         if path == "/api/debug":
+            import socket
+            try:
+                lan_ip = socket.gethostbyname(socket.gethostname())
+            except Exception:
+                lan_ip = ""
             return self.send_json({"ok": True, "DATA_DIR": DATA_DIR, "BASE_DIR": BASE_DIR,
                                    "STATIC_DIR": STATIC_DIR, "frozen": getattr(sys, "frozen", False),
-                                   "cwd": os.getcwd(), "appdata_env": os.environ.get("APPDATA", "")})
+                                   "cwd": os.getcwd(), "appdata_env": os.environ.get("APPDATA", ""),
+                                   "lan_ip": lan_ip,
+                                   "bind": "0.0.0.0" if SETTINGS.get("lan_access") else "127.0.0.1"})
         if path == "/api/backup" and method == "POST":
             return self.send_json({"ok": True, **backup_now(body.get("reason", "manual"))})
         if path == "/api/backups":
@@ -2380,6 +2481,8 @@ class Handler(BaseHTTPRequestHandler):
                                            "warnings": [f"自动转换失败（{e}），已返回 UI 原格式，请手动转换"]})
             return self.send_json({"ok": True, "format": "api", "api": data})
 
+        if path == "/api/image_to_prompt" and method == "POST":
+            return self.send_json(image_to_prompt(body.get("path", "")))
         # ---- LLM 厂商
         if path == "/api/llm/providers":
             return self.send_json({"ok": True, "presets": [
@@ -2463,7 +2566,8 @@ def create_server():
     threading.Thread(target=watchdog_loop, daemon=True).start()
     threading.Thread(target=lambda: (time.sleep(6), _thumb_lru_cleanup(), backup_now("startup")), daemon=True).start()
     port = int(SETTINGS.get("port", 8190))
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    bind = "0.0.0.0" if SETTINGS.get("lan_access") else "127.0.0.1"
+    httpd = ThreadingHTTPServer((bind, port), Handler)
     httpd.daemon_threads = True
     print(f"* ComfyAgent running at http://127.0.0.1:{port}  (ComfyUI: {SETTINGS['comfy_url']})")
     print(f"* gallery root: {SETTINGS['output_dir']}")
