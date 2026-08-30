@@ -45,6 +45,11 @@ export function initPipeline() {
   $("#pl-run").addEventListener("click", runBatch);
   $("#pl-concat").addEventListener("click", concatBatch);
   $("#pl-del").addEventListener("click", delBatch);
+  $("#pl-episodes").addEventListener("click", toggleEpisodes);
+  $("#pl-scenes").addEventListener("click", () => {
+    const box = $("#scene-editor");
+    if (box) box.hidden = !box.hidden;
+  });
   $("#pl-bgm-vol").addEventListener("change", () => {}); // 占位保持布局
   $("#char-new").addEventListener("click", () => { curChar = null; $("#char-editor").hidden = false; $("#char-name").value = ""; $("#char-lock").value = ""; $("#char-ref").value = ""; updateRefPreview(null); });
   $("#char-pick").addEventListener("click", () => openPicker("选择角色参考图（可多选，最多4张）", (path) => {
@@ -62,7 +67,7 @@ export function initPipeline() {
   let syncTimer = null;
   new MutationObserver(() => {
     const active = $("#view-pipeline").classList.contains("active");
-    if (active) { refresh(); loadChars(); }
+    if (active) { refresh(); loadChars(); loadScenes(); }
     if (active && !syncTimer) {
       syncTimer = setInterval(async () => {
         if (!$("#lightbox").hidden) return;
@@ -301,3 +306,84 @@ async function delChar() {
   await api("/api/characters/delete", { method: "POST", body: { id: curChar.id } });
   curChar = null; $("#char-editor").hidden = true; loadChars();
 }
+
+
+/* ---------- 场景库 ---------- */
+let scenes = [];
+let curScene = null;
+
+async function loadScenes() {
+  const r = await api("/api/scenes");
+  if (!r.ok) return;
+  scenes = r.scenes;
+  const box = $("#scene-list");
+  if (!box) return;
+  box.innerHTML = scenes.length
+    ? scenes.map((s) => `<div class="note-item" data-id="${s.id}"><span class="nm">🌐 ${s.name}</span><span class="meta">${(s.tokens || "").length}字</span></div>`).join("")
+    : `<div class="muted">还没有场景。</div>`;
+  box.querySelectorAll(".note-item").forEach((el) => el.addEventListener("click", () => editScene(el.dataset.id)));
+}
+
+function editScene(id) {
+  const s = scenes.find((x) => x.id === id);
+  if (!s) return;
+  curScene = s;
+  $("#scene-editor").hidden = false;
+  $("#scene-name").value = s.name;
+  $("#scene-desc").value = s.desc || "";
+  $("#scene-tokens").value = s.tokens || "";
+}
+
+const sceneNewBtn = $("#scene-new");
+if (sceneNewBtn) sceneNewBtn.addEventListener("click", () => {
+  curScene = null; $("#scene-editor").hidden = false;
+  $("#scene-name").value = ""; $("#scene-desc").value = ""; $("#scene-tokens").value = "";
+});
+const sceneSaveBtn = $("#scene-save");
+if (sceneSaveBtn) sceneSaveBtn.addEventListener("click", async () => {
+  const body = { name: $("#scene-name").value.trim(), desc: $("#scene-desc").value, tokens: $("#scene-tokens").value };
+  if (!body.name) { toast("场景名必填", "err"); return; }
+  if (curScene) body.id = curScene.id;
+  const r = await api("/api/scenes/save", { method: "POST", body });
+  toast(r.ok ? "场景已保存" : r.error, r.ok ? "ok" : "err");
+  loadScenes();
+});
+const sceneDelBtn = $("#scene-del");
+if (sceneDelBtn) sceneDelBtn.addEventListener("click", async () => {
+  if (!curScene || !confirm(`删除场景？`)) return;
+  await api("/api/scenes/delete", { method: "POST", body: { id: curScene.id } });
+  curScene = null; $("#scene-editor").hidden = true; loadScenes();
+});
+
+/* ---------- 集数聚合视图 ---------- */
+let episodesVisible = false;
+
+function toggleEpisodes() {
+  episodesVisible = !episodesVisible;
+  $("#pl-episodes-view").hidden = !episodesVisible;
+  $("#pl-detail-head").hidden = episodesVisible;
+  $("#pl-items").innerHTML = episodesVisible ? "" : `<div class="muted">左侧选择批次，或导入分镜脚本新建</div>`;
+  if (episodesVisible) renderEpisodes();
+}
+
+async function renderEpisodes() {
+  const r = await api("/api/batches/episodes");
+  if (!r.ok) return;
+  const box = $("#pl-items");
+  box.innerHTML = r.episodes.length
+    ? `<div class="card pad"><h3 style="font-size:13px;margin-bottom:10px">📊 按集聚合</h3>
+       ${r.episodes.map((e) => `<div class="pl-item">
+           <b>${e.name}</b> · ${e.total} 镜 · ✓${e.done} ✗${e.failed} · ⏱${e.gpu_minutes.toFixed(1)}min
+         </div>`).join("")}</div>`
+    : `<div class="muted">没有批次</div>`;
+}
+
+/* ---------- 字幕烧入 ---------- */
+const subBtn = $("#pl-subtitle");
+if (subBtn) subBtn.addEventListener("click", async () => {
+  const video = prompt("视频文件路径（output 相对路径）：");
+  const srt = prompt("SRT 字幕文件路径：");
+  if (!video || !srt) return;
+  const r = await api("/api/subtitle_burn", { method: "POST", body: { video, srt_path: srt } });
+  toast(r.ok ? "字幕已烧入 → " + r.output : r.error, r.ok ? "ok" : "err");
+});
