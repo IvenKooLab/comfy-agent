@@ -212,6 +212,8 @@
         <div class="head-tools">
           <button id="pl-import" class="btn">📥 导入分镜脚本</button>
           <button id="pl-new" class="btn">＋ 新建批次</button>
+          <button id="pl-episodes" class="btn">📊 集数视图</button>
+          <button id="pl-scenes" class="btn">🌐 场景库</button>
         </div>
       </header>
       <div style="display:flex;gap:12px;align-items:stretch;height:calc(100vh - 400px);min-height:420px">
@@ -223,6 +225,7 @@
               <select id="pl-wf" class="input select"></select>
               <button id="pl-save" class="btn">保存</button>
               <button id="pl-run" class="btn primary">▶ 排队全部</button>
+              <button id="pl-episodes-view" class="btn" hidden>← 返回批次</button>
               <button id="pl-concat" class="btn">🎬 拼接成片</button>
               <button id="pl-del" class="btn danger ghost">删除</button>
             </div>
@@ -247,6 +250,21 @@
           </div>
         </div>
       </div>
+      <h3 class="sec-title">场景库</h3>
+      <div class="row margin-top" style="align-items:flex-start">
+        <div class="card pad" style="width:320px;flex:none">
+          <div id="scene-list"></div>
+          <button class="btn sm ghost" id="scene-new" style="width:100%;margin-top:8px">＋ 新建场景</button>
+        </div>
+        <div class="card pad" id="scene-editor" style="flex:1" hidden>
+          <div class="field"><label>场景名</label><input id="scene-name" class="input" style="width:100%"></div>
+          <div class="field"><label>场景描述（追加到提示词尾部的场景描述）</label><textarea id="scene-desc" class="input" rows="2" style="width:100%"></textarea></div>
+          <div class="field"><label>风格令牌（英文，逗号分隔）</label><input id="scene-tokens" class="input" style="width:100%"></div>
+          <div class="row"><button id="scene-save" class="btn sm primary">保存场景</button><button id="scene-del" class="btn sm danger ghost">删除</button></div>
+        </div>
+      </div>
+      <h3 class="sec-title">音频资产</h3>
+      <div class="card pad" id="audio-list"><div class="muted">读取中…</div></div>
       <h3 class="sec-title">角色资产库</h3>
       <div class="row margin-top" style="align-items:flex-start">
         <div class="card pad" style="width:320px;flex:none">

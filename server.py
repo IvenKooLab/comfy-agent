@@ -1690,10 +1690,15 @@ def run_batch(bid, only_index=None):
             break
     if not wf:
         wf = BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
+    # 优先级排序：priority=true 的镜头排前面
+    indices = list(range(len(b.get("items", []))))
+    if only_index is not None:
+        indices = [only_index]
+    else:
+        indices.sort(key=lambda i: (not b["items"][i].get("priority", False), i))
     queued = 0
-    for i, item in enumerate(b.get("items", [])):
-        if only_index is not None and i != only_index:
-            continue
+    for i in indices:
+        item = b["items"][i]
         if only_index is None and item.get("status") == "success":
             continue
         overrides = {"text": item.get("prompt", "")}
@@ -1853,6 +1858,117 @@ def tpl_index():
     except Exception:
         pass
     return read_json_file(TPL_INDEX_CACHE, None)  # 过期缓存兜底
+
+
+# ---------------------------------------------------------------- scenes (场景库)
+
+SCENE_DIR = os.path.join(DATA_DIR, "scenes")
+
+
+def list_scenes():
+    out = []
+    if os.path.isdir(SCENE_DIR):
+        for fn in sorted(os.listdir(SCENE_DIR)):
+            if fn.endswith(".json"):
+                s = read_json_file(os.path.join(SCENE_DIR, fn), None)
+                if s:
+                    out.append(s)
+    return out
+
+
+# ---------------------------------------------------------------- episodes (集数聚合)
+
+def batch_episodes():
+    """按批次名前缀提取集数聚合。"""
+    eps = {}
+    for b in _list_batches():
+        bid_full = _load_batch(b["id"])
+        if not bid_full:
+            continue
+        ep_key = b["name"].split("_")[0].split("·")[0].strip() or "未分组"
+        if ep_key not in eps:
+            eps[ep_key] = {"name": ep_key, "batches": [], "total": 0, "done": 0, "failed": 0,
+                           "gpu_minutes": 0.0, "outputs": []}
+        for item in bid_full.get("items", []):
+            eps[ep_key]["total"] += 1
+            if item.get("status") == "success":
+                eps[ep_key]["done"] += 1
+                if item.get("duration"):
+                    eps[ep_key]["gpu_minutes"] += item["duration"]
+                if item.get("output"):
+                    eps[ep_key]["outputs"].append(item["output"])
+            elif item.get("status") == "error":
+                eps[ep_key]["failed"] += 1
+        eps[ep_key]["batches"].append(b["id"])
+    return sorted(eps.values(), key=lambda x: -x["total"])
+
+
+# ---------------------------------------------------------------- audio assets
+
+AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a"}
+
+
+def scan_audio_assets():
+    """扫描 output 目录及子目录中的音频文件。"""
+    root = SETTINGS.get("output_dir", "")
+    out = []
+    if not os.path.isdir(root):
+        return out
+    for dp, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for f in files:
+            if os.path.splitext(f)[1].lower() in AUDIO_EXTS:
+                fp = os.path.join(dp, f)
+                try:
+                    st = os.stat(fp)
+                    out.append({"path": os.path.relpath(fp, root).replace("\\", "/"),
+                                "name": f, "size": st.st_size, "mtime": int(st.st_mtime)})
+                except OSError:
+                    pass
+    out.sort(key=lambda x: -x["mtime"])
+    return out
+
+
+# ---------------------------------------------------------------- style induction
+
+def induce_style_from_images(paths):
+    """多张图 → GLM 视觉归纳共同风格关键词。"""
+    import base64
+    key = SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key") or ""
+    if not key:
+        return {"ok": False, "error": "未配置 API Key"}
+    base = (SETTINGS.get("llm_base_url") or LLM_PRESETS.get(SETTINGS.get("llm_provider"), {}).get("base", "")).rstrip("/")
+    model = SETTINGS.get("llm_model") or ""
+    content = [{"type": "text", "text": "分析这些图片的共同视觉风格。输出一段 30-60 词的英文风格描述（style tokens），可直接用作生成提示词的风格后缀。只输出风格描述。"}]
+    for p in paths[:4]:
+        full = resolve_media(p)
+        if not full or not os.path.isfile(full):
+            continue
+        ext = os.path.splitext(full)[1].lower().lstrip(".")
+        mime = "jpeg" if ext in ("jpg", "jpeg") else ext
+        with open(full, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/{mime};base64,{b64}"}})
+    if len(content) < 2:
+        return {"ok": False, "error": "没有有效图片"}
+    body = json.dumps({"model": model, "messages": [{"role": "user", "content": content}], "max_tokens": 200}).encode()
+    req = urllib.request.Request(base + "/chat/completions", data=body,
+                                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        resp = json.loads(r.read())
+    return {"ok": True, "style": resp["choices"][0]["message"]["content"].strip()}
+
+
+# ---------------------------------------------------------------- subtitle burn
+
+def burn_subtitles(video_path, srt_path, out_path):
+    """ffmpeg srt 字幕烧入。"""
+    srt_esc = srt_path.replace("\\", "/").replace(":", "\:").replace("'", "\'")
+    r = subprocess.run([FFMPEG, "-v", "error", "-i", video_path,
+                        "-vf", f"subtitles='{srt_esc}':force_style='FontSize=18,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=3,Outline=1'",
+                        "-c:a", "copy", "-y", out_path],
+                       capture_output=True, text=True, timeout=600, creationflags=0x08000000)
+    return r.returncode == 0
 
 
 # ---------------------------------------------------------------- HTTP handler
@@ -2483,6 +2599,48 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/image_to_prompt" and method == "POST":
             return self.send_json(image_to_prompt(body.get("path", "")))
+        # ---- 场景库 / 集数聚合 / 音频 / 字幕 / 风格归纳
+        if path == "/api/scenes" and method == "GET":
+            return self.send_json({"ok": True, "scenes": list_scenes()})
+        if path == "/api/scenes/save" and method == "POST":
+            sid = body.get("id") or ("s" + datetime.now().strftime("%Y%m%d%H%M%S"))
+            s = {"id": sid, "name": body.get("name") or sid,
+                 "desc": body.get("desc", ""), "tokens": body.get("tokens", ""),
+                 "updated": datetime.now().strftime("%Y-%m-%d %H:%M")}
+            write_text_atomic(os.path.join(SCENE_DIR, safe_name(sid) + ".json"),
+                              json.dumps(s, ensure_ascii=False, indent=1))
+            return self.send_json({"ok": True, "scene": s, "msg": "saved"})
+        if path == "/api/scenes/delete" and method == "POST":
+            fp = os.path.join(SCENE_DIR, safe_name(body.get("id", "")) + ".json")
+            if os.path.isfile(fp):
+                os.remove(fp)
+                return self.send_json({"ok": True, "msg": "deleted"})
+            return self.send_json({"ok": False, "error": "not found"}, 404)
+        if path == "/api/batches/episodes":
+            return self.send_json({"ok": True, "episodes": batch_episodes()})
+        if path == "/api/audio_assets":
+            return self.send_json({"ok": True, "audio": scan_audio_assets()[:100]})
+        if path == "/api/style_induce" and method == "POST":
+            return self.send_json(induce_style_from_images(body.get("paths", [])))
+        if path == "/api/subtitle_burn" and method == "POST":
+            if not FFMPEG:
+                return self.send_json({"ok": False, "error": "ffmpeg not found"})
+            video = resolve_media(body.get("video", ""))
+            srt = body.get("srt_path", "")
+            if not video or not os.path.isfile(video):
+                return self.send_json({"ok": False, "error": "video not found"})
+            if not srt or not os.path.isfile(srt):
+                return self.send_json({"ok": False, "error": "srt not found"})
+            base_n = os.path.splitext(video)[0]
+            out = base_n + "_sub.mp4"
+            srt_esc = srt.replace("\\", "/").replace(":", "\:").replace("'", "\'")
+            r = subprocess.run([FFMPEG, "-v", "error", "-i", video,
+                                "-vf", f"subtitles='{srt_esc}'",
+                                "-c:a", "copy", "-y", out],
+                               capture_output=True, text=True, timeout=600, creationflags=0x08000000)
+            if r.returncode == 0 and os.path.isfile(out):
+                return self.send_json({"ok": True, "output": os.path.basename(out)})
+            return self.send_json({"ok": False, "error": (r.stderr or "")[-200:]})
         # ---- LLM 厂商
         if path == "/api/llm/providers":
             return self.send_json({"ok": True, "presets": [
