@@ -60,7 +60,7 @@ DEFAULT_SETTINGS = {
     "comfy_dir": r"D:\tools\ComfyUI-aki-v3\ComfyUI",
     "comfy_python": r"D:\tools\ComfyUI-aki-v3\python\python.exe",
     "comfy_launch_args": "--listen 127.0.0.1 --port 8188 --reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory",
-    "gitee_repo": "gu-dongwei/comfy-agent",
+    "gitee_repo": "IvenKooLab/comfy-agent",
     "gitee_token": "",
     "llm_provider": "zhipu",
     "llm_base_url": "https://open.bigmodel.cn/api/paas/v4",
