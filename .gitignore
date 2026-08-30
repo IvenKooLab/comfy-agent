@@ -12,3 +12,4 @@ build/
 dist/*
 !dist/ComfyAgent-win64.zip
 push_github.log
+docs/竞品分析与路线图.md
