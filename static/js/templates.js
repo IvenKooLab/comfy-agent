@@ -2,10 +2,11 @@
 import { $, $$, api, toast, goto } from "./app.js";
 
 let groups = [];
-let curGroup = "all";
+let curGroup = localStorage.getItem("tpl_fav_only") === "1" ? "fav" : "all";
 let q = "";
 let shown = 24;
 let importing = false;
+let favs = JSON.parse(localStorage.getItem("tpl_favs") || "[]");
 
 const GROUP_ICON = {
   "Video": "🎬", "Image": "🖼", "Use Cases": "📚", "Audio": "🔊",
@@ -14,6 +15,15 @@ const GROUP_ICON = {
 
 export function initTemplates() {
   $("#tpl-search").addEventListener("input", (e) => { q = e.target.value.trim().toLowerCase(); shown = 24; renderCards(); });
+  const favChip = document.createElement("button");
+  favChip.className = "chip" + (curGroup === "fav" ? " active" : "");
+  favChip.textContent = "⭐ 只看收藏";
+  favChip.addEventListener("click", () => {
+    curGroup = curGroup === "fav" ? "all" : "fav";
+    favChip.classList.toggle("active", curGroup === "fav");
+    shown = 24; renderCards();
+  });
+  document.querySelector(".page-head .head-tools").prepend(favChip);
   $("#tpl-more")?.addEventListener("click", () => { shown += 24; renderCards(); });
   new MutationObserver(() => {
     if ($("#view-templates").classList.contains("active") && !groups.length) load();
@@ -77,7 +87,8 @@ function renderCards() {
   }
   const all = allTemplates();
   const list = all.filter((t) => {
-    if (curGroup !== "all" && t.group !== curGroup) return false;
+    if (curGroup === "fav" && !favs.includes(t.name)) return false;
+    if (curGroup !== "all" && curGroup !== "fav" && t.group !== curGroup) return false;
     if (!q) return true;
     return (t.title + " " + t.description + " " + (t.models || []).join(" ") + " " + (t.tags || []).join(" ")).toLowerCase().includes(q);
   });
@@ -90,14 +101,23 @@ function renderCards() {
     const badge = (t.models || []).slice(0, 2).map((m) => `<span class="tpl-badge vendor">${m}</span>`).join("");
     const tags = (t.tags || []).slice(0, 2).map((tg) => `<span class="tpl-badge">${tg}</span>`).join("");
     const preview = `/api/templates/preview?name=${encodeURIComponent(t.name)}&ext=${t.mediaSubtype || "webp"}`;
+    const isFav = favs.includes(t.name);
     card.innerHTML = `
       <div class="tpl-thumb"><div class="tpl-ph"><span>${t.title.slice(0, 1)}</span></div>
         <img class="tpl-img" src="${preview}" loading="lazy" onerror="this.remove()">
+        <button class="tpl-fav" data-n="${t.name}">${isFav ? "★" : "☆"}</button>
         <div class="tpl-badges">${badge}${tags}</div></div>
       <div class="tpl-info">
         <div class="tpl-title" title="${t.title}">${t.title}</div>
         <div class="tpl-desc">${t.description.slice(0, 90)}${t.description.length > 90 ? "…" : ""}</div>
       </div>`;
+    card.querySelector(".tpl-fav").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const n = e.target.dataset.n;
+      favs = favs.includes(n) ? favs.filter((x) => x !== n) : [...favs, n];
+      localStorage.setItem("tpl_favs", JSON.stringify(favs));
+      e.target.textContent = favs.includes(n) ? "★" : "☆";
+    });
     card.addEventListener("click", () => openTemplate(t));
     grid.appendChild(card);
   }

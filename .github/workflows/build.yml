@@ -1,0 +1,27 @@
+name: Build Windows EXE
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install deps
+        run: pip install pyinstaller pywebview pystray pillow
+      - name: Build
+        run: |
+          pip install pyinstaller
+          pyinstaller --noconfirm --clean --name ComfyAgent --icon build_assets/icon.ico --noconsole --add-data "static;static" --collect-all webview --collect-data pystray app.py
+      - name: Zip
+        run: Compress-Archive -Path dist/ComfyAgent -DestinationPath ComfyAgent-win64.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ComfyAgent-win64
+          path: ComfyAgent-win64.zip

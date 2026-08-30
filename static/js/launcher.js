@@ -64,6 +64,7 @@ async function poll() {
   const d = r.disk;
   $("#lc-diag").innerHTML = `
     <div class="kv-line"><span>Python（后端）</span><b>${r.python_version}</b></div>
+    <div class="kv-line"><span>torch / triton / sage</span><b>${[r.ai_env && (r.ai_env.torch || r.ai_env["torch"]), r.ai_env && r.ai_env["triton-windows"], r.ai_env && r.ai_env.sageattention].map(v => v || "—").join(" / ")}</b></div>
     <div class="kv-line"><span>ffmpeg</span><b>${r.ffmpeg ? "✓ 可用" : "✗ 未找到"}</b></div>
     <div class="kv-line"><span>成果盘剩余空间</span><b>${d ? fmtSize(d.free) + " / " + fmtSize(d.total) : "—"}</b></div>
     <div class="kv-line"><span>自定义节点</span><b>${r.nodes.length} 个</b></div>
