@@ -586,6 +586,12 @@
 
 <div id="toasts"></div>
 
+<script>
+window.__module_err = [];
+window.addEventListener('error', function(e) {
+  window.__module_err.push(e.message + ' @' + (e.filename||'') + ':' + (e.lineno||''));
+});
+</script>
 <script type="module" src="/js/app.js"></script>
 </body>
 </html>

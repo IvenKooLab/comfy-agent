@@ -64,6 +64,7 @@ export function initPipeline() {
   $("#char-pick-clear").addEventListener("click", () => { $("#char-ref").value = ""; updateRefPreview(null); });
   $("#char-save").addEventListener("click", saveChar);
   $("#char-del").addEventListener("click", delChar);
+  initSceneHandlers();
   let syncTimer = null;
   new MutationObserver(() => {
     const active = $("#view-pipeline").classList.contains("active");
@@ -334,26 +335,25 @@ function editScene(id) {
   $("#scene-tokens").value = s.tokens || "";
 }
 
-const sceneNewBtn = $("#scene-new");
-if (sceneNewBtn) sceneNewBtn.addEventListener("click", () => {
-  curScene = null; $("#scene-editor").hidden = false;
-  $("#scene-name").value = ""; $("#scene-desc").value = ""; $("#scene-tokens").value = "";
-});
-const sceneSaveBtn = $("#scene-save");
-if (sceneSaveBtn) sceneSaveBtn.addEventListener("click", async () => {
-  const body = { name: $("#scene-name").value.trim(), desc: $("#scene-desc").value, tokens: $("#scene-tokens").value };
-  if (!body.name) { toast("场景名必填", "err"); return; }
-  if (curScene) body.id = curScene.id;
-  const r = await api("/api/scenes/save", { method: "POST", body });
-  toast(r.ok ? "场景已保存" : r.error, r.ok ? "ok" : "err");
-  loadScenes();
-});
-const sceneDelBtn = $("#scene-del");
-if (sceneDelBtn) sceneDelBtn.addEventListener("click", async () => {
-  if (!curScene || !confirm(`删除场景？`)) return;
-  await api("/api/scenes/delete", { method: "POST", body: { id: curScene.id } });
-  curScene = null; $("#scene-editor").hidden = true; loadScenes();
-});
+function initSceneHandlers() {
+  $("#scene-new").addEventListener("click", () => {
+    curScene = null; $("#scene-editor").hidden = false;
+    $("#scene-name").value = ""; $("#scene-desc").value = ""; $("#scene-tokens").value = "";
+  });
+  $("#scene-save").addEventListener("click", async () => {
+    const body = { name: $("#scene-name").value.trim(), desc: $("#scene-desc").value, tokens: $("#scene-tokens").value };
+    if (!body.name) { toast("场景名必填", "err"); return; }
+    if (curScene) body.id = curScene.id;
+    const r = await api("/api/scenes/save", { method: "POST", body });
+    toast(r.ok ? "场景已保存" : r.error, r.ok ? "ok" : "err");
+    loadScenes();
+  });
+  $("#scene-del").addEventListener("click", async () => {
+    if (!curScene || !confirm(`删除场景？`)) return;
+    await api("/api/scenes/delete", { method: "POST", body: { id: curScene.id } });
+    curScene = null; $("#scene-editor").hidden = true; loadScenes();
+  });
+}
 
 /* ---------- 集数聚合视图 ---------- */
 let episodesVisible = false;
@@ -379,11 +379,15 @@ async function renderEpisodes() {
 }
 
 /* ---------- 字幕烧入 ---------- */
-const subBtn = $("#pl-subtitle");
-if (subBtn) subBtn.addEventListener("click", async () => {
-  const video = prompt("视频文件路径（output 相对路径）：");
-  const srt = prompt("SRT 字幕文件路径：");
-  if (!video || !srt) return;
-  const r = await api("/api/subtitle_burn", { method: "POST", body: { video, srt_path: srt } });
-  toast(r.ok ? "字幕已烧入 → " + r.output : r.error, r.ok ? "ok" : "err");
-});
+function initSubtitleBurn() {
+  const subBtn = $("#pl-subtitle");
+  if (!subBtn) return;
+  subBtn.addEventListener("click", async () => {
+    const video = prompt("视频文件路径（output 相对路径）：");
+    const srt = prompt("SRT 字幕文件路径：");
+    if (!video || !srt) return;
+    const r = await api("/api/subtitle_burn", { method: "POST", body: { video, srt_path: srt } });
+    toast(r.ok ? "字幕已烧入 → " + r.output : r.error, r.ok ? "ok" : "err");
+  });
+  subBtn.click();
+}

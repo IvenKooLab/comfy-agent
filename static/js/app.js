@@ -9,8 +9,8 @@ import { initPipeline } from "./pipeline.js";
 import { initTemplates } from "./templates.js";
 import { applyI18n } from "./i18n.js";
 
-export const $ = (sel) => document.querySelector(sel);
-export const $$ = (sel) => [...document.querySelectorAll(sel)];
+export function $(sel) { return document.querySelector(sel); }
+export function $$(sel) { return [...document.querySelectorAll(sel)]; }
 
 export async function api(path, opts = {}) {
   const r = await fetch(path, {
@@ -238,19 +238,19 @@ async function waitServerAndBoot() {
 }
 async function boot() {
   try {
-    applyI18n();
-    initCreate();
-    initGallery();
-    initEditor();
-    initTemplates();
-    initRuns();
-    initLauncher();
-    initPipeline();
-    initMisc();
-    applyHash();
-    connectSSE();
-    hwLoop();
-    initCmdk();
+    applyI18n(); window.__step = "applyI18n";
+    initCreate(); window.__step = "initCreate";
+    initGallery(); window.__step = "initGallery";
+    initEditor(); window.__step = "initEditor";
+    initTemplates(); window.__step = "initTemplates";
+    initRuns(); window.__step = "initRuns";
+    initLauncher(); window.__step = "initLauncher";
+    initPipeline(); window.__step = "initPipeline";
+    initMisc(); window.__step = "initMisc";
+    applyHash(); window.__step = "applyHash";
+    connectSSE(); window.__step = "connectSSE";
+    hwLoop(); window.__step = "hwLoop";
+    initCmdk(); window.__step = "initCmdk";
     $("#nav-about")?.addEventListener("click", () => { $("#about-modal").hidden = false; });
     const st = await api("/api/status");
     setComfyDot(st.comfy_online);
