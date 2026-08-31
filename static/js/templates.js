@@ -26,7 +26,7 @@ export function initTemplates() {
     shown = 24; renderCards();
   });
   document.querySelector(".page-head .head-tools").prepend(favChip);
-  window.addEventListener("langchange", () => { favChip.textContent = tr("tpl.fav"); renderGroups(); });
+  window.addEventListener("langchange", () => { favChip.textContent = tr("tpl.fav"); renderGroups(); renderCards(); });
   $("#tpl-more")?.addEventListener("click", () => { shown += 24; renderCards(); });
   load(); // 启动时预加载
   new MutationObserver(() => {

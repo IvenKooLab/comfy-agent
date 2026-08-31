@@ -131,6 +131,7 @@
       <div id="gallery-empty" class="empty" hidden>
         <div class="empty-ico">📭</div>
         <p data-i18n="gallery.empty">还没有成果物。去创作页生成第一个，或让助手「画：xxx」。</p>
+        <button class="btn primary" id="g-empty-go" data-i18n="nav.create">去创作</button>
       </div>
     </section>
 
@@ -409,10 +410,19 @@
     <section id="view-settings" class="view">
       <header class="page-head"><h1 data-i18n="settings.title">设置</h1></header>
       <div class="card pad form">
+        <h3 style="font-size:13px;margin-bottom:10px" data-i18n="set.grp.conn">连接与目录</h3>
         <label><span data-i18n="settings.comfy">ComfyUI 地址</span><input id="s-comfy" class="input"></label>
         <label><span data-i18n="settings.output">成果目录（output）</span><input id="s-output" class="input"></label>
         <label><span data-i18n="settings.vault">Obsidian 库路径（vault）</span><input id="s-vault" class="input"></label>
         <label><span data-i18n="settings.port">服务端口（重启生效）</span><input id="s-port" class="input" type="number"></label>
+        <div class="row">
+          <button id="s-save" class="btn primary" data-i18n="settings.save">保存设置</button>
+          <button id="s-test" class="btn ghost" data-i18n="settings.test">测试 ComfyUI 连接</button>
+          <span id="s-msg" class="muted"></span>
+        </div>
+      </div>
+      <div class="card pad form" style="margin-top:16px">
+        <h3 style="font-size:13px;margin-bottom:10px" data-i18n="set.grp.ai">AI 接入（提示词增强 / 助手 / 图生文）</h3>
         <label><span data-i18n="settings.llm.provider">AI 厂商</span>
           <select id="s-llm-provider" class="input select"></select>
         </label>
@@ -425,6 +435,9 @@
           </div>
           <input id="s-llm-model-manual" class="input" data-i18n-ph="set.model.manual.ph" placeholder="拉取失败？手动填写模型名" style="display:none;margin-top:6px">
         </label>
+      </div>
+      <div class="card pad form" style="margin-top:16px">
+        <h3 style="font-size:13px;margin-bottom:10px" data-i18n="set.grp.ui">界面与更新</h3>
         <label><span data-i18n="settings.lang">界面语言 Language</span>
           <select id="s-lang" class="input select">
             <option value="zh">中文</option>
@@ -432,11 +445,8 @@
           </select>
         </label>
         <div class="row">
-          <button id="s-save" class="btn primary" data-i18n="settings.save">保存设置</button>
-          <button id="s-test" class="btn ghost" data-i18n="settings.test">测试 ComfyUI 连接</button>
           <button id="s-update" class="btn" data-i18n="settings.update">检查更新</button>
           <button id="s-openrel" class="btn ghost" data-i18n="settings.openrel">打开下载页</button>
-          <span id="s-msg" class="muted"></span>
         </div>
         <div id="s-update-info" class="muted" hidden></div>
       </div>
