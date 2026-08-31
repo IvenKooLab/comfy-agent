@@ -114,7 +114,7 @@ export function initCreate() {
   document.addEventListener("sse", (e) => {
     if (e.detail?.type === "execution_success") setTimeout(refreshFeed, 1500);
   });
-  window.addEventListener("langchange", () => { loadStyles(); loadWorkflows(); });
+  window.addEventListener("langchange", () => { loadStyles(); loadWorkflows(); loadCharacters(); });
 }
 
 async function loadStyles() {

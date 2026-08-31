@@ -1382,6 +1382,9 @@ def comfy_launch():
     return {"ok": True, "msg": f"ComfyUI 启动中（PID {proc.pid}）… 首次加载模型约 1-3 分钟，可到「启动器」页看日志"}
 
 
+_ai_env_cache = {"ts": 0.0, "data": {}}
+
+
 def launcher_info():
     cdir = SETTINGS.get("comfy_dir", "")
     models = {}
@@ -1410,18 +1413,43 @@ def launcher_info():
     except Exception:
         disk_info = None
     ai_env = {}
-    try:
-        cpy = SETTINGS.get("comfy_python", "")
-        if cpy and os.path.isfile(cpy):
-            r = subprocess.run([cpy, "-c", "import torch, importlib.metadata as im; print(torch.__version__); print(im.version('triton-windows', '未装')); print(im.version('sageattention', '未装'))"],
-                               capture_output=True, text=True, timeout=15, creationflags=0x08000000)
-            if r.returncode == 0 and r.stdout.strip():
-                lines = [l.strip() for l in r.stdout.strip().splitlines() if l.strip() and "Warning" not in l]
-                ai_env = {"torch": lines[0] if len(lines) > 0 else "未装",
-                          "triton-windows": lines[1] if len(lines) > 1 else "未装",
-                          "sageattention": lines[2] if len(lines) > 2 else "未装"}
-    except Exception:
-        pass
+    # torch 探测要 fork 解释器 + import（秒级），而启动器页每 4s 轮询本接口——结果缓存 10 分钟
+    if time.time() - _ai_env_cache["ts"] > 600:
+        try:
+            cpy = SETTINGS.get("comfy_python", "")
+            if not cpy or not os.path.isfile(cpy):
+                # 默认路径不存在（分发到其他机器）时自动探测 ComfyUI 自带解释器
+                parent = os.path.dirname(cdir.rstrip("\\/")) if cdir else ""
+                for cand in (os.path.join(cdir, "python_embeded", "python.exe"),
+                             os.path.join(cdir, "venv", "Scripts", "python.exe"),
+                             os.path.join(parent, "python", "python.exe")):
+                    if os.path.isfile(cand):
+                        cpy = cand
+                        break
+            if cpy and os.path.isfile(cpy):
+                probe = (
+                    "import torch, importlib.metadata as im, json\n"
+                    "def _v(p):\n"
+                    "    try:\n"
+                    "        return im.version(p)\n"
+                    "    except Exception:\n"
+                    "        return ''\n"
+                    "print(json.dumps({'torch': torch.__version__, 'triton-windows': _v('triton-windows'), 'sageattention': _v('sageattention')}))\n"
+                )
+                r = subprocess.run([cpy, "-c", probe], capture_output=True, text=True, timeout=30,
+                                   encoding="utf-8", errors="replace", creationflags=0x08000000)
+                if r.returncode == 0 and r.stdout.strip():
+                    jlines = [l for l in r.stdout.strip().splitlines() if l.strip().startswith("{")]
+                    d = json.loads(jlines[-1])
+                    ai_env = {"torch": d.get("torch", ""),
+                              "triton-windows": d.get("triton-windows", ""),
+                              "sageattention": d.get("sageattention", "")}
+        except Exception:
+            pass
+        _ai_env_cache["ts"] = time.time()
+        _ai_env_cache["data"] = ai_env
+    else:
+        ai_env = _ai_env_cache["data"]
     return {
         "comfy_dir": cdir, "models": models, "nodes": nodes, "disk": disk_info,
         "python_version": sys.version.split()[0], "ffmpeg": bool(FFMPEG),

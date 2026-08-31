@@ -54,6 +54,7 @@ export function initGallery() {
   window.addEventListener("langchange", syncFolderOptions);
   $("#g-sort").addEventListener("change", (e) => { filter.sort = e.target.value; saveFilter(); render(); });
   $("#g-refresh").addEventListener("click", () => galleryRefresh(true));
+  $("#g-empty-go")?.addEventListener("click", () => goto("create"));
   // 批量操作
   $("#b-archive").addEventListener("click", () => batchArchive());
   $("#b-trash").addEventListener("click", () => batchTrash());
