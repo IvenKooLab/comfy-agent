@@ -21,6 +21,7 @@ const HELP_EN = [
     { q: "What does hovering a card show?", a: "Hovering reveals action buttons (regenerate / open in editor / archive / download / delete).\nVideo cards silently auto-play a preview after 600ms of hover." },
     { q: "What can I do in the lightbox?", a: "Lightbox mode: arrow keys to navigate, Esc to close.\nThe right panel shows generation params (model / sampler / seed / prompt).\nOne-click regenerate, open in editor, or archive to the vault.\nHover a param row to copy it. Click \"Expand\" for long prompts." },
     { q: "How do I filter by folder?", a: "Use the top dropdown (\"All\") → pick a subfolder (e.g. video/, feibi/).\nYour filter choice is remembered." },
+    { q: "How does style induction work?", a: "Select a few images with a consistent look → the assistant's vision model induces English style keywords → save them as a custom style SOP.\nGreat for extracting a style from finished shots and reusing it in batch." },
   ]},
   { mod: "❏ Templates", items: [
     { q: "What is the template library?", a: "602 official ComfyUI workflow templates (video / image / audio / 3D / LLM etc., 9 categories) with real example previews.\nClick any template → the workflow is fetched and converted → loaded into the editor → save or run right away." },
@@ -45,6 +46,9 @@ const HELP_EN = [
     { q: "What is a \"keyframe\"?", a: "It assigns an image as the i2v first frame — the video starts from that picture.\nUsed to lock character/scene consistency (far more stable than text).\nPick an image from the gallery; it is copied into ComfyUI's input folder automatically." },
     { q: "How does \"Concat\" work?", a: "Once all shots in a batch succeed, click \"Concat\" to merge them in order into one video file.\nOptionally add BGM (enter an audio path + volume)." },
     { q: "What is the Scene library?", a: "It stores reusable scene descriptions and style tokens for quick reference in new shots.\nLike the Character library, but for scenes/environments instead of people." },
+    { q: "What is the Episodes view?", a: "It aggregates batches by name prefix (e.g. E001) into one per-episode stat card: shots / done / failed / GPU time.\nSwitch via \"Episodes\" — handy for managing long series by episode." },
+    { q: "How does priority queueing work?", a: "Each shot has a priority field; when a batch is queued, higher-priority shots are submitted first.\nUseful for rendering key shots early to check the look before running the rest." },
+    { q: "What is Audio assets?", a: "It auto-scans the output folder for audio files (mp3/wav/flac/ogg/aac/m4a) and lists them at the bottom of the Pipeline page.\nPick a BGM path from here when concatenating." },
   ]},
   { mod: "⏻ Launcher", items: [
     { q: "What does \"Start ComfyUI\" do?", a: "Starts ComfyUI with your configured args (crash-safe defaults).\nIf ComfyUI is already running you'll be told so.\nAfter startup its log streams below." },
@@ -87,6 +91,7 @@ const HELP = [
     { q: "悬停图片能看到什么？", a: "图片卡片悬停出现操作按钮（重新生成/导入编辑器/归档/下载/删除）。\n视频卡片悬停 600ms 后自动静默播放预览。" },
     { q: "点开大图后能干什么？", a: "灯箱模式：左右箭头切换、Esc 关闭。\n右侧面板显示生成参数（模型/采样器/种子/提示词）。\n可一键重新生成、导入编辑器、归档到知识库。\n悬停参数行可复制内容。长提示词点「展开」看全文。" },
     { q: "怎么按文件夹筛选？", a: "顶部下拉框「全部」→ 选子目录（如 video/、feibi/）。\n筛选会记住你的选择。" },
+    { q: "风格归纳怎么用？", a: "选几张风格统一的图 → 助手用视觉模型归纳出英文风格关键词 → 可保存为自定义风格 SOP。\n适合从满意的成片里反提风格，批量复用。" },
   ]},
   { mod: "❏ 模板库", items: [
     { q: "模板库是什么？", a: "ComfyUI 官方 602 个工作流模板（视频/图像/音频/3D/LLM 等 9 大分类），带真实实例图预览。\n点击任意模板 → 自动拉取工作流并转换 → 载入编辑器 → 保存或直接运行。" },
@@ -111,6 +116,9 @@ const HELP = [
     { q: "「关键帧」是什么？", a: "给镜头指定一张图作为 i2v 首帧，视频从这个画面开始生成。\n用于固定人物/场景一致性（比文字描述稳定得多）。\n从画廊选图即可，自动复制到 ComfyUI input 目录。" },
     { q: "「拼接成片」怎么用？", a: "批次内所有镜头成功后，点「拼接成片」按顺序合并为一个视频文件。\n可选添加 BGM 背景音乐（输入音频路径 + 音量）。" },
     { q: "场景库是干什么的？", a: "保存常用场景描述和风格令牌。创建新镜头时可以快速引用。\n和角色库类似，但管理的是场景/环境而不是人物。" },
+    { q: "集数聚合视图是什么？", a: "按批次名前缀（如 E001）把多个批次聚合成一集的统计卡：镜头数/成功/失败/GPU 时间。\n点「集数视图」切换，适合长剧按集管理产能。" },
+    { q: "优先级排队怎么用？", a: "镜头有 priority 字段，批次排队时高优先级镜头先提交。\n适合先把关键镜头跑出来看效果，再补剩余镜头。" },
+    { q: "音频资产是什么？", a: "自动扫描 output 目录里的音频文件（mp3/wav/flac/ogg/aac/m4a）列在产线页底部。\n拼接成片选 BGM 时可直接从这里取路径。" },
   ]},
   { mod: "⏻ 启动器", items: [
     { q: "「启动 ComfyUI」按钮做什么？", a: "用配置的参数启动 ComfyUI（默认 h3_launch.sh 防炸参数）。\n如果 ComfyUI 已在运行则提示。\n启动后日志实时显示在下方。" },
