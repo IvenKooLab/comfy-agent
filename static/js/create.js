@@ -1,5 +1,6 @@
 /* create.js — 创作首页：Composer + 最新创作流 */
 import { $, $$, api, toast, mediaUrl, fmtTime, goto } from "./app.js";
+import { t, tf, getLang, wfLabel } from "./i18n.js";
 import { copyText } from "./gallery.js";
 
 const PARAMS_KEY = "comfyagent_params";
@@ -17,6 +18,23 @@ let feedItems = [];
 let styles = [];
 let selStyle = localStorage.getItem("comfyagent_style") || "guoman_epic";
 
+/* 风格 SOP 英文标签（id 对应 server.py STYLE_SOPS；服务端 name/desc 为中文） */
+const STYLE_I18N = {
+  guoman_epic: ["Donghua Epic", "3D donghua in the epic xianxia vein, cinematic immortal-hero feel"],
+  guofeng_ink: ["Ink Wash", "Negative-space ink wash, misty mountains, eastern mood"],
+  cinematic_film: ["Cinematic", "Photoreal film look, shallow depth of field, pro color grade"],
+  cyber_neon: ["Cyber Neon", "Rainy-night neon, high-contrast sci-fi city"],
+  storybook: ["Storybook", "Warm children's-book illustration, soft hand-drawn feel"],
+  ghibli_warm: ["Warm Hand-drawn", "Ghibli-like natural light, cozy and healing"],
+  thick_paint: ["Impasto Oil", "Impressionist impasto brushwork, painterly texture"],
+  figure_3d: ["3D Figure", "Collector-grade figure render, studio lighting"],
+  chibi_sticker: ["Chibi Sticker", "Rounded chibi, clear-sticker style"],
+  poster_minimal: ["Minimal Poster", "Generous whitespace, geometric composition"],
+  portrait_photo: ["Portrait Photo", "85mm portrait, natural skin texture"],
+  vaporwave: ["Vaporwave", "80s retro-synth aesthetics"],
+};
+const styleView = (s) => (getLang() === "en" && STYLE_I18N[s.id]) ? { ...s, name: STYLE_I18N[s.id][0], desc: STYLE_I18N[s.id][1] } : s;
+
 const INSPIRE = {
   image: [
     "cinematic close-up, swordsman in white robe looking back, sea of clouds at dawn, guoman 3d style",
@@ -29,8 +47,8 @@ const INSPIRE = {
     "drifting clouds over ink-wash immortal mountains, seamless loop",
   ],
 };
-const VIDEO_HINT = "H3 W4A8 快线 · 640×352 · ≈5秒 · 4步 · 原生音频 · 约8.5分钟/条（视频尺寸由工作流锁定）";
-const IMAGE_HINT = "Flux 文生图 · 20步 · 约1-2分钟/张（视队列而定）";
+const VIDEO_HINT = () => t("create.hint.video");
+const IMAGE_HINT = () => t("create.hint.image");
 
 let characters = [];
 let selChar = "";
@@ -83,8 +101,8 @@ export function initCreate() {
     if (!e.target.classList.contains("en-copy")) return;
     const t = e.target.dataset.copy || "";
     const ok = await copyText(t);
-    e.target.textContent = ok ? "✓ 已复制" : "复制失败";
-    setTimeout(() => { e.target.textContent = "复制"; }, 1500);
+    e.target.textContent = ok ? t("st.ok") : t("st.copy.fail");
+    setTimeout(() => { e.target.textContent = t("lb.copy"); }, 1500);
   });
   $("#c-go").addEventListener("click", create);
   $("#c-prompt").addEventListener("keydown", (e) => {
@@ -96,6 +114,7 @@ export function initCreate() {
   document.addEventListener("sse", (e) => {
     if (e.detail?.type === "execution_success") setTimeout(refreshFeed, 1500);
   });
+  window.addEventListener("langchange", () => { loadStyles(); loadWorkflows(); });
 }
 
 async function loadStyles() {
@@ -105,13 +124,14 @@ async function loadStyles() {
   if (!styles.find((s) => s.id === selStyle)) selStyle = styles[0]?.id;
   const box = $("#c-styles");
   box.innerHTML = "";
-  for (const s of styles) {
+  for (const raw of styles) {
+    const s = styleView(raw);
     const c = document.createElement("button");
-    c.className = "style-chip" + (s.id === selStyle ? " active" : "");
+    c.className = "style-chip" + (raw.id === selStyle ? " active" : "");
     c.innerHTML = `<span class="em">${s.emoji}</span>${s.name}`;
     c.title = s.desc;
     c.addEventListener("click", () => {
-      selStyle = s.id;
+      selStyle = raw.id;
       localStorage.setItem("comfyagent_style", s.id);
       box.querySelectorAll(".style-chip").forEach((x) => x.classList.remove("active"));
       c.classList.add("active");
@@ -138,7 +158,7 @@ function applyMode() {
   for (const wf of fits) {
     const o = document.createElement("option");
     o.value = wf.id || wf.name;
-    o.textContent = wf.name;
+    o.textContent = wfLabel(wf);
     sel.appendChild(o);
   }
   const remembered = loadParams()["wf_" + mode];
@@ -147,7 +167,7 @@ function applyMode() {
   if (!sel.value) sel.selectedIndex = 0;
   sel.onchange = () => saveParams({ ["wf_" + mode]: sel.value });
   $("#c-size-box").style.display = mode === "video" ? "none" : "";
-  $("#c-hint").innerHTML = `<span class="dot2"></span>${mode === "video" ? VIDEO_HINT : IMAGE_HINT}`;
+  $("#c-hint").innerHTML = `<span class="dot2"></span>${mode === "video" ? VIDEO_HINT() : IMAGE_HINT()}`;
 }
 
 async function loadWorkflows() {
@@ -159,11 +179,11 @@ async function loadWorkflows() {
 
 async function create() {
   const promptText = $("#c-prompt").value.trim();
-  if (!promptText) { toast("先描述一下你想要的画面", "err"); $("#c-prompt").focus(); return; }
-  if (mode === "video" && selCount > 2 && !confirm(`视频模式一次排 ${selCount} 条约需 ${Math.ceil(8.5 * selCount)} 分钟，确定？`)) return;
+  if (!promptText) { toast(t("err.no.prompt"), "err"); $("#c-prompt").focus(); return; }
+  if (mode === "video" && selCount > 2 && !confirm(tf("misc.confirm.video.count", selCount, Math.ceil(8.5 * selCount)))) return;
   const sel = $("#c-wf");
   const wf = workflows.find((w) => (w.id || w.name) === sel.value);
-  if (!wf) { toast("没有可用工作流", "err"); return; }
+  if (!wf) { toast(t("err.no.workflow"), "err"); return; }
   // 角色锁定串：追加到描述后一起增强，保证角色一致性
   const charObj = characters.find((c) => c.id === $("#c-char").value);
   const baseText = promptText + (charObj && charObj.lock ? "，" + charObj.lock : "");
@@ -173,7 +193,7 @@ async function create() {
   const styleObj = styles.find((s) => s.id === selStyle);
   if ($("#c-translate").classList.contains("active")) {
     const btn = $("#c-go");
-    btn.disabled = true; btn.querySelector("span").textContent = "翻译中…";
+    btn.disabled = true; btn.querySelector("span").textContent = t("st.translating");
     try {
       const en = await api("/api/enhance_prompt", {
         method: "POST", body: { text: promptText, style: selStyle, mode },
@@ -181,14 +201,14 @@ async function create() {
       if (en.ok && en.english) {
         submitText = en.english;
         const pv = $("#c-en-preview");
-        pv.innerHTML = `<span class="en-tag">EN（${en.engine}${styleObj ? " · " + styleObj.name : ""}）→</span>${en.english}<button class="kv-copy en-copy" data-copy="${en.english.replace(/"/g, "&quot;")}">复制</button>`;
+        pv.innerHTML = `<span class="en-tag">EN（${en.engine}${styleObj ? " · " + styleView(styleObj).name : ""}）→</span>${en.english}<button class="kv-copy en-copy" data-copy="${en.english.replace(/"/g, "&quot;")}">${t("lb.copy")}</button>`;
         pv.hidden = false;
         if (en.note) toast(en.note, "err");
       } else {
-        toast(en.error || "翻译失败，按原文提交", "err");
+        toast(en.error || t("err.translate.fail"), "err");
       }
     } finally {
-      btn.disabled = false; btn.querySelector("span").textContent = "✦ 生 成";
+      btn.disabled = false; btn.querySelector("span").textContent = t("act.generate");
     }
   } else if (styleObj && mode === "image") {
     // 关闭翻译也要吃到风格令牌（英文原样 + 追加）
@@ -205,18 +225,18 @@ async function create() {
   // 尺寸只对"Latent 建尺寸"类工作流生效；H3 等视频工作流用自带尺寸（640×352）
   const hasLatentSize = Object.values(wf.api || {}).some((n) => /Latent/i.test(n.class_type || ""));
   const go = $("#c-go");
-  go.disabled = true; go.querySelector("span").textContent = "提交中…";
+  go.disabled = true; go.querySelector("span").textContent = t("st.submitting");
   try {
     const r = await api("/api/prompt", {
       method: "POST",
-      body: { name: "创作·" + promptText.slice(0, 16), prompt: wf.api, times: selCount, seed,
+      body: { name: t("name.create.prefix") + promptText.slice(0, 16), prompt: wf.api, times: selCount, seed,
               overrides: { text, ...(hasLatentSize ? { width: w, height: h } : {}) },
               params: styleParams },
     });
-    r.ok ? toast(r.msg + (hasLatentSize ? "" : "（视频按工作流自带尺寸）"), "ok") : toast(r.msg || r.error, "err");
+    r.ok ? toast(r.msg + (hasLatentSize ? "" : t("video.mode.warn")), "ok") : toast(r.msg || r.error, "err");
     if (r.ok) $("#c-seed").value = "";
   } finally {
-    go.disabled = false; go.querySelector("span").textContent = "✦ 生 成";
+    go.disabled = false; go.querySelector("span").textContent = t("act.generate");
   }
 }
 
@@ -228,7 +248,7 @@ export async function refreshFeed() {
   box.innerHTML = "";
   for (const it of feedItems) box.appendChild(gCard(it, feedItems));
   if (!feedItems.length)
-    box.innerHTML = `<div class="muted" style="padding:30px 0">还没有作品，上面输入第一条提示词吧。</div>`;
+    box.innerHTML = `<div class="muted" style="padding:30px 0">${t("empty.feed")}</div>`;
 }
 
 /* 与画廊一致的卡片（含悬浮操作） */
@@ -243,12 +263,12 @@ function gCard(it, list) {
     ${it.kind === "video" ? '<div class="g-play"><span>▶</span></div>' : ""}
     <div class="g-overlay">
       <div class="g-acts">
-        <button class="g-act" data-act="rerun" title="重新生成">↻</button>
-        <button class="g-act" data-act="archive" title="归档到知识库">◈</button>
-        <button class="g-act" data-act="download" title="下载">↓</button>
+        <button class="g-act" data-act="rerun" title="${t("act.rerun")}">↻</button>
+        <button class="g-act" data-act="archive" title="${t("lb.archive")}">◈</button>
+        <button class="g-act" data-act="download" title="${t("lb.download")}">↓</button>
       </div>
     </div>
-    <span class="g-badge">${it.kind === "video" ? "视频" : "图片"}${it.w ? " · " + it.w + "×" + it.h : ""}</span>
+    <span class="g-badge">${it.kind === "video" ? t("gallery.video") : t("gallery.image")}${it.w ? " · " + it.w + "×" + it.h : ""}</span>
     <div class="g-foot"><span class="g-name" title="${it.path}">${it.name}</span><span class="g-date">${fmtTime(it.mtime)}</span></div>`;
   card.addEventListener("click", (e) => {
     if (e.target.closest(".g-act")) return;
@@ -263,14 +283,14 @@ function gCard(it, list) {
     const r = await api("/api/obsidian/archive", {
       method: "POST", body: { paths: [it.path], title: it.name.replace(/\.[^.]+$/, "").slice(0, 40) },
     });
-    if (r.ok) { toast(`已归档：${r.note}`, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
-    else toast(r.error || "归档失败", "err");
+    if (r.ok) { toast(t("toast.archived") + r.note, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
+    else toast(r.error || t("toast.archive.fail"), "err");
   });
   card.querySelector('[data-act="rerun"]')?.addEventListener("click", async (e) => {
     e.stopPropagation();
     const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
-    if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流", "err"); return; }
-    const r = await api("/api/prompt", { method: "POST", body: { name: "重跑·" + it.name, prompt: meta.prompt } });
+    if (!meta.ok || !meta.prompt) { toast(t("err.no.embed"), "err"); return; }
+    const r = await api("/api/prompt", { method: "POST", body: { name: t("name.rerun.prefix") + it.name, prompt: meta.prompt } });
     r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
   });
   return card;
@@ -286,7 +306,7 @@ async function loadCharacters() {
   box.style.display = "";
   const sel = $("#c-char");
   const keep = loadParams().char || "";
-  sel.innerHTML = `<option value="">无</option>` + characters.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+  sel.innerHTML = `<option value="">${t("opt.none")}</option>` + characters.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
   if (keep && characters.find((c) => c.id === keep)) sel.value = keep;
   sel.onchange = () => saveParams({ char: sel.value });
 }
