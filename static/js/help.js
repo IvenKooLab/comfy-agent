@@ -1,5 +1,73 @@
-/* help.js — 内置帮助：全模块使用指南，可搜索 */
+/* help.js — 内置帮助：全模块使用指南，可搜索（中英双语，跟随界面语言） */
 import { $, $$ } from "./app.js";
+import { t, getLang } from "./i18n.js";
+
+/* EN 版帮助（结构同 HELP） */
+const HELP_EN = [
+  { mod: "🚀 Quick start", items: [
+    { q: "How do I get started?", a: "1. Make sure ComfyUI is running (bottom-left dot green = online)\n2. Open \"Create\" → pick a style → type a description → Generate\n3. Finished renders appear automatically in the Gallery\n4. First time? Check the ComfyUI URL and output folder in Settings" },
+    { q: "What is the bottom status bar?", a: "Real-time GPU status: VRAM / utilization / temperature / RAM / queue.\nAuto-refreshes every 2 seconds. GPU temp ≥83°C turns red as a warning.\n(Source: nvidia-smi)" },
+    { q: "Keyboard shortcuts?", a: "Keys 1-8 → switch pages\n/ → focus gallery search\nCtrl+K → command palette (navigate / run workflow / interrupt / clear queue)\nCtrl+S → save workflow (editor)\nCtrl+Enter → run workflow (editor)\nEsc → close dialog / clear selection\nDelete → remove selected node (editor)" },
+  ]},
+  { mod: "✦ Create", items: [
+    { q: "How do I generate an image?", a: "1. Pick a style (e.g. \"Donghua Epic\")\n2. Type a description (e.g. \"a white-robed swordsman looking back above a sea of clouds\")\n3. Choose size and count → Generate\n\nChinese input is auto-translated into an English prompt (Flux follows English better). The translation shows below the input box." },
+    { q: "How do I generate a video?", a: "Switch to the \"Video\" tab → pick the H3 workflow → type a description → Generate.\nVideos are fixed at 640×352, ~5s, native audio, ~8.5 min per clip.\nResolution is locked by the workflow (the H3 fast lane has no custom resolution)." },
+    { q: "When should I turn off \"ZH→EN\"?", a: "Turn it off when your input is already an English prompt to skip translation.\nEven when off, the English style tokens of the current style SOP are still appended." },
+    { q: "What is the \"Character\" dropdown for?", a: "Pick a character from the Character Library; its lock string is appended to the prompt so the character looks consistent across renders.\nCharacters are managed in the Pipeline page's Character Library." },
+    { q: "Does count 4 generate 4 different images?", a: "Yes. Each image uses a different random seed, so layout and details vary. Great for exploring before settling on a final." },
+  ]},
+  { mod: "▦ Gallery", items: [
+    { q: "How do I batch delete / archive?", a: "1. Hover a card and a checkbox appears at its top-right; click to select (or Ctrl+click for multi-select)\n2. The batch bar appears at the bottom → \"Archive\" or \"Delete\"\n3. Ctrl+A selects all visible items, Esc clears selection" },
+    { q: "What does hovering a card show?", a: "Hovering reveals action buttons (regenerate / open in editor / archive / download / delete).\nVideo cards silently auto-play a preview after 600ms of hover." },
+    { q: "What can I do in the lightbox?", a: "Lightbox mode: arrow keys to navigate, Esc to close.\nThe right panel shows generation params (model / sampler / seed / prompt).\nOne-click regenerate, open in editor, or archive to the vault.\nHover a param row to copy it. Click \"Expand\" for long prompts." },
+    { q: "How do I filter by folder?", a: "Use the top dropdown (\"All\") → pick a subfolder (e.g. video/, feibi/).\nYour filter choice is remembered." },
+  ]},
+  { mod: "❏ Templates", items: [
+    { q: "What is the template library?", a: "602 official ComfyUI workflow templates (video / image / audio / 3D / LLM etc., 9 categories) with real example previews.\nClick any template → the workflow is fetched and converted → loaded into the editor → save or run right away." },
+    { q: "How does search work?", a: "The top search box fuzzy-matches titles, descriptions and model names.\nFor example, search \"H3\" to find all MiniMax H3 templates." },
+    { q: "What are star favorites for?", a: "Starred templates can be quickly found via the \"⭐ Favorites only\" filter. Favorites are stored locally in your browser." },
+  ]},
+  { mod: "⑃ Workflow editor", items: [
+    { q: "How do I add a node?", a: "Double-click empty canvas → a search panel pops up → type the node name → click to add.\nYou can also use the \"＋\" button at the top right." },
+    { q: "How do I link / unlink?", a: "Link: drag from a node's right dot to another node's left dot.\nUnlink: click a connected left dot to disconnect.\nWhile dragging you can adjust the path freely." },
+    { q: "How do I edit params?", a: "Click a node card → the inspector on the right lists all params → edit in place.\nSeed params have a 🎲 button to randomize.\nRemember to click \"Save\" after editing." },
+    { q: "How do I import a ComfyUI workflow?", a: "Export API-format JSON from ComfyUI → click \"Import\" in the editor → pick the JSON file.\nYou can also import a PNG directly (embedded workflow is extracted automatically).\nReview the params, then \"Save\" into the library." },
+    { q: "What does a red node border mean?", a: "That node type doesn't exist in the current ComfyUI (a custom-node pack may be missing).\nInstall the matching custom nodes before running." },
+  ]},
+  { mod: "◷ Jobs", items: [
+    { q: "How do I read the progress bar?", a: "The top progress panel shows sampling progress of the current node.\nEach job row also has its own progress bar and ETA." },
+    { q: "What if a job fails?", a: "Failed rows show a \"↻ Retry\" button that resubmits with a new seed.\nYou can also batch-retry inside a Pipeline batch." },
+    { q: "\"Queued\" vs \"Running\"?", a: "Running = currently rendering on the GPU (has a progress bar).\nQueued = waiting for earlier jobs (FIFO)." },
+  ]},
+  { mod: "⛓ Pipeline", items: [
+    { q: "What is the Pipeline for?", a: "A full assembly line that turns episode scripts into finished videos.\nImport script → parse shot list → edit / set keyframes → queue all → auto-retry → concat into one video." },
+    { q: "How do I import a storyboard script?", a: "Click \"Import script\" → paste the full text → \"Parse\".\nIt auto-detects the ### SHOTxx【style】+ text block format.\nA simple one-shot-per-line format also works: name | prompt" },
+    { q: "What is a \"keyframe\"?", a: "It assigns an image as the i2v first frame — the video starts from that picture.\nUsed to lock character/scene consistency (far more stable than text).\nPick an image from the gallery; it is copied into ComfyUI's input folder automatically." },
+    { q: "How does \"Concat\" work?", a: "Once all shots in a batch succeed, click \"Concat\" to merge them in order into one video file.\nOptionally add BGM (enter an audio path + volume)." },
+    { q: "What is the Scene library?", a: "It stores reusable scene descriptions and style tokens for quick reference in new shots.\nLike the Character library, but for scenes/environments instead of people." },
+  ]},
+  { mod: "⏻ Launcher", items: [
+    { q: "What does \"Start ComfyUI\" do?", a: "Starts ComfyUI with your configured args (crash-safe defaults).\nIf ComfyUI is already running you'll be told so.\nAfter startup its log streams below." },
+    { q: "What does \"Check updates\" do?", a: "It queries the remote git repo and computes how many commits you're behind.\nIf behind, \"Update\" stashes local changes → pull → restore → prompts you to restart." },
+    { q: "What does \"Models\" show?", a: "It scans ComfyUI's models folders: checkpoints/loras/vae/upscale/controlnet, with counts and sizes.\nClick to expand the file list." },
+    { q: "How do I change launch args?", a: "Edit the args in the \"Launch config\" card (space separated) and save; applies on next start.\nDefaults are a crash-optimized set (--reserve-vram 2.5 etc.)." },
+  ]},
+  { mod: "◈ Vault", items: [
+    { q: "How do I archive images to Obsidian?", a: "Select images in the gallery → \"Archive\" → a Markdown note is created under ComfyAgent/notes in your vault (with embedded images and a params table).\nBatch archive works the same, merging multiple files into one note." },
+    { q: "What is the link graph?", a: "Inspired by Obsidian's graph view — a canvas force-directed map of wiki links between notes in your vault.\nNode size = word count; drag to arrange; double-click a node to open the note." },
+    { q: "How does note search work?", a: "Type a keyword in the top search box → matching notes filter live → click to preview the full text (first 8000 chars) → jump into Obsidian to edit." },
+  ]},
+  { mod: "✧ Assistant", items: [
+    { q: "What can the assistant do?", a: "Just talk to it:\n· \"draw: swordsman in a snowy bamboo forest\" → enhance and generate\n· \"run H3 t2v ×2\" → queue a batch\n· \"archive latest 10\" → batch archive\n· \"status / interrupt / clear queue\" → manage jobs\n· \"paint in ink-wash style: xxx\" → applies the style SOP automatically" },
+    { q: "Will chat history be lost?", a: "No. Chat history is stored locally in your browser and survives refreshes and restarts." },
+  ]},
+  { mod: "⚙ Settings", items: [
+    { q: "How do I switch AI providers?", a: "Pick a provider (Zhipu / DeepSeek / Kimi / Qwen / SiliconFlow / OpenAI / Custom) → Base URL auto-fills → enter your API key → \"Fetch models\" → pick a model → Save.\nIf fetching fails you can type the model name manually." },
+    { q: "What does \"Check updates\" do?", a: "It checks Gitee for newer Releases. Private repos need a Gitee token (stored locally, never sent back to the page)." },
+    { q: "Is \"Allow LAN access\" safe?", a: "When on, phones/tablets on the same Wi-Fi can open the console at http://your-ip:8190 — handy for monitoring from a phone.\nNote: everyone on the LAN can access it; use only on trusted networks." },
+  ]},
+];
+
 
 const HELP = [
   { mod: "🚀 快速上手", items: [
@@ -72,6 +140,7 @@ export function initHelp() {
   const box = $("#help-content");
   if (!box) return;
   renderHelp();
+  window.addEventListener("langchange", renderHelp);
   $("#help-search").addEventListener("input", (e) => {
     helpSearch = e.target.value.trim().toLowerCase();
     renderHelp();
@@ -81,8 +150,9 @@ export function initHelp() {
 function renderHelp() {
   const box = $("#help-content");
   if (!box) return;
+  const data = (getLang() === "en" && HELP_EN) ? HELP_EN : HELP;
   let html = "";
-  for (const section of HELP) {
+  for (const section of data) {
     const matched = section.items.filter((i) =>
       !helpSearch || i.q.toLowerCase().includes(helpSearch) || i.a.toLowerCase().includes(helpSearch) || section.mod.toLowerCase().includes(helpSearch)
     );
@@ -92,6 +162,6 @@ function renderHelp() {
       html += `<div class="help-item"><div class="help-q">${item.q}</div><div class="help-a">${item.a.replace(/\n/g, "<br>")}</div></div>`;
     }
   }
-  if (helpSearch && !html) html = `<div class="muted" style="padding:20px">没有匹配的帮助主题</div>`;
+  if (helpSearch && !html) html = `<div class="muted" style="padding:20px">${t("empty.help.search")}</div>`;
   box.innerHTML = html;
 }

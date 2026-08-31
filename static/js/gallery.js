@@ -1,13 +1,14 @@
 /* gallery.js — 画廊：瀑布流 + 灯箱 + 批量选择/批量归档删除 + 文件夹筛选 */
 import { $, $$, api, toast, fmtSize, fmtTime, mediaUrl, goto } from "./app.js";
+import { t, tf } from "./i18n.js";
 
 let items = [];
-let filter = { q: "", kind: "all", sort: "new", folder: "全部" };
+let filter = { q: "", kind: "all", sort: "new", folder: "" };
 let lbIndex = -1;
 let lastSeenMtime = 0;
 let lbMeta = null;
 let selected = new Set();
-let folders = ["全部"];
+let folders = [];
 let renderLimit = 40;      // 分页渲染：每屏 40 张，滚动到底自动加载
 const PAGE = 40;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -33,6 +34,7 @@ function loadFilter() {
     if (f.kind) filter.kind = f.kind;
     if (f.sort) filter.sort = f.sort;
     if (f.folder) filter.folder = f.folder;
+    if (filter.folder === "全部" || filter.folder === "All") filter.folder = "";
   } catch { }
 }
 
@@ -49,6 +51,7 @@ export function initGallery() {
     });
   });
   $("#g-folder").addEventListener("change", (e) => { filter.folder = e.target.value; saveFilter(); renderLimit = PAGE; render(); });
+  window.addEventListener("langchange", syncFolderOptions);
   $("#g-sort").addEventListener("change", (e) => { filter.sort = e.target.value; saveFilter(); render(); });
   $("#g-refresh").addEventListener("click", () => galleryRefresh(true));
   // 批量操作
@@ -74,7 +77,7 @@ export function initGallery() {
       e.preventDefault();
       visible().forEach((i) => selected.add(i.path));
       render();
-      toast(`已全选 ${selected.size} 个`, "ok");
+      toast(tf("misc.select.all.n", selected.size), "ok");
     }
     if (e.key === "Escape" && selected.size) {
       selected.clear(); syncBatchBar(); render();
@@ -84,21 +87,21 @@ export function initGallery() {
   // 图生文反推：视觉 LLM 从图生成英文提示词
   $("#lb-i2p").addEventListener("click", async () => {
     const it = visible()[lbIndex];
-    if (!it || it.kind !== "image") { toast("仅图片支持反推", "err"); return; }
+    if (!it || it.kind !== "image") { toast(t("err.image.only"), "err"); return; }
     const btn = $("#lb-i2p");
-    btn.disabled = true; btn.textContent = "反推中…";
+    btn.disabled = true; btn.textContent = t("st.i2p");
     try {
       const r = await api("/api/image_to_prompt", { method: "POST", body: { path: it.path } });
       if (r.ok && r.prompt) {
         const box = $("#lb-summary");
-        box.innerHTML = `<div class="kv"><span>反推</span><span class="kv-val">${r.prompt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span></div>
-          <button class="kv-copy" id="lb-i2p-copy">复制</button>`;
+        box.innerHTML = `<div class="kv"><span>${t("lb.i2p")}</span><span class="kv-val">${r.prompt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span></div>
+          <button class="kv-copy" id="lb-i2p-copy">${t("lb.copy")}</button>`;
         box.querySelector("#lb-i2p-copy").addEventListener("click", () => {
-          navigator.clipboard.writeText(r.prompt).then(() => { btn.textContent = "✓ 已复制"; setTimeout(() => btn.textContent = "复制", 1200); });
+          navigator.clipboard.writeText(r.prompt).then(() => { btn.textContent = t("st.ok"); setTimeout(() => btn.textContent = t("lb.copy"), 1200); });
         });
       } else toast(r.error, "err");
     } finally {
-      btn.disabled = false; btn.textContent = "🔍 反推提示词";
+      btn.disabled = false; btn.textContent = t("lb.i2p.btn");
     }
   });
   // 参数行：悬停复制 + 长文本展开（委托，一次绑定）
@@ -107,15 +110,15 @@ export function initGallery() {
     const cp = e.target.closest(".kv-copy");
     if (cp) {
       const ok = await copyText(cp.dataset.copy);
-      cp.textContent = ok ? "✓ 已复制" : "复制失败";
-      setTimeout(() => { cp.textContent = "复制"; }, 1500);
+      cp.textContent = ok ? "✓ " + t("toast.copied") : t("toast.copy.fail");
+      setTimeout(() => { cp.textContent = t("lb.copy"); }, 1500);
       return;
     }
     const ex = e.target.closest(".kv-expand");
     if (ex) {
       const kvEl = ex.closest(".kv");
       const clamped = kvEl.classList.toggle("clamp");
-      ex.textContent = clamped ? "展开" : "收起";
+      ex.textContent = clamped ? t("lb.expand") : t("lb.collapse");
     }
   });
   $("#lb-reveal").addEventListener("click", async () => {
@@ -128,15 +131,15 @@ export function initGallery() {
   });
   $("#lb-trash").addEventListener("click", async () => {
     const it = visible()[lbIndex];
-    if (!it || !confirm(`把「${it.name}」移入回收站？`)) return;
+    if (!it || !confirm(tf("misc.confirm.delete", it.name))) return;
     const r = await api("/api/media/trash", { method: "POST", body: { paths: [it.path] } });
-    if (r.ok) { toast("已移入回收站（data/trash）", "ok"); selected.delete(it.path); syncBatchBar(); closeLightbox(); galleryRefresh(true); }
+    if (r.ok) { toast(t("toast.trashed"), "ok"); selected.delete(it.path); syncBatchBar(); closeLightbox(); galleryRefresh(true); }
     else toast(r.error, "err");
   });
   $("#lb-import").addEventListener("click", () => {
     const it = visible()[lbIndex];
     if (!it) return;
-    if (!lbMeta || !lbMeta.prompt) { toast("该文件没有嵌入工作流（视频/旧图可能没有）", "err"); return; }
+    if (!lbMeta || !lbMeta.prompt) { toast(t("err.no.embed"), "err"); return; }
     localStorage.setItem("pendingImport", JSON.stringify({ api: lbMeta.prompt, name: it.name.replace(/\.[^.]+$/, "") }));
     closeLightbox();
     goto("editor");
@@ -144,8 +147,8 @@ export function initGallery() {
   $("#lb-rerun").addEventListener("click", async () => {
     const it = visible()[lbIndex];
     if (!it) return;
-    if (!lbMeta || !lbMeta.prompt) { toast("没有嵌入工作流，无法直接重跑", "err"); return; }
-    const r = await api("/api/prompt", { method: "POST", body: { name: "重跑·" + it.name, prompt: lbMeta.prompt } });
+    if (!lbMeta || !lbMeta.prompt) { toast(t("err.no.embed.rerun"), "err"); return; }
+    const r = await api("/api/prompt", { method: "POST", body: { name: t("name.rerun.prefix") + it.name, prompt: lbMeta.prompt } });
     r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
     if (r.ok) goto("runs");
   });
@@ -160,27 +163,27 @@ export async function galleryRefresh(force) {
   // 文件夹清单（顶层目录）
   const dirs = new Set();
   for (const it of items) {
-    const top = it.path.includes("/") ? it.path.split("/")[0] : "output 根目录";
+    const top = it.path.includes("/") ? it.path.split("/")[0] : t("g.root");
     dirs.add(top);
   }
-  folders = ["全部", ...[...dirs].sort()];
+  folders = [...dirs].sort();
   syncFolderOptions();
   render();
-  if (force && prevMax && lastSeenMtime > prevMax) toast("画廊有新成果 ✨", "ok");
+  if (force && prevMax && lastSeenMtime > prevMax) toast(t("toast.new.work"), "ok");
 }
 
 function syncFolderOptions() {
   const sel = $("#g-folder");
   const cur = filter.folder;
-  sel.innerHTML = folders.map((f) => `<option ${f === cur ? "selected" : ""}>${f}</option>`).join("");
+  sel.innerHTML = `<option value="" ${cur === "" ? "selected" : ""}>${t("gallery.all")}</option>` + folders.map((f) => `<option ${f === cur ? "selected" : ""}>${f}</option>`).join("");
   $("#g-sort").value = filter.sort;
 }
 
 function visible() {
   let list = items.filter((i) => {
-    const top = i.path.includes("/") ? i.path.split("/")[0] : "output 根目录";
+    const top = i.path.includes("/") ? i.path.split("/")[0] : t("g.root");
     return (filter.kind === "all" || i.kind === filter.kind)
-      && (filter.folder === "全部" || top === filter.folder)
+      && (filter.folder === "" || top === filter.folder)
       && (!filter.q || i.name.toLowerCase().includes(filter.q));
   });
   if (filter.sort === "old") list = [...list].reverse();
@@ -191,7 +194,7 @@ function visible() {
 function render() {
   const grid = $("#gallery-grid");
   const list = visible();
-  $("#g-count").textContent = `${list.length} / ${items.length} 个`;
+  $("#g-count").textContent = tf("g.count.tpl", list.length, items.length);
   $("#gallery-empty").hidden = list.length > 0;
   grid.innerHTML = "";
   const shown = list.slice(0, renderLimit);
@@ -201,19 +204,19 @@ function render() {
     card.dataset.path = it.path;
     const src = it.kind === "video" ? mediaUrl(it.path, { thumb: "1" }) : mediaUrl(it.path);
     card.innerHTML = `
-      <div class="g-check" title="选择">✓</div>
+      <div class="g-check" title="${t("lb.select")}">✓</div>
       <img loading="lazy" src="${src}" alt="">
       ${it.kind === "video" ? '<div class="g-play"><span>▶</span></div>' : ""}
       <div class="g-overlay">
         <div class="g-acts">
-          <button class="g-act" data-act="rerun" title="重新生成">↻</button>
-          <button class="g-act" data-act="edit" title="导入编辑器">⑃</button>
-          <button class="g-act" data-act="archive" title="归档到知识库">◈</button>
-          <button class="g-act" data-act="download" title="下载">↓</button>
-          <button class="g-act del" data-act="del" title="删除">✕</button>
+          <button class="g-act" data-act="rerun" title="${t("act.rerun")}">↻</button>
+          <button class="g-act" data-act="edit" title="${t("act.edit")}">⑃</button>
+          <button class="g-act" data-act="archive" title="${t("lb.archive")}">◈</button>
+          <button class="g-act" data-act="download" title="${t("lb.download")}">↓</button>
+          <button class="g-act del" data-act="del" title="${t("act.delete")}">✕</button>
         </div>
       </div>
-      <span class="g-badge">${it.kind === "video" ? "视频" : "图片"}${it.w ? " · " + it.w + "×" + it.h : ""}</span>
+      <span class="g-badge">${it.kind === "video" ? t("gallery.video") : t("gallery.image")}${it.w ? " · " + it.w + "×" + it.h : ""}</span>
       <div class="g-foot"><span class="g-name" title="${it.path}">${it.name}</span><span class="g-date">${fmtTime(it.mtime)}</span></div>`;
     card.addEventListener("click", (e) => {
       if (e.target.closest(".g-act") || e.target.closest(".g-check")) return;
@@ -244,7 +247,7 @@ function render() {
     s.id = "gallery-more";
     s.className = "muted";
     s.style.cssText = "text-align:center;padding:16px;column-span:all;cursor:pointer";
-    s.textContent = `↓ 加载更多（还有 ${list.length - shown.length} 个）`;
+    s.textContent = tf("misc.load.more.n", list.length - shown.length);
     s.addEventListener("click", () => { renderLimit += PAGE; render(); });
     grid.appendChild(s);
   }
@@ -260,28 +263,28 @@ function wireActions(card, it) {
     const r = await api("/api/obsidian/archive", {
       method: "POST", body: { paths: [it.path], title: it.name.replace(/\.[^.]+$/, "").slice(0, 40) },
     });
-    if (r.ok) { toast(`已归档：${r.note}`, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
-    else toast(r.error || "归档失败", "err");
+    if (r.ok) { toast(t("toast.archived") + r.note, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
+    else toast(r.error || t("toast.archive.fail"), "err");
   });
   card.querySelector('[data-act="edit"]')?.addEventListener("click", async (e) => {
     e.stopPropagation();
     const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
-    if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流", "err"); return; }
+    if (!meta.ok || !meta.prompt) { toast(t("err.no.embed"), "err"); return; }
     localStorage.setItem("pendingImport", JSON.stringify({ api: meta.prompt, name: it.name.replace(/\.[^.]+$/, "") }));
     goto("editor");
   });
   card.querySelector('[data-act="rerun"]')?.addEventListener("click", async (e) => {
     e.stopPropagation();
     const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
-    if (!meta.ok || !meta.prompt) { toast("该文件没有嵌入工作流，无法直接重跑", "err"); return; }
-    const r = await api("/api/prompt", { method: "POST", body: { name: "重跑·" + it.name, prompt: meta.prompt } });
+    if (!meta.ok || !meta.prompt) { toast(t("err.no.embed.rerun"), "err"); return; }
+    const r = await api("/api/prompt", { method: "POST", body: { name: t("name.rerun.prefix") + it.name, prompt: meta.prompt } });
     r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
   });
   card.querySelector('[data-act="del"]')?.addEventListener("click", async (e) => {
     e.stopPropagation();
-    if (!confirm(`把「${it.name}」移入回收站？`)) return;
+    if (!confirm(tf("misc.confirm.delete", it.name))) return;
     const r = await api("/api/media/trash", { method: "POST", body: { paths: [it.path] } });
-    if (r.ok) { toast("已移入回收站", "ok"); galleryRefresh(true); }
+    if (r.ok) { toast(t("toast.trashed"), "ok"); galleryRefresh(true); }
     else toast(r.error, "err");
   });
 }
@@ -299,29 +302,29 @@ function syncBatchBar() {
   $("#batch-n").textContent = selected.size;
   const vids = [...selected].filter((p) => /\.(mp4|webm|mov|mkv)$/i.test(p)).length;
   $("#b-concat").hidden = vids < 2;
-  $("#b-concat").textContent = `🎬 拼接成片（${vids}段）`;
+  $("#b-concat").textContent = tf("g.concat.n", vids);
 }
 
 async function batchConcat() {
   const vids = [...selected].filter((p) => /\.(mp4|webm|mov|mkv)$/i.test(p));
   if (vids.length < 2) return;
-  if (!confirm(`按选择顺序拼接 ${vids.length} 段视频？`)) return;
-  const r = await api("/api/concat", { method: "POST", body: { paths: vids, name: "拼接成片" } });
-  if (r.ok) { toast(r.msg + "（已进画廊）", "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
+  if (!confirm(tf("misc.confirm.concat", vids.length))) return;
+  const r = await api("/api/concat", { method: "POST", body: { paths: vids, name: t("name.concat") } });
+  if (r.ok) { toast(r.msg + t("st.in.gallery"), "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
   else toast(r.error, "err");
 }
 async function batchArchive() {
   const paths = [...selected];
   if (!paths.length) return;
-  const r = await api("/api/obsidian/archive", { method: "POST", body: { paths, title: `批量归档${paths.length}个` } });
-  if (r.ok) { toast(`已归档 ${r.count} 个到 ${r.note}`, "ok"); selected.clear(); syncBatchBar(); render(); }
-  else toast(r.error || "归档失败", "err");
+  const r = await api("/api/obsidian/archive", { method: "POST", body: { paths, title: tf("g.batcharch", paths.length) } });
+  if (r.ok) { toast(tf("toast.archived.n", r.count, r.note), "ok"); selected.clear(); syncBatchBar(); render(); }
+  else toast(r.error || t("toast.archive.fail"), "err");
 }
 async function batchTrash() {
   const paths = [...selected];
-  if (!paths.length || !confirm(`把选中的 ${paths.length} 个文件移入回收站？`)) return;
+  if (!paths.length || !confirm(tf("misc.confirm.del.multi", paths.length))) return;
   const r = await api("/api/media/trash", { method: "POST", body: { paths } });
-  if (r.ok) { toast(`已移入回收站 ${r.count} 个`, "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
+  if (r.ok) { toast(tf("toast.trashed.n", r.count), "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
   else toast(r.error, "err");
 }
 
@@ -347,7 +350,7 @@ async function renderLightbox(list) {
   const box = $("#lb-media");
   box.innerHTML = "";
   lbMeta = null;
-  $("#lb-summary").innerHTML = `<div class="muted">读取生成参数…</div>`;
+  $("#lb-summary").innerHTML = `<div class="muted">${t("st.meta")}</div>`;
   if (it.kind === "video") {
     const v = document.createElement("video");
     v.src = mediaUrl(it.path); v.controls = true; v.autoplay = true; v.loop = true;
@@ -363,13 +366,13 @@ async function renderLightbox(list) {
     const s = meta.summary;
     if (s && (s.model || s.prompt || s.seed != null)) {
       $("#lb-summary").innerHTML =
-        kv("模型", s.model) + kv("采样", `${s.sampler ?? "-"} · ${s.steps ?? "-"}步 · cfg ${s.cfg ?? "-"}`) +
-        kv("种子", s.seed) + kv("尺寸", s.dimensions) + kv("提示词", s.prompt, true) + kv("负向", s.negative, true);
+        kv(t("kv.model"), s.model) + kv(t("kv.sampler"), `${s.sampler ?? "-"} · ${s.steps ?? "-"}${t("unit.steps")} · cfg ${s.cfg ?? "-"}`) +
+        kv(t("kv.seed"), s.seed) + kv(t("kv.size"), s.dimensions) + kv(t("kv.prompt"), s.prompt, true) + kv(t("kv.negative"), s.negative, true);
     } else {
-      $("#lb-summary").innerHTML = `<div class="muted">未嵌入生成参数</div>`;
+      $("#lb-summary").innerHTML = `<div class="muted">${t("meta.none")}</div>`;
     }
   } else {
-    $("#lb-summary").innerHTML = `<div class="muted">（元数据读取失败）</div>`;
+    $("#lb-summary").innerHTML = `<div class="muted">${t("meta.fail")}</div>`;
   }
 }
 
@@ -379,8 +382,8 @@ function kv(label, value, expandable = false) {
   const v = String(value);
   return `<div class="kv${expandable && v.length > 90 ? " clamp" : ""}">
     <span>${label}</span><span class="kv-val">${esc(v)}</span>
-    <button class="kv-copy" data-copy="${esc(v)}" title="复制">复制</button>
-    ${expandable && v.length > 90 ? '<button class="kv-expand" data-exp="1">展开</button>' : ""}
+    <button class="kv-copy" data-copy="${esc(v)}" title="${t("lb.copy")}">${t("lb.copy")}</button>
+    ${expandable && v.length > 90 ? `<button class="kv-expand" data-exp="1">${t("lb.expand")}</button>` : ""}
   </div>`;
 }
 
@@ -391,6 +394,6 @@ async function doArchive() {
   const r = await api("/api/obsidian/archive", {
     method: "POST", body: { paths: [it.path], title: it.name.replace(/\.[^.]+$/, "").slice(0, 40), note },
   });
-  if (r.ok) { toast(`已归档到 Obsidian：${r.note}`, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
-  else toast(r.error || "归档失败", "err");
+  if (r.ok) { toast(t("toast.archived") + r.note, "ok"); const a = document.createElement("a"); a.href = r.uri; a.click(); }
+  else toast(r.error || t("toast.archive.fail"), "err");
 }

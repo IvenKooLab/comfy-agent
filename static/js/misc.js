@@ -1,6 +1,6 @@
 /* misc.js — Obsidian 知识库页 + 智能助手页 + 设置页 + 语言/更新 */
 import { $, $$, api, toast, goto } from "./app.js";
-import { getLang, setLang } from "./i18n.js";
+import { getLang, setLang, t, tf } from "./i18n.js";
 
 export function initMisc() {
   initObsidian();
@@ -11,7 +11,7 @@ export function initMisc() {
 }
 
 function initAbout() {
-  $("#about-version").textContent = (window.APP_VERSION || "") + " · 本地优先 · 数据不出机器";
+  $("#about-version").textContent = (window.APP_VERSION || "") + t("about.tag");
   $("#about-close").addEventListener("click", () => { $("#about-modal").hidden = true; });
   $("#about-modal").addEventListener("click", (e) => { if (e.target.id === "about-modal") e.target.hidden = true; });
 }
@@ -26,13 +26,13 @@ function initWizard() {
     $("#w3-input").value = r.settings.vault_path || "";
   });
   $("#w1-btn").addEventListener("click", async () => {
-    $("#w1-state").textContent = "探测中…";
+    $("#w1-state").textContent = t("wd.detecting");
     const st = await api("/api/status");
     if (st.comfy_online) {
-      $("#w1-state").innerHTML = `✓ 已连接 ComfyUI（${(st.system_stats?.system || {}).comfyui_version || "?"}）`;
+      $("#w1-state").innerHTML = tf("wizard.conn", (st.system_stats?.system || {}).comfyui_version || "?");
       $("#w1").classList.add("done");
     } else {
-      $("#w1-state").textContent = "未检测到 —— 请先启动 ComfyUI，或到设置页修改地址（也可以先跳过，稍后配置）";
+      $("#w1-state").textContent = t("wd.notdetected");
     }
   });
   $("#wizard-skip").addEventListener("click", () => {
@@ -47,7 +47,7 @@ function initWizard() {
     if (Object.keys(body).length) await api("/api/settings", { method: "POST", body });
     localStorage.setItem("comfyagent_wizard", "1");
     $("#wizard").hidden = true;
-    toast("设置已保存，开始创作吧 ✦", "ok");
+    toast(t("wizard.saved"), "ok");
   });
 }
 
@@ -58,7 +58,7 @@ let vaultNotes = [];
 function initObsidian() {
   $("#obs-sync").addEventListener("click", async () => {
     const r = await api("/api/obsidian/sync", { method: "POST", body: {} });
-    r.ok ? toast(`已同步 ${r.count} 个工作流到 ${r.dir}`, "ok") : toast(r.error, "err");
+    r.ok ? toast(tf("obsidian.synced", r.count, r.dir), "ok") : toast(r.error, "err");
     refreshObsidian();
   });
   $("#obs-refresh").addEventListener("click", refreshObsidian);
@@ -78,20 +78,20 @@ async function refreshObsidian() {
   $("#obs-status").innerHTML = `
     <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
-        <div style="font-size:15px;font-weight:700">${st.valid ? "🟢 已连接" : "🔴 库不可用"}</div>
-        <div class="muted">${esc(st.path)} ${st.is_vault ? "（检测到 .obsidian，是有效库）" : "（未检测到 .obsidian，请确认路径是库根目录）"}</div>
+        <div style="font-size:15px;font-weight:700">${st.valid ? t("obs.conn") : t("obs.bad")}</div>
+        <div class="muted">${esc(st.path)} ${st.is_vault ? t("obs.vault.ok") : t("obs.vault.no")}</div>
       </div>
-      <div class="muted">归档附件 ${st.attachments} 个</div>
+      <div class="muted">${tf("obs.attach", st.attachments)}</div>
     </div>
-    <div class="muted margin-top">归档目录：ComfyAgent/attachments · 笔记：ComfyAgent/notes · 工作流镜像：ComfyAgent/workflows</div>`;
+    <div class="muted margin-top">${t("obs.dirs")}</div>`;
   loadVault();
   const arch = await api("/api/obsidian/archives");
   const ab = $("#obs-archives");
   ab.innerHTML = arch.ok && arch.archives.length
     ? arch.archives.map((a) => `<div class="obs-row">
-        <span>${esc(a.title)}</span><span class="muted">${a.count} 个文件 · ${esc(a.time)}</span>
-        <a class="obs-uri grow" href="${a.uri}">在 Obsidian 中打开 ↗</a></div>`).join("")
-    : `<div class="obs-row muted">还没有归档记录。去画廊挑一张图，点「归档」试试。</div>`;
+        <span>${esc(a.title)}</span><span class="muted">${a.count}${t("unit.count")} ${esc(a.time)}</span>
+        <a class="obs-uri grow" href="${a.uri}">${t("obs.open")}</a></div>`).join("")
+    : `<div class="obs-row muted">${t("empty.archives")}</div>`;
 }
 
 /* —— 全库可视化：统计 + 搜索列表 + 双链图 —— */
@@ -101,8 +101,8 @@ async function loadVault() {
   vaultNotes = r.notes;
   const s = r.stats;
   $("#obs-stats").innerHTML = [
-    ["笔记", s.count], ["总字数", s.words >= 10000 ? (s.words / 10000).toFixed(1) + "w" : s.words],
-    ["双链", s.links], ["近7天更新", "+" + s.recent7],
+    [t("kb.stat.notes"), s.count], [t("kb.stat.words"), s.words >= 10000 ? (getLang() === "en" ? Math.round(s.words / 1000) + "k" : (s.words / 10000).toFixed(1) + "w") : s.words],
+    [t("kb.stat.links"), s.links], [t("kb.stat.recent"), "+" + s.recent7],
   ].map(([l, n]) => `<div class="obs-stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
   renderNoteList();
   drawGraph();
@@ -112,8 +112,8 @@ function renderNoteList() {
   const q = ($("#obs-search").value || "").trim().toLowerCase();
   const list = vaultNotes.filter((n) => !q || n.name.toLowerCase().includes(q) || n.path.toLowerCase().includes(q));
   $("#obs-notelist").innerHTML = list.length
-    ? list.map((n) => `<div class="note-item" data-p="${n.path}"><span class="nm">📄 ${n.name}</span><span class="meta">${n.words}字</span></div>`).join("")
-    : `<div class="muted">没有匹配的笔记</div>`;
+    ? list.map((n) => `<div class="note-item" data-p="${n.path}"><span class="nm">📄 ${n.name}</span><span class="meta">${n.words}${t("unit.words")}</span></div>`).join("")
+    : `<div class="muted">${t("kb.search.none")}</div>`;
   $$("#obs-notelist .note-item").forEach((el) => el.addEventListener("click", () => openNotePreview(el.dataset.p)));
 }
 
@@ -237,18 +237,18 @@ function initAgent() {
       for (const a of actions) {
         if (a.type === "submitted") {
           const b = document.createElement("button");
-          b.className = "btn sm"; b.textContent = "查看任务 →";
+          b.className = "btn sm"; b.textContent = t("kb.viewjobs");
           b.addEventListener("click", () => goto("runs"));
           box.appendChild(b);
         }
         if (a.type === "archive" && a.uri) {
           const aa = document.createElement("a");
-          aa.className = "btn sm"; aa.textContent = "打开笔记 ↗"; aa.href = a.uri;
+          aa.className = "btn sm"; aa.textContent = t("kb.opennote"); aa.href = a.uri;
           box.appendChild(aa);
         }
         if (a.type === "open") {
           const b = document.createElement("button");
-          b.className = "btn sm"; b.textContent = "前往 →";
+          b.className = "btn sm"; b.textContent = t("kb.goto");
           b.addEventListener("click", () => goto(a.view));
           box.appendChild(b);
         }
@@ -261,11 +261,13 @@ function initAgent() {
     return el;
   };
   // 恢复历史
-  const hist = loadChatHistory();
+  const isGreeting = (txt) => typeof txt === "string" &&
+    (txt.startsWith("你好，我是创作台助手") || txt.startsWith("Hi, I'm your console assistant"));
+  const hist = loadChatHistory().filter((m) => !isGreeting(m.text));
   if (hist.length) {
     for (const m of hist) say(m.text, m.who, null, true);
   } else {
-    say("你好，我是创作台助手。直接说人话就行：\n· 「画：雪夜竹林里的剑客」\n· 「跑 H3 文生视频 ×2」\n· 「归档最近 10 个」\n· 「状态 / 中断 / 清空队列」", "bot");
+    say(t("agent.hello"), "bot");
   }
 
   const send = async () => {
@@ -279,7 +281,7 @@ function initAgent() {
     log.appendChild(holder); log.scrollTop = log.scrollHeight;
     const r = await api("/api/agent", { method: "POST", body: { text } });
     holder.remove();
-    say(r.ok ? r.reply : (r.error || "出错了"), "bot", r.actions);
+    say(r.ok ? r.reply : (r.error || t("agent.error")), "bot", r.actions);
   };
   $("#chat-send").addEventListener("click", send);
   $("#chat-input").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
@@ -296,7 +298,9 @@ function initLLMSettings() {
     if (!r.ok) return;
     llmPresets = r.presets;
     const sel = $("#s-llm-provider");
-    sel.innerHTML = llmPresets.map((p) => `<option value="${p.id}">${p.name}</option>`).join("");
+    const fillVendors = () => { sel.innerHTML = llmPresets.map((p) => `<option value="${p.id}">${vendorLabel(p)}</option>`).join(""); sel.value = sel.value || "zhipu"; };
+    fillVendors();
+    window.addEventListener("langchange", fillVendors);
     api("/api/settings").then((s) => {
       if (!s.ok) return;
       sel.value = s.settings.llm_provider || "zhipu";
@@ -306,6 +310,13 @@ function initLLMSettings() {
   $("#s-llm-provider").addEventListener("change", () => onProviderChange());
   $("#s-llm-refresh").addEventListener("click", () => refreshLLMModels());
 }
+
+/* 厂商标签英文映射（服务端 name 为中文） */
+const VENDOR_EN = {
+  zhipu: "Zhipu GLM", deepseek: "DeepSeek", moonshot: "Moonshot Kimi", dashscope: "Alibaba Qwen",
+  siliconflow: "SiliconFlow", openai: "OpenAI", custom: "Custom (OpenAI-compatible)",
+};
+const vendorLabel = (p) => (getLang() === "en" && VENDOR_EN[p.id]) ? VENDOR_EN[p.id] : p.name;
 
 function currentPreset() {
   return llmPresets.find((p) => p.id === $("#s-llm-provider").value) || { base: "", models: [] };
@@ -330,7 +341,7 @@ function fillModelSelect(models, keep) {
 async function refreshLLMModels(keep) {
   const manual = $("#s-llm-model-manual");
   const btn = $("#s-llm-refresh");
-  btn.disabled = true; btn.textContent = "拉取中…";
+  btn.disabled = true; btn.textContent = t("st.pulling");
   try {
     const body = { provider: $("#s-llm-provider").value, base_url: $("#s-llm-base").value.trim() };
     const key = $("#s-llm-key").value.trim();
@@ -339,13 +350,13 @@ async function refreshLLMModels(keep) {
     if (r.ok && r.models.length) {
       fillModelSelect(r.models, keep || r.models.includes($("#s-llm-model").value) ? $("#s-llm-model").value : undefined);
       manual.style.display = "none";
-      toast(`已拉取 ${r.models.length} 个模型`, "ok");
+      toast(tf("toast.models.fetched", r.models.length), "ok");
     } else {
       manual.style.display = "block";
-      toast("该厂商模型列表拉取失败，可手动填写模型名", "err");
+      toast(t("toast.model.fetch.fail"), "err");
     }
   } finally {
-    btn.disabled = false; btn.textContent = "↻ 拉取模型";
+    btn.disabled = false; btn.textContent = t("settings.llm.pull");
   }
 }
 
@@ -354,20 +365,20 @@ function initSettings() {
   loadForm();
   $("#s-backup").addEventListener("click", async () => {
     const r = await api("/api/backup", { method: "POST", body: { reason: "manual" } });
-    $("#s-backup-info").textContent = r.ok ? `已备份 ${r.file}` : (r.error || "失败");
-    toast(r.ok ? "已备份到 data/backups" : "备份失败", r.ok ? "ok" : "err");
+    $("#s-backup-info").textContent = r.ok ? tf("backup.done", r.file) : (r.error || t("act.fail"));
+    toast(r.ok ? t("toast.saved") : t("toast.save.fail"), r.ok ? "ok" : "err");
   });
   $("#s-lang").addEventListener("change", (e) => setLang(e.target.value));
   $("#s-update").addEventListener("click", async () => {
     const info = $("#s-update-info");
     info.hidden = false;
-    info.textContent = "检查中…";
+    info.textContent = t("st.checking");
     const r = await api("/api/update/check");
     if (!r.ok) { info.textContent = r.error; return; }
     if (r.newer) {
-      info.innerHTML = `发现新版本 <b>v${r.latest}</b>（当前 v${r.local}）。到下载页获取最新 zip，替换后重启即可。 <a href="${r.url}" target="_blank">打开 Release ↗</a>`;
+      info.innerHTML = tf("upd.found", r.latest, r.local) + ` <a href="${r.url}" target="_blank">${t("upd.openrel")}</a>`;
     } else {
-      info.textContent = `已是最新版本 v${r.local}${r.latest ? `（线上 v${r.latest}）` : ""}`;
+      info.textContent = r.latest ? tf("upd.latest", r.local, r.latest) : tf("upd.latest.only", r.local);
     }
   });
   $("#s-openrel").addEventListener("click", async () => {
@@ -393,15 +404,15 @@ function initSettings() {
     if ($("#s-llm-key").value.trim()) body.llm_key = $("#s-llm-key").value.trim();
     const r = await api("/api/settings", { method: "POST", body });
     $("#s-msg").textContent = r.ok ? r.msg : r.error;
-    toast(r.ok ? "设置已保存" : r.error, r.ok ? "ok" : "err");
+    toast(r.ok ? t("toast.lang.saved") : r.error, r.ok ? "ok" : "err");
   });
   $("#s-test").addEventListener("click", async () => {
-    $("#s-msg").textContent = "测试中…";
+    $("#s-msg").textContent = t("st.testing");
     const st = await api("/api/status");
     const dev = (st.system_stats?.devices || [])[0];
     $("#s-msg").textContent = st.comfy_online
-      ? `✓ 在线 · ${dev?.name || "?"} · 显存 ${Math.round((dev?.vram_total || 0) / 1048576)}MB`
-      : "✗ 连不上（ComfyUI 启动了吗？）";
+      ? tf("set.test.ok", dev?.name || "?", Math.round((dev?.vram_total || 0) / 1048576))
+      : "✗ Offline (is ComfyUI running?)";
   });
 }
 async function loadForm() {
@@ -413,7 +424,7 @@ async function loadForm() {
   $("#s-vault").value = s.vault_path || "";
   $("#s-port").value = s.port || 8190;
   $("#s-llm-base").value = s.llm_base || s.llm_base_url || "";
-  $("#s-llm-key").placeholder = s.has_llm_key ? "已配置（留空保持不变）" : "sk-…";
+  $("#s-llm-key").placeholder = s.has_llm_key ? t("set.key.set") : "sk-…";
   if (s.llm_model) { const m = $("#s-llm-model"); m.innerHTML = `<option>${s.llm_model}</option>`; m.value = s.llm_model; }
   $("#s-watchdog").checked = s.comfy_watchdog !== false;
   $("#s-autorequeue").checked = s.comfy_autorequeue !== false;
@@ -429,11 +440,11 @@ async function loadForm() {
     const dev = (st.system_stats?.devices || [])[0];
     $("#env-card").innerHTML = `
       <div class="row" style="justify-content:space-between">
-        <span>版本 <b>${st.version || "?"}</b></span>
-        <span class="muted">ComfyUI ${st.comfy_online ? "✓ 在线" : "✗ 离线"}</span>
+        <span>${t("env.ver")}<b>${st.version || "?"}</b></span>
+        <span class="muted">ComfyUI ${st.comfy_online ? t("env.online") : t("env.offline")}</span>
       </div>
       <div class="row" style="justify-content:space-between">
-        <span class="muted">ffmpeg：${st.ffmpeg ? "✓ 可用（视频海报帧）" : "✗ 未找到（视频无预览，其余可用）"}</span>
+        <span class="muted">${st.ffmpeg ? t("env.ffmpeg.ok") : t("env.ffmpeg.none")}</span>
         <span class="muted">${dev ? (dev.name || "") : ""}</span>
       </div>`;
   }

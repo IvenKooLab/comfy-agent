@@ -1,5 +1,6 @@
 /* runs.js — 任务页：队列 + 实时进度 + 历史（ETA/重试） */
 import { $, $$, api, toast, goto } from "./app.js";
+import { t, tf } from "./i18n.js";
 
 export function initRuns() {
   $("#q-interrupt").addEventListener("click", async () => {
@@ -7,7 +8,7 @@ export function initRuns() {
     toast(r.msg || r.error, r.ok ? "ok" : "err");
   });
   $("#q-clear").addEventListener("click", async () => {
-    if (!confirm("清空整个排队队列？（不影响正在执行的）")) return;
+    if (!confirm(t("misc.confirm.clear.queue"))) return;
     const r = await api("/api/clear_queue", { method: "POST", body: {} });
     toast(r.msg || r.error, r.ok ? "ok" : "err");
     refresh();
@@ -26,13 +27,13 @@ export function runsOnSSE(ev) {
     if (d.prompt_id) rowProgress[d.prompt_id] = { value: d.value, max: d.max, node: d.node };
     $("#progress-panel").hidden = false;
     const pct = d.max ? Math.round((d.value / d.max) * 100) : 0;
-    $("#prog-node").textContent = `节点 ${d.node ?? ""} · 采样进度`;
+    $("#prog-node").textContent = tf("runs.node.sampling", d.node ?? "");
     $("#prog-pct").textContent = `${d.value}/${d.max}（${pct}%）`;
     $("#prog-fill").style.width = pct + "%";
   }
   if (t === "executing" && d.node != null) {
     $("#progress-panel").hidden = false;
-    $("#prog-node").textContent = `执行节点 ${d.node}…`;
+    $("#prog-node").textContent = tf("runs.node.doing", d.node);
   }
   if (t === "execution_start" || t === "status") refresh();
   if (t === "execution_success" || t === "execution_error" || t === "execution_interrupted") {
@@ -51,7 +52,7 @@ function elapsedMin(submitted) {
     return (Date.now() - new Date(Y, M - 1, D, hh, mm, ss).getTime()) / 60000;
   } catch { return 0; }
 }
-const fmtEta = (m) => m < 1 ? "<1 分钟" : `~${Math.ceil(m)} 分钟`;
+const fmtEta = (m) => m < 1 ? t("runs.eta.lt1") : tf("runs.eta.min", Math.ceil(m));
 
 async function refresh() {
   if (!$("#view-runs").classList.contains("active")) return;
@@ -64,9 +65,9 @@ async function refresh() {
   const fmtQ = (arr) => arr.length
     ? arr.map(([num, info]) => {
         const nodes = Object.keys(info?.prompt?.[0] || {}).length;
-        return `<div class="q-item"><span>任务 #${num}</span><span class="muted">${nodes} 节点</span></div>`;
+        return `<div class="q-item"><span>${tf("runs.job.n", num)}</span><span class="muted">${nodes}${t("unit.nodes")}</span></div>`;
       }).join("")
-    : `<div class="muted">（空）</div>`;
+    : `<div class="muted">${t("empty.paren")}</div>`;
   $("#q-pending").innerHTML = fmtQ(pend);
   $("#q-running").innerHTML = fmtQ(run);
   renderHistory();
@@ -74,12 +75,12 @@ async function refresh() {
 
 async function renderHistory() {
   const r = await api("/api/history?limit=25");
-  if (!r.ok) { $("#runs-list").innerHTML = `<div class="card pad muted">ComfyUI 离线，历史不可用</div>`; return; }
+  if (!r.ok) { $("#runs-list").innerHTML = `<div class="card pad muted">${t("empty.runs.offline")}</div>`; return; }
   const runs = await api("/api/runs");   // 带 submitted/graph 快照
   const byPid = runs.ok ? Object.fromEntries(runs.runs.map((x) => [x.prompt_id, x])) : {};
   const box = $("#runs-list");
   box.innerHTML = "";
-  if (!r.history.length) { box.innerHTML = `<div class="card pad muted">还没有执行记录</div>`; return; }
+  if (!r.history.length) { box.innerHTML = `<div class="card pad muted">${t("empty.runs")}</div>`; return; }
   const wrap = document.createElement("div");
   wrap.className = "card";
   for (const h of r.history) {
@@ -88,11 +89,11 @@ async function renderHistory() {
     const info = byPid[h.prompt_id] || {};
     const name = info.name || h.name || h.prompt_id.slice(0, 8);
     const st = h.status === "success" || h.completed ? "success" : (h.status === "error" ? "error" : (h.status === "executing" ? "running" : "queued"));
-    const stTxt = { success: "✓ 成功", error: "✗ 失败", running: "执行中", queued: "排队" }[st] || h.status;
+    const stTxt = { success: "✓ " + t("status.success"), error: "✗ " + t("status.error"), running: t("status.running"), queued: t("status.queued") }[st] || h.status;
     let meta = h.prompt_id.slice(0, 8);
     if (st === "running" || st === "queued") {
       const el = elapsedMin(info.submitted || "");
-      meta += ` · 已 ${el < 1 ? "<1" : Math.floor(el)} 分钟 · 预计 ${fmtEta(el + estMin(name) * (st === "queued" ? 1 : 0.5))}`;
+      meta += tf("runs.elapsed", el < 1 ? "<1" : Math.floor(el), fmtEta(el + estMin(name) * (st === "queued" ? 1 : 0.5)));
     } else if (info.submitted) {
       meta += " · " + info.submitted.slice(5, 16);
     }
@@ -103,7 +104,7 @@ async function renderHistory() {
       const tSrc = (o.type === "output" && /\.(mp4|webm|gif|mov|mkv)$/i.test(o.filename)) ? mediaUrl(rel, { thumb: "1" }) : src;
       return `<img src="${tSrc}" loading="lazy" title="${esc(o.filename)}" data-full="${src}">`;
     }).join("");
-    const retryable = info.graph ? `<button class="btn ghost run-retry" data-pid="${h.prompt_id}">↻ 重试</button>` : "";
+    const retryable = info.graph ? `<button class="btn ghost run-retry" data-pid="${h.prompt_id}">↻ ${t("act.retry")}</button>` : "";
     const prog = rowProgress[h.prompt_id];
     const progHtml = (st === "running" && prog?.max)
       ? `<div class="row-progress"><i style="width:${Math.round(prog.value / prog.max * 100)}%"></i></div>` : "";

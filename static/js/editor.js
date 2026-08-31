@@ -1,5 +1,6 @@
 /* editor.js — 工作流可视化编辑器：SVG 节点图 + 参数检查器 + 导入导出 */
 import { $, $$, api, toast, goto } from "./app.js";
+import { t, tf, wfLabel } from "./i18n.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const NODE_W = 195, HEAD_H = 26, ROW_H = 20, PORT_R = 5.5;
@@ -56,9 +57,9 @@ function doPendingImport() {
     localStorage.removeItem("pendingImport");
     try {
       const { api: a, name } = JSON.parse(pend);
-      cur = { id: null, name: "来自图片·" + (name || "工作流"), api: a, layout: {}, builtin: false };
+      cur = { id: null, name: t("ed.fromimg") + (name || t("common.workflow")), api: a, layout: {}, builtin: false };
       afterLoad();
-      toast("已从图片载入工作流，点「保存」存入库", "ok");
+      toast(t("ed.loaded.img"), "ok");
     } catch { }
     return;
   }
@@ -66,8 +67,8 @@ function doPendingImport() {
     localStorage.removeItem("pendingImportUI");
     try {
       const { ui, name } = JSON.parse(pendUI);
-      importUI(ui, name || "模板");
-    } catch (err) { toast("导入失败：" + err.message, "err"); }
+      importUI(ui, name || t("ed.fromtpl"));
+    } catch (err) { toast(t("ed.import.fail") + err.message, "err"); }
   }
 }
 
@@ -105,19 +106,19 @@ async function loadList(selectId) {
   const box = $("#wf-list");
   box.innerHTML = "";
   const add = document.createElement("div");
-  add.className = "wf-add"; add.textContent = "＋ 新建工作流";
-  add.addEventListener("click", () => { cur = { id: null, name: "新工作流", api: {}, layout: {}, builtin: false }; afterLoad(); });
+  add.className = "wf-add"; add.textContent = t("editor.new");
+  add.addEventListener("click", () => { cur = { id: null, name: t("ed.newwf"), api: {}, layout: {}, builtin: false }; afterLoad(); });
   box.appendChild(add);
   for (const wf of workflows) {
     const el = document.createElement("div");
     el.className = "wf-item" + (cur && cur.id === wf.id ? " active" : "");
-    el.innerHTML = `<div class="t">${esc(wf.name)}</div>
-      <div class="m"><span>${wf.builtin ? "内置" : esc((wf.updated || "").slice(5))} · ${Object.keys(wf.api || {}).length}节点</span>
-      ${wf.builtin ? "" : '<span class="del" title="删除">✕</span>'}</div>`;
+    el.innerHTML = `<div class="t">${esc(wfLabel(wf))}</div>
+      <div class="m"><span>${wf.builtin ? t("ed.builtin") : esc((wf.updated || "").slice(5))} · ${Object.keys(wf.api || {}).length}${t("unit.nodes")}</span>
+      ${wf.builtin ? "" : `<span class="del" title="${t("act.delete")}">✕</span>`}</div>`;
     el.addEventListener("click", () => { cur = JSON.parse(JSON.stringify(wf)); afterLoad(); renderListSel(); });
     el.querySelector(".del")?.addEventListener("click", async (e) => {
       e.stopPropagation();
-      if (!confirm(`删除工作流「${wf.name}」？`)) return;
+      if (!confirm(tf("ed.del.ask", wf.name))) return;
       const rr = await api("/api/workflows/delete", { method: "POST", body: { id: wf.id } });
       rr.ok ? loadList() : toast(rr.error, "err");
     });
@@ -268,7 +269,7 @@ function renderGraph() {
       const path = mk("path", { class: "edge", d: edgePath(a, b) });
       path.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (confirm(`断开 ${cur.api[src].class_type} → ${iname}？`)) {
+        if (confirm(tf("ed.unlink.ask", cur.api[src].class_type, iname))) {
           delete cur.api[id].inputs[iname];
           renderGraph();
         }
@@ -415,8 +416,8 @@ function renderInspector() {
   const { scalars, outputs } = portDefs(selected);
   const s = schemaOf(ct);
   let html = `<div class="insp-title">${esc(ct.split("/").pop())}</div>
-    <div class="insp-nodeid">节点 #${selected} · ${Object.keys(node.inputs || {}).length} 个输入 · ${outputs.length} 个输出</div>`;
-  if (!s) html += `<div class="insp-warn">⚠ ComfyUI 离线或无此节点定义，参数按原值编辑</div>`;
+    <div class="insp-nodeid">${tf("ed.insp.head", selected, Object.keys(node.inputs || {}).length, outputs.length)}</div>`;
+  if (!s) html += `<div class="insp-warn">${t("ed.insp.warn")}</div>`;
   for (const f of scalars) {
     const val = node.inputs?.[f.name];
     const t = f.type;
@@ -434,7 +435,7 @@ function renderInspector() {
       const isSeed = /seed/i.test(f.name);
       html += `<div class="field">${label}<div class="seed-row">
         <input class="input" type="number" step="${t === "FLOAT" ? "0.1" : "1"}" data-f="${esc(f.name)}" value="${val ?? 0}">
-        ${isSeed ? `<button class="dice" data-dice="${esc(f.name)}" title="随机种子">🎲</button>` : ""}</div></div>`;
+        ${isSeed ? `<button class="dice" data-dice="${esc(f.name)}" title="${t("create.dice.tip")}">🎲</button>` : ""}</div></div>`;
     } else {
       const long = typeof val === "string" && (val.length > 60 || /text|prompt|caption|negative/i.test(f.name));
       html += `<div class="field">${label}${long
@@ -442,9 +443,9 @@ function renderInspector() {
         : `<input class="input" data-f="${esc(f.name)}" value="${esc(val ?? "")}">`}</div>`;
     }
   }
-  if (!scalars.length) html += `<div class="muted">该节点没有可编辑参数（纯连接节点）</div>`;
+  if (!scalars.length) html += `<div class="muted">${t("ed.insp.none")}</div>`;
   html += `<div style="margin-top:14px" class="row">
-    <button class="btn sm danger ghost" id="insp-del">删除节点</button></div>`;
+    <button class="btn sm danger ghost" id="insp-del">${t("ed.delnode")}</button></div>`;
   body.innerHTML = html;
   body.querySelectorAll("[data-f]").forEach((el) => {
     el.addEventListener("change", () => {
@@ -455,7 +456,7 @@ function renderInspector() {
       else if (f && (f.type === "FLOAT" || f.type === "NUMBER")) v = parseFloat(v) || 0;
       else if (f && f.type === "BOOLEAN") v = v === "true";
       cur.api[selected].inputs[name] = v;
-      toast(`已改 ${name}`, "");
+      toast(t("ed.changed") + name, "");
     });
   });
   body.querySelectorAll("[data-dice]").forEach((b) => b.addEventListener("click", () => {
@@ -469,9 +470,9 @@ function renderInspector() {
 /* ================= 节点面板 ================= */
 async function openPalette(x, y) {
   if (!objectInfo) {
-    toast("正在拉取节点目录（首次约几秒）…");
+    toast(t("ed.catalog.pull"));
     const r = await api("/api/object_info");
-    if (!r.ok) { toast(r.error || "需要 ComfyUI 在线", "err"); return; }
+    if (!r.ok) { toast(r.error || t("ed.needonline"), "err"); return; }
     objectInfo = r.object_info;
   }
   const pal = $("#node-palette");
@@ -490,11 +491,12 @@ function renderPalette() {
   const groups = new Map();
   for (const name of Object.keys(objectInfo)) {
     if (q && !name.toLowerCase().includes(q)) continue;
-    const cat = name.includes("/") ? name.split("/")[0] : "常用";
+    const cat = name.includes("/") ? name.split("/")[0] : t("ed.common");
     if (!groups.has(cat)) groups.set(cat, []);
     groups.get(cat).push(name);
   }
-  const entries = [...groups.entries()].sort((a, b) => (a[0] === "常用" ? -1 : b[0] === "常用" ? 1 : a[0].localeCompare(b[0])));
+  const common = t("ed.common");
+  const entries = [...groups.entries()].sort((a, b) => (a[0] === common ? -1 : b[0] === common ? 1 : a[0].localeCompare(b[0])));
   let shown = 0;
   for (const [cat, names] of entries) {
     if (shown > 300) break;
@@ -510,7 +512,7 @@ function renderPalette() {
       box.appendChild(it);
     }
   }
-  if (!shown) box.innerHTML = `<div class="muted pad">没匹配到节点</div>`;
+  if (!shown) box.innerHTML = `<div class="muted pad">${t("ed.search.none")}</div>`;
 }
 
 function addNode(classType) {
@@ -545,7 +547,7 @@ function onCanvasDblClick(e) {
 
 /* ================= 保存/运行/导入导出 ================= */
 async function saveWorkflow() {
-  const name = $("#wf-name").value.trim() || "未命名工作流";
+  const name = $("#wf-name").value.trim() || t("ed.untitled");
   let id = cur.id;
   if (cur.builtin || !id) id = "wf" + Date.now().toString(36);
   const r = await api("/api/workflows", {
@@ -553,7 +555,7 @@ async function saveWorkflow() {
     body: { id, name, api: cur.api, layout: cur.layout, builtin_copy: cur.builtin, created: cur.created },
   });
   if (r.ok) {
-    toast(`已保存「${name}」`, "ok");
+    toast(tf("ed.saved", name), "ok");
     cur = r.workflow; cur.builtin = false;
     await loadList();
     renderListSel();
@@ -561,8 +563,8 @@ async function saveWorkflow() {
 }
 
 async function runWorkflow() {
-  if (!Object.keys(cur.api).length) { toast("工作流是空的", "err"); return; }
-  const times = prompt("运行几次？（每批会换随机 seed）", "1");
+  if (!Object.keys(cur.api).length) { toast(t("err.empty.workflow"), "err"); return; }
+  const times = prompt(t("ed.run.times"), "1");
   if (times === null) return;
   const r = await api("/api/prompt", {
     method: "POST",
@@ -582,32 +584,32 @@ async function onImportFiles(e) {
         const ap = txt.prompt ? JSON.parse(txt.prompt) : null;
         if (ap) { loadImported(ap, f.name); continue; }
         if (ui) { await importUI(ui, f.name); continue; }
-        toast(`${f.name} 里没有嵌入工作流`, "err");
+        toast(tf("ed.noembed.f", f.name), "err");
       } else {
         const data = JSON.parse(await f.text());
         if (data.nodes) await importUI(data, f.name);
         else if (typeof data === "object") loadImported(data, f.name);
-        else toast("无法识别的 JSON", "err");
+        else toast(t("ed.badjson"), "err");
       }
-    } catch (err) { toast(`导入 ${f.name} 失败：${err.message}`, "err"); }
+    } catch (err) { toast(tf("ed.import.fail.f", f.name, err.message), "err"); }
   }
 }
 
 async function importUI(ui, filename) {
-  toast("转换 UI 格式 → API 格式…");
+  toast(t("ed.converting"));
   const r = await api("/api/convert", { method: "POST", body: { ui } });
   if (!r.ok) { toast(r.error, "err"); return; }
   loadImported(r.api, filename);
-  if (r.warnings?.length) toast("导入完成，但：\n" + r.warnings.join("\n"), "err");
+  if (r.warnings?.length) toast(t("ed.import.warn") + "\n" + r.warnings.join("\n"), "err");
   // 顺便用 UI 坐标
   if (ui.nodes) for (const n of ui.nodes) cur.layout[String(n.id)] = [n.pos?.[0] || 0, n.pos?.[1] || 0];
   renderGraph(); fitView();
 }
 
 function loadImported(apiGraph, filename) {
-  cur = { id: null, name: "导入·" + filename.replace(/\.[^.]+$/, "").slice(0, 40), api: apiGraph, layout: {}, builtin: false };
+  cur = { id: null, name: t("ed.prefix") + filename.replace(/\.[^.]+$/, "").slice(0, 40), api: apiGraph, layout: {}, builtin: false };
   afterLoad();
-  toast(`已导入 ${Object.keys(apiGraph).length} 个节点，记得保存`, "ok");
+  toast(tf("ed.imported.n", Object.keys(apiGraph).length), "ok");
 }
 
 function exportApi() {

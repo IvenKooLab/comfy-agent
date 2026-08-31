@@ -1,5 +1,7 @@
 /* templates.js — 模板库：ComfyUI 官方 632 模板浏览/搜索/一键进编辑器 */
 import { $, $$, api, toast, goto } from "./app.js";
+/* 本文件局部变量 t=模板对象，故翻译函数用别名 tr/trf */
+import { t as tr, tf as trf } from "./i18n.js";
 
 let groups = [];
 let curGroup = localStorage.getItem("tpl_fav_only") === "1" ? "fav" : "all";
@@ -17,13 +19,14 @@ export function initTemplates() {
   $("#tpl-search").addEventListener("input", (e) => { q = e.target.value.trim().toLowerCase(); shown = 24; renderCards(); });
   const favChip = document.createElement("button");
   favChip.className = "chip" + (curGroup === "fav" ? " active" : "");
-  favChip.textContent = "⭐ 只看收藏";
+  favChip.textContent = tr("tpl.fav");
   favChip.addEventListener("click", () => {
     curGroup = curGroup === "fav" ? "all" : "fav";
     favChip.classList.toggle("active", curGroup === "fav");
     shown = 24; renderCards();
   });
   document.querySelector(".page-head .head-tools").prepend(favChip);
+  window.addEventListener("langchange", () => { favChip.textContent = tr("tpl.fav"); renderGroups(); });
   $("#tpl-more")?.addEventListener("click", () => { shown += 24; renderCards(); });
   load(); // 启动时预加载
   new MutationObserver(() => {
@@ -37,7 +40,7 @@ async function load() {
   const r = await api("/api/templates/index");
   if (!r.ok) {
     box.innerHTML = `<div class="empty"><div class="empty-ico">📡</div><p>${r.error}</p>
-      <button class="btn" id="tpl-retry" style="margin-top:12px">↻ 重试</button></div>`;
+      <button class="btn" id="tpl-retry" style="margin-top:12px">↻ ${tr("act.retry")}</button></div>`;
     box.querySelector("#tpl-retry").addEventListener("click", load);
     setTimeout(() => { if (!groups.length) load(); }, 5000); // 网络抖动自动重试一次
     return;
@@ -63,7 +66,7 @@ function renderGroups() {
     `<div class="tpl-group-item${curGroup === key ? " active" : ""}" data-g="${key}">
        <span>${icon} ${label}</span><span class="muted">${count}</span></div>`;
   box.innerHTML =
-    row("all", "☰", "所有模板", total) +
+    row("all", "☰", tr("tpl.all"), total) +
     groups.map((g) => row(g.title, GROUP_ICON[g.title] || "📁", g.title, g.templates.length)).join("");
   box.querySelectorAll(".tpl-group-item").forEach((el) => el.addEventListener("click", () => {
     curGroup = el.dataset.g;
@@ -93,9 +96,9 @@ function renderCards() {
     if (!q) return true;
     return (t.title + " " + t.description + " " + (t.models || []).join(" ") + " " + (t.tags || []).join(" ")).toLowerCase().includes(q);
   });
-  $("#tpl-count").textContent = `${list.length} 个模板`;
+  $("#tpl-count").textContent = trf("tpl.count", list.length);
   const shownList = list.slice(0, shown);
-  grid.innerHTML = shownList.length ? "" : `<div class="empty" style="column-span:all"><div class="empty-ico">🔍</div><p>没有匹配的模板</p></div>`;
+  grid.innerHTML = shownList.length ? "" : `<div class="empty" style="column-span:all"><div class="empty-ico">🔍</div><p>${tr("empty.templates.search")}</p></div>`;
   for (const t of shownList) {
     const card = document.createElement("div");
     card.className = "tpl-card";
@@ -129,7 +132,7 @@ function renderCards() {
     btn.id = "tpl-more-inline";
     btn.className = "btn";
     btn.style.cssText = "margin:10px auto;display:block";
-    btn.textContent = `↓ 加载更多（还有 ${list.length - shown} 个）`;
+    btn.textContent = trf("misc.load.more.n", list.length - shown);
     btn.addEventListener("click", () => { shown += 24; renderCards(); });
     grid.appendChild(btn);
   }
@@ -138,7 +141,7 @@ function renderCards() {
 async function openTemplate(t) {
   if (importing) return;
   importing = true;
-  toast(`拉取模板「${t.title}」…`);
+  toast(trf("tpl.pulling", t.title));
   try {
     const r = await api("/api/templates/workflow", { method: "POST", body: { name: t.name } });
     if (!r.ok) { toast(r.error, "err"); return; }
@@ -146,7 +149,7 @@ async function openTemplate(t) {
       localStorage.setItem("pendingImport", JSON.stringify({ api: r.api, name: t.title.slice(0, 40) }));
     } else {
       localStorage.setItem("pendingImportUI", JSON.stringify({ ui: r.ui, name: t.title.slice(0, 40) }));
-      toast("该模板为 UI 格式且自动转换失败，请在编辑器手动转换", "err");
+      toast(tr("tpl.uifail"), "err");
     }
     if (r.warnings?.length) toast(r.warnings[0], "err");
     goto("editor");

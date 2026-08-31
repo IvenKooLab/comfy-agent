@@ -8,7 +8,7 @@ import { initLauncher } from "./launcher.js";
 import { initPipeline } from "./pipeline.js";
 import { initTemplates } from "./templates.js";
 import { initHelp } from "./help.js";
-import { applyI18n } from "./i18n.js";
+import { applyI18n, t, tf } from "./i18n.js";
 
 export function $(sel) { return document.querySelector(sel); }
 export function $$(sel) { return [...document.querySelectorAll(sel)]; }
@@ -19,7 +19,7 @@ export async function api(path, opts = {}) {
     headers: { "Content-Type": "application/json" },
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
-  const data = await r.json().catch(() => ({ ok: false, error: "响应解析失败" }));
+  const data = await r.json().catch(() => ({ ok: false, error: t("err.parse.fail") }));
   if (!r.ok && !data.error) data.error = `HTTP ${r.status}`;
   return data;
 }
@@ -44,7 +44,7 @@ export function fmtTime(ts) {
   const now = new Date();
   const pad = (x) => String(x).padStart(2, "0");
   const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if (d.toDateString() === now.toDateString()) return `今天 ${hm}`;
+  if (d.toDateString() === now.toDateString()) return `${t("time.today")} ${hm}`;
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${hm}`;
 }
 export function mediaUrl(path, extra = {}) {
@@ -79,19 +79,19 @@ function connectSSE() {
   es.onmessage = (e) => {
     let ev = {};
     try { ev = JSON.parse(e.data); } catch { return; }
-    const t = ev.type, d = ev.data || {};
-    if (t === "comfy_status") setComfyDot(!!d.online);
-    if (t === "force_reload") location.reload();
-    if (t === "watchdog") {
+    const ty = ev.type, d = ev.data || {};
+    if (ty === "comfy_status") setComfyDot(!!d.online);
+    if (ty === "force_reload") location.reload();
+    if (ty === "watchdog") {
       const phase = d.phase;
-      if (phase === "down") toast("看门狗：ComfyUI 掉线，准备自动重启…", "err");
-      if (phase === "restart") toast(d.ok ? "看门狗：已重启 ComfyUI" : "看门狗：重启失败 " + (d.msg || ""), d.ok ? "ok" : "err");
-      if (phase === "resumed") toast(`看门狗：已自动续跑 ${d.count} 个中断任务`, "ok");
+      if (phase === "down") toast(t("wd.toast.down"), "err");
+      if (phase === "restart") toast(d.ok ? t("wd.toast.restart.ok") : t("wd.toast.restart.fail") + (d.msg || ""), d.ok ? "ok" : "err");
+      if (phase === "resumed") toast(tf("wd.toast.resumed", d.count), "ok");
     }
-    if (t === "execution_success" || t === "execution_error" || t === "execution_cached") {
+    if (ty === "execution_success" || ty === "execution_error" || ty === "execution_cached") {
       setTimeout(() => galleryRefresh(true), 1500);
     }
-    if (t === "execution_error") toast("有任务执行失败，到「任务」页查看", "err");
+    if (ty === "execution_error") toast(t("toast.task.fail"), "err");
     runsOnSSE(ev);
     document.dispatchEvent(new CustomEvent("sse", { detail: ev }));
   };
@@ -100,12 +100,18 @@ function connectSSE() {
 
 let comfyOnline = null;
 let offlineToasted = false;
+window.addEventListener("langchange", () => {
+  if (comfyOnline === null) return;
+  setComfyDot._force = true;
+  setComfyDot(comfyOnline);
+});
 export function setComfyDot(on) {
-  if (on === comfyOnline) return;
+  if (on === comfyOnline && !setComfyDot._force) return;
   comfyOnline = on;
+  setComfyDot._force = false;
   $("#comfy-dot").className = "dot " + (on ? "on" : "off");
-  $("#comfy-dot-text").textContent = on ? "ComfyUI 在线" : "ComfyUI 离线";
-  if (!on && !offlineToasted) { toast("ComfyUI 掉线，自动重连中…（生成任务会排队等它回来）", "err"); offlineToasted = true; }
+  $("#comfy-dot-text").textContent = on ? t("status.online") : t("status.offline");
+  if (!on && !offlineToasted) { toast(t("toast.offline"), "err"); offlineToasted = true; }
   if (on) offlineToasted = false;
 }
 
@@ -126,9 +132,9 @@ function hwLoop() {
         $("#hw-vram-text").textContent = "—";
       }
       $("#hw-util-text").textContent = g?.util != null ? Math.round(g.util) + "%" : "—";
-      const t = $("#hw-temp-text");
-      t.textContent = g?.temp != null ? Math.round(g.temp) + "°C" : "—";
-      t.classList.toggle("hot", g?.temp != null && g.temp >= 83);
+      const tEl = $("#hw-temp-text");
+      tEl.textContent = g?.temp != null ? Math.round(g.temp) + "°C" : "—";
+      tEl.classList.toggle("hot", g?.temp != null && g.temp >= 83);
       if (h.ram?.total) {
         const used = h.ram.total - (h.ram.free || 0);
         $("#hw-ram-fill").style.width = Math.min(100, used / h.ram.total * 100) + "%";
@@ -169,12 +175,12 @@ function initCmdk() {
   const close = () => { box.hidden = true; };
   const buildItems = async () => {
     const items = [];
-    const labels = { create: "去创作", gallery: "去画廊", editor: "去工作流", runs: "去任务", obsidian: "去知识库", agent: "去助手", settings: "去设置" };
-    for (const v of views) items.push({ label: labels[v], key: "页面", run: () => goto(v) });
+    const labels = { create: t("cmd.goto.create"), gallery: t("cmd.goto.gallery"), editor: t("cmd.goto.editor"), runs: t("cmd.goto.runs"), obsidian: t("cmd.goto.obsidian"), agent: t("cmd.goto.agent"), settings: t("cmd.goto.settings") };
+    for (const v of views) items.push({ label: labels[v], key: t("cmd.pages"), run: () => goto(v) });
     try {
       const r = await api("/api/workflows");
       for (const wf of (r.workflows || [])) items.push({
-        label: `运行「${wf.name}」`, key: "工作流",
+        label: tf("cmd.runwf", wf.name), key: t("cmd.cat.wf"),
         run: async () => {
           const rr = await api("/api/prompt", { method: "POST", body: { name: wf.name, prompt: wf.api, times: 1 } });
           toast(rr.msg || rr.error, rr.ok ? "ok" : "err");
@@ -182,8 +188,8 @@ function initCmdk() {
         },
       });
     } catch { }
-    items.push({ label: "⏹ 中断当前任务", key: "动作", run: async () => { await api("/api/interrupt", { method: "POST", body: {} }); toast("已发送中断", "ok"); } });
-    items.push({ label: "🧹 清空队列", key: "动作", run: async () => { await api("/api/clear_queue", { method: "POST", body: {} }); toast("队列已清空", "ok"); } });
+    items.push({ label: t("cmd.interrupt"), key: t("cmd.cat.action"), run: async () => { await api("/api/interrupt", { method: "POST", body: {} }); toast(t("toast.interrupt.sent"), "ok"); } });
+    items.push({ label: t("runs.clear"), key: t("cmd.cat.action"), run: async () => { await api("/api/clear_queue", { method: "POST", body: {} }); toast(t("toast.queue.cleared"), "ok"); } });
     return items;
   };
   const renderCmdk = (q) => {
@@ -226,8 +232,8 @@ async function waitServerAndBoot() {
   } catch {
     document.body.innerHTML = `<div style="position:fixed;inset:0;background:#08090d;color:#a8aec2;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;gap:14px;z-index:999">
       <div style="font-size:40px">⏳</div>
-      <div style="font-size:15px;color:#f0f2f8">ComfyAgent 服务正在重启…</div>
-      <div style="font-size:12px">页面将自动恢复（每 2 秒探测一次）</div></div>`;
+      <div style="font-size:15px;color:#f0f2f8">${t("heal.title")}</div>
+      <div style="font-size:12px">${t("heal.sub")}</div></div>`;
     for (;;) {
       await new Promise((r) => setTimeout(r, 2000));
       try { await fetch("/api/status", { cache: "no-store" }); break; } catch { }
@@ -263,7 +269,7 @@ async function boot() {
     if (box) {
       const el = document.createElement("div");
       el.style.cssText = "position:fixed;top:60px;left:212px;z-index:300;max-width:520px;background:#2a1418;border:1px solid var(--err);border-radius:12px;padding:14px 16px;font-size:12px;color:#ffd9df;white-space:pre-wrap";
-      el.textContent = "界面初始化出错：" + ((err && err.message) || err) + "（刷新重试；若反复出现，删除 data/ 后重启）";
+      el.textContent = tf("err.init", (err && err.message) || err);
       document.body.appendChild(el);
     }
   }
