@@ -51,7 +51,6 @@ export function initPipeline() {
     const box = $("#scene-editor");
     if (box) box.hidden = !box.hidden;
   });
-  $("#pl-bgm-vol").addEventListener("change", () => {}); // 占位保持布局
   $("#char-new").addEventListener("click", () => { curChar = null; $("#char-editor").hidden = false; $("#char-name").value = ""; $("#char-lock").value = ""; $("#char-ref").value = ""; updateRefPreview(null); });
   $("#char-pick").addEventListener("click", () => openPicker(t("pick.char.refs"), (path) => {
     let refs = ($("#char-ref").dataset.refs || "").split("|").filter(Boolean);
@@ -142,10 +141,12 @@ function renderItems() {
       ? `<button class="btn sm pl-ff set" data-i="${i}" title="${it.first_frame}">${t("pl.ff.set")}</button>`
       : `<button class="btn sm ghost pl-ff" data-i="${i}">${t("pl.ff")}</button>`;
     const retryN = it.retry_count ? ` <span class="muted">↻${it.retry_count}</span>` : "";
+    const chain = i > 0 ? `<button class="btn sm ghost pl-chain" data-i="${i}" title="${t("pl.chain.tip")}">↳</button>` : "";
     return `<div class="pl-item">
       <span class="run-status ${cls}">${txt}</span>
       <input class="input pl-item-name" data-i="${i}" value="${it.name.replace(/"/g, "&quot;")}">
       ${ff}
+      ${chain}
       <button class="btn sm ghost pl-retry" data-i="${i}" title="${t("pl.retry.one")}">↻</button>
     </div>
     <textarea class="input pl-prompt-edit" data-i="${i}" rows="2">${it.prompt.replace(/"/g, "&quot;").replace(/</g, "&lt;")}</textarea>`;
@@ -174,6 +175,19 @@ function renderItems() {
     toast(r.msg || r.error, r.ok ? "ok" : "err");
     if (r.ok && r.batch) { cur = r.batch; renderItems(); refresh(); }
   }));
+  box.querySelectorAll(".pl-chain").forEach((b) => b.addEventListener("click", () => chainFromPrev(+b.dataset.i)));
+}
+
+/* 镜头接龙：抽上一镜（最近一个成功且带输出的）末帧，设为本镜 i2v 首帧 */
+async function chainFromPrev(i) {
+  const prev = (cur.items || []).slice(0, i).reverse().find((it) => it.status === "success" && it.output);
+  if (!prev) { toast(t("pl.chain.none"), "err"); return; }
+  const r = await api("/api/video/last_frame", { method: "POST", body: { path: prev.output } });
+  if (!r.ok) { toast(r.error || t("pl.chain.fail"), "err"); return; }
+  cur.items[i].first_frame = r.frame;
+  saveBatch(true);
+  renderItems();
+  toast(t("pl.chain.done"), "ok");
 }
 
 /* ---------- 导入/解析 ---------- */

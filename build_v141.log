@@ -1,0 +1,126 @@
+117 INFO: PyInstaller: 6.22.2, contrib hooks: 2026.7
+117 INFO: Python: 3.13.11
+139 INFO: Platform: Windows-11-10.0.22631-SP0
+139 INFO: Python environment: D:\tools\ComfyUI-aki-v3\python
+139 INFO: wrote E:\work\gitee\comfy-agent\ComfyAgent.spec
+140 INFO: Removing temporary files and cleaning cache in C:\Users\Administrator\AppData\Local\pyinstaller
+98 WARNING: Failed to collect submodules for 'webview.platforms.android' because importing 'webview.platforms.android' raised: ModuleNotFoundError: No module named 'android'
+836 INFO: Module search paths (PYTHONPATH):
+['E:\\work\\gitee\\comfy-agent',
+ 'D:\\tools\\ComfyUI-aki-v3\\python\\python313.zip',
+ 'D:\\tools\\ComfyUI-aki-v3\\python\\DLLs',
+ 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib',
+ 'D:\\tools\\ComfyUI-aki-v3\\python',
+ 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages',
+ 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\win32',
+ 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\win32\\lib',
+ 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\Pythonwin',
+ 'E:\\work\\gitee\\comfy-agent']
+1080 INFO: Appending 'binaries' from .spec
+1080 INFO: Appending 'datas' from .spec
+1083 INFO: checking Analysis
+1083 INFO: Building Analysis because Analysis-00.toc is non existent
+1083 INFO: Looking for Python shared library...
+1083 INFO: Using Python shared library: D:\tools\ComfyUI-aki-v3\python\python313.dll
+1083 INFO: Running Analysis Analysis-00.toc
+1083 INFO: Target bytecode optimization level: 0
+1083 INFO: Initializing module dependency graph...
+1084 INFO: Initializing module graph hook caches...
+1115 INFO: Analyzing modules for base_library.zip ...
+1649 INFO: Processing standard module hook 'hook-encodings.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+2185 INFO: Processing standard module hook 'hook-math.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+2390 INFO: Processing standard module hook 'hook-heapq.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+3233 INFO: Processing standard module hook 'hook-pickle.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+4278 INFO: Caching module dependency graph...
+4309 INFO: Analyzing E:\work\gitee\comfy-agent\app.py
+E:\work\gitee\comfy-agent\server.py:1994: SyntaxWarning: invalid escape sequence '\:'
+  srt_esc = srt_path.replace("\\", "/").replace(":", "\:").replace("'", "\'")
+E:\work\gitee\comfy-agent\server.py:2664: SyntaxWarning: invalid escape sequence '\:'
+  srt_esc = srt.replace("\\", "/").replace(":", "\:").replace("'", "\'")
+4723 INFO: Processing standard module hook 'hook-platform.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+4754 INFO: Processing standard module hook 'hook-sysconfig.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+4758 INFO: Processing standard module hook 'hook-_ctypes.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+4791 INFO: Processing standard module hook 'hook-webbrowser.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+4888 INFO: Processing standard module hook 'hook-webview.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\webview\\__pyinstaller'
+5252 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+5315 INFO: Processing standard module hook 'hook-xml.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+5913 INFO: Processing standard module hook 'hook-pygments.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+6589 INFO: Processing standard module hook 'hook-chardet.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+7500 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+7501 INFO: SetuptoolsInfo: initializing cached setuptools info...
+7862 INFO: Processing standard module hook 'hook-mako.codegen.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+7972 INFO: Processing standard module hook 'hook-jinja2.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+8457 INFO: Processing pre-safe-import-module hook 'hook-gi.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+8564 INFO: Processing standard module hook 'hook-clr.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\pythonnet\\_pyinstaller'
+8598 INFO: Processing standard module hook 'hook-clr_loader.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+8676 INFO: Processing standard module hook 'hook-pycparser.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+8980 INFO: Processing standard module hook 'hook-setuptools.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+8985 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+9215 INFO: Processing pre-safe-import-module hook 'hook-importlib_metadata.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+9238 INFO: Processing standard module hook 'hook-importlib_metadata.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+9259 INFO: Processing pre-safe-import-module hook 'hook-zipp.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+9414 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+9848 INFO: Processing standard module hook 'hook-pkg_resources.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+11508 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+11568 INFO: Processing standard module hook 'hook-cryptography.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+12168 INFO: hook-cryptography: cryptography does not seem to be using dynamically linked OpenSSL.
+12416 INFO: Processing standard module hook 'hook-pystray.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+12618 INFO: Processing pre-safe-import-module hook 'hook-six.moves.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+12667 INFO: Processing standard module hook 'hook-PIL.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+12779 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+12981 INFO: Processing standard module hook 'hook-numpy.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+13775 INFO: Processing standard module hook 'hook-difflib.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+13948 INFO: Processing standard module hook 'hook-psutil.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+14957 INFO: Processing standard module hook 'hook-charset_normalizer.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+15333 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+15600 INFO: Analyzing hidden import 'webview.__pyinstaller'
+15601 INFO: Analyzing hidden import 'webview.__pyinstaller.hook-webview'
+15626 INFO: Processing standard module hook 'hook-win32ctypes.core.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+16476 INFO: Analyzing hidden import 'webview._version'
+16477 INFO: Processing module hooks (post-graph stage)...
+16722 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+17074 INFO: Processing pre-safe-import-module hook 'hook-platformdirs.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+17081 INFO: Processing standard module hook 'hook-platformdirs.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+18463 INFO: Processing standard module hook 'hook-setuptools._vendor.importlib_metadata.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+18531 INFO: Processing standard module hook 'hook-setuptools._vendor.jaraco.text.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks'
+18749 INFO: Performing binary vs. data reclassification (200 entries)
+18818 INFO: Looking for ctypes DLLs
+18896 INFO: Analyzing run-time hooks ...
+18900 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+18902 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+18904 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+18906 INFO: Including run-time hook 'pyi_rth_setuptools.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+18907 INFO: Including run-time hook 'pyi_rth_pkgres.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+18911 INFO: Including run-time hook 'pyi_rth_cryptography_openssl.py' from 'D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\rthooks'
+18927 INFO: Creating base_library.zip...
+18942 INFO: Looking for dynamic libraries
+19522 INFO: Extra DLL search directories (AddDllDirectory): ['D:\\tools\\ComfyUI-aki-v3\\python\\Lib\\site-packages\\numpy.libs']
+19522 INFO: Extra DLL search directories (PATH): []
+19980 INFO: Warnings written to E:\work\gitee\comfy-agent\build\ComfyAgent\warn-ComfyAgent.txt
+20054 INFO: Graph cross-reference written to E:\work\gitee\comfy-agent\build\ComfyAgent\xref-ComfyAgent.html
+20086 INFO: checking PYZ
+20086 INFO: Building PYZ because PYZ-00.toc is non existent
+20086 INFO: Building PYZ (ZlibArchive) E:\work\gitee\comfy-agent\build\ComfyAgent\PYZ-00.pyz
+21024 INFO: Building PYZ (ZlibArchive) E:\work\gitee\comfy-agent\build\ComfyAgent\PYZ-00.pyz completed successfully.
+21043 INFO: checking PKG
+21043 INFO: Building PKG because PKG-00.toc is non existent
+21043 INFO: Building PKG (CArchive) ComfyAgent.pkg
+21063 INFO: Building PKG (CArchive) ComfyAgent.pkg completed successfully.
+21063 INFO: Bootloader D:\tools\ComfyUI-aki-v3\python\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+21063 INFO: checking EXE
+21063 INFO: Building EXE because EXE-00.toc is non existent
+21063 INFO: Building EXE from EXE-00.toc
+21063 INFO: Copying bootloader EXE to E:\work\gitee\comfy-agent\build\ComfyAgent\ComfyAgent.exe
+21066 INFO: Copying icon to EXE
+21068 INFO: Copying 0 resources to EXE
+21068 INFO: Embedding manifest in EXE
+21069 INFO: Appending PKG archive to EXE
+21074 INFO: Fixing EXE headers
+21134 INFO: Building EXE from EXE-00.toc completed successfully.
+21140 INFO: checking COLLECT
+21140 INFO: Building COLLECT because COLLECT-00.toc is non existent
+21140 INFO: Removing dir E:\work\gitee\comfy-agent\dist\ComfyAgent
+21157 INFO: Building COLLECT COLLECT-00.toc
+21293 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+21297 INFO: Build complete! The results are available in: E:\work\gitee\comfy-agent\dist
+== DONE: dist/ComfyAgent/ComfyAgent.exe (desktop app) + dist/ComfyAgent-win64.zip ==
