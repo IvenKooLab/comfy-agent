@@ -10,3 +10,4 @@ server_run.log
 dev_app.log
 build/
 dist/
+build*.log
