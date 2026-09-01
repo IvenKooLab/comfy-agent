@@ -2517,6 +2517,22 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True, "output": "成片/" + os.path.basename(out),
                                        "msg": f"已拼接 {len(paths)} 段 → {os.path.basename(out)}"})
             return self.send_json({"ok": False, "error": "拼接失败：" + (r.stderr or "")[-200:]})
+        if path == "/api/video/last_frame" and method == "POST":
+            # 镜头接龙：抽视频最后 1.5 秒内的末帧存入 output，供下一镜作 i2v 首帧
+            if not FFMPEG:
+                return self.send_json({"ok": False, "error": "未找到 ffmpeg"})
+            rel = body.get("path", "")
+            full = resolve_media(rel)
+            if not full or not os.path.isfile(full):
+                return self.send_json({"ok": False, "error": "视频不存在"})
+            base = safe_name(os.path.splitext(os.path.basename(rel))[0])[:40] or "clip"
+            out = os.path.join(SETTINGS.get("output_dir", BASE_DIR), base + "_lastframe.png")
+            r = subprocess.run([FFMPEG, "-y", "-v", "error", "-sseof", "-1.5", "-i", full,
+                                "-update", "1", "-frames:v", "1", out],
+                               capture_output=True, text=True, timeout=60, creationflags=0x08000000)
+            if not os.path.isfile(out) or os.path.getsize(out) == 0:
+                return self.send_json({"ok": False, "error": "抽帧失败：" + (r.stderr or "")[-120:]})
+            return self.send_json({"ok": True, "frame": os.path.basename(out)})
         if path == "/api/characters" and method == "GET":
             return self.send_json({"ok": True, "characters": list_characters()})
         if path == "/api/characters/save" and method == "POST":

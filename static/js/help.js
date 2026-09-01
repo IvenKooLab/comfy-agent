@@ -49,6 +49,7 @@ const HELP_EN = [
     { q: "What is the Episodes view?", a: "It aggregates batches by name prefix (e.g. E001) into one per-episode stat card: shots / done / failed / GPU time.\nSwitch via \"Episodes\" — handy for managing long series by episode." },
     { q: "How does priority queueing work?", a: "Each shot has a priority field; when a batch is queued, higher-priority shots are submitted first.\nUseful for rendering key shots early to check the look before running the rest." },
     { q: "What is Audio assets?", a: "It auto-scans the output folder for audio files (mp3/wav/flac/ogg/aac/m4a) and lists them at the bottom of the Pipeline page.\nPick a BGM path from here when concatenating." },
+    { q: "What is the chain button (↳)?", a: "Shot chaining: it auto-extracts the last frame of the previous successful shot and sets it as this shot's i2v first frame.\nUse it to build very long continuous shots that flow seamlessly from one to the next." },
   ]},
   { mod: "⏻ Launcher", items: [
     { q: "What does \"Start ComfyUI\" do?", a: "Starts ComfyUI with your configured args (crash-safe defaults).\nIf ComfyUI is already running you'll be told so.\nAfter startup its log streams below." },
@@ -119,6 +120,7 @@ const HELP = [
     { q: "集数聚合视图是什么？", a: "按批次名前缀（如 E001）把多个批次聚合成一集的统计卡：镜头数/成功/失败/GPU 时间。\n点「集数视图」切换，适合长剧按集管理产能。" },
     { q: "优先级排队怎么用？", a: "镜头有 priority 字段，批次排队时高优先级镜头先提交。\n适合先把关键镜头跑出来看效果，再补剩余镜头。" },
     { q: "音频资产是什么？", a: "自动扫描 output 目录里的音频文件（mp3/wav/flac/ogg/aac/m4a）列在产线页底部。\n拼接成片选 BGM 时可直接从这里取路径。" },
+    { q: "「接尾帧」(↳) 是干什么的？", a: "镜头接龙：自动抽取上一个成功镜头视频的最后一帧，设为当前镜头的 i2v 首帧。\n适合做超长连续镜头：一段接一段，画面无缝衔接。" },
   ]},
   { mod: "⏻ 启动器", items: [
     { q: "「启动 ComfyUI」按钮做什么？", a: "用配置的参数启动 ComfyUI（默认 h3_launch.sh 防炸参数）。\n如果 ComfyUI 已在运行则提示。\n启动后日志实时显示在下方。" },
