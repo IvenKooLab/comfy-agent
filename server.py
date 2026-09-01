@@ -609,7 +609,8 @@ BUILTIN_WORKFLOWS = {
 def list_workflows():
     out = list(BUILTIN_WORKFLOWS.values())
     for fn in os.listdir(WORKFLOW_DIR):
-        if fn.endswith(".json"):
+        # .crashed. 归档（如 sage 崩溃版 h3_t2v.sage_cuda.crashed.json）只留档不入库——误跑会让 ComfyUI 原生崩溃
+        if fn.endswith(".json") and ".crashed." not in fn:
             wf = read_json_file(os.path.join(WORKFLOW_DIR, fn), None)
             if wf:
                 out.append(wf)
