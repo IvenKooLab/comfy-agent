@@ -143,10 +143,10 @@
           <input id="wf-name" class="input grow" data-i18n-ph="editor.name.ph" placeholder="工作流名称">
           <button id="wf-save" class="btn" data-i18n="editor.save">保存</button>
           <button id="wf-run" class="btn primary" data-i18n="editor.run">▶ 运行</button>
-          <button id="wf-interrupt" class="btn danger ghost">⏹</button>
+          <button id="wf-interrupt" class="btn danger ghost" data-i18n-title="tip.interrupt" title="">⏹</button>
           <button id="wf-import" class="btn ghost" data-i18n="editor.import">导入</button>
           <input id="wf-file" type="file" accept=".json,.png" multiple hidden>
-          <button id="wf-export" class="btn ghost" data-i18n="editor.export">导出API</button>
+          <button id="wf-export" class="btn ghost" data-i18n="editor.export" data-i18n-title="tip.wf.export" title="">导出API</button>
         </div>
       </header>
       <div class="editor-body">
@@ -191,8 +191,8 @@
       <header class="page-head">
         <h1 data-i18n="runs.title">任务</h1>
         <div class="head-tools">
-          <button id="q-interrupt" class="btn danger ghost" data-i18n="runs.interrupt">⏹ 中断当前</button>
-          <button id="q-clear" class="btn danger ghost" data-i18n="runs.clear">🧹 清空队列</button>
+          <button id="q-interrupt" class="btn danger ghost" data-i18n="runs.interrupt" data-i18n-title="tip.interrupt" title="">⏹ 中断当前</button>
+          <button id="q-clear" class="btn danger ghost" data-i18n="runs.clear" data-i18n-title="tip.clear.queue" title="">🧹 清空队列</button>
         </div>
       </header>
       <div id="progress-panel" class="card pad" hidden>
@@ -226,9 +226,9 @@
               <input id="pl-name" class="input grow" data-i18n-ph="pl.name.ph" placeholder="批次名">
               <select id="pl-wf" class="input select"></select>
               <button id="pl-save" class="btn" data-i18n="act.save">保存</button>
-              <button id="pl-run" class="btn primary" data-i18n="pl.run">▶ 排队全部</button>
+              <button id="pl-run" class="btn primary" data-i18n="pl.run" data-i18n-title="tip.pl.run" title="">▶ 排队全部</button>
               <button id="pl-episodes-view" class="btn" hidden data-i18n="pl.back">← 返回批次</button>
-              <button id="pl-concat" class="btn" data-i18n="pl.concat">🎬 拼接成片</button>
+              <button id="pl-concat" class="btn" data-i18n="pl.concat" data-i18n-title="tip.pl.concat" title="">🎬 拼接成片</button>
               <button id="pl-del" class="btn danger ghost" data-i18n="act.delete">删除</button>
             </div>
             <div class="row margin-top" style="flex-wrap:wrap">
@@ -409,7 +409,7 @@
     <!-- ============ 设置 ============ -->
     <section id="view-settings" class="view">
       <header class="page-head"><h1 data-i18n="settings.title">设置</h1></header>
-      <div class="card pad form">
+      <div class="card pad form collapsible" data-fold="conn">
         <h3 style="font-size:13px;margin-bottom:10px" data-i18n="set.grp.conn">连接与目录</h3>
         <label><span data-i18n="settings.comfy">ComfyUI 地址</span><input id="s-comfy" class="input"></label>
         <label><span data-i18n="settings.output">成果目录（output）</span><input id="s-output" class="input"></label>
@@ -421,7 +421,7 @@
           <span id="s-msg" class="muted"></span>
         </div>
       </div>
-      <div class="card pad form" style="margin-top:16px">
+      <div class="card pad form collapsible" data-fold="ai" style="margin-top:16px">
         <h3 style="font-size:13px;margin-bottom:10px" data-i18n="set.grp.ai">AI 接入（提示词增强 / 助手 / 图生文）</h3>
         <label><span data-i18n="settings.llm.provider">AI 厂商</span>
           <select id="s-llm-provider" class="input select"></select>
@@ -436,7 +436,7 @@
           <input id="s-llm-model-manual" class="input" data-i18n-ph="set.model.manual.ph" placeholder="拉取失败？手动填写模型名" style="display:none;margin-top:6px">
         </label>
       </div>
-      <div class="card pad form" style="margin-top:16px">
+      <div class="card pad form collapsible" data-fold="ui" style="margin-top:16px">
         <h3 style="font-size:13px;margin-bottom:10px" data-i18n="set.grp.ui">界面与更新</h3>
         <label><span data-i18n="settings.lang">界面语言 Language</span>
           <select id="s-lang" class="input select">
@@ -451,7 +451,7 @@
         <div id="s-update-info" class="muted" hidden></div>
       </div>
       <div class="card pad form" id="env-card" style="margin-top:16px" data-i18n="env.loading">读取环境信息…</div>
-      <div class="card pad form" style="margin-top:16px">
+      <div class="card pad form collapsible" data-fold="rel" style="margin-top:16px">
         <h3 style="font-size:13px;margin-bottom:10px" data-i18n="set.reliability">可靠性（看门狗与备份）</h3>
         <label style="flex-direction:row;align-items:center;gap:8px"><input id="s-watchdog" type="checkbox" style="width:auto"> <span data-i18n="set.wd">ComfyUI 掉线自动重启（看门狗）</span></label>
         <label style="flex-direction:row;align-items:center;gap:8px"><input id="s-autorequeue" type="checkbox" style="width:auto"> <span data-i18n="set.requeue">重启后自动续跑中断任务（按图快照同种子重提）</span></label>
@@ -477,11 +477,11 @@
 <!-- 灯箱 -->
 <div id="lightbox" hidden>
   <div class="lb-backdrop"></div>
-  <button class="lb-nav lb-prev" id="lb-prev">‹</button>
-  <button class="lb-nav lb-next" id="lb-next">›</button>
+  <button class="lb-nav lb-prev" id="lb-prev" data-i18n-title="tip.lb.prev" title="">‹</button>
+  <button class="lb-nav lb-next" id="lb-next" data-i18n-title="tip.lb.next" title="">›</button>
   <div class="lb-media" id="lb-media"></div>
   <aside class="lb-side">
-    <button class="lb-close" id="lb-close">✕</button>
+    <button class="lb-close" id="lb-close" data-i18n-title="tip.lb.close" title="">✕</button>
     <h3 id="lb-title"></h3>
     <div id="lb-info" class="lb-info"></div>
     <div id="lb-summary" class="lb-summary"></div>
