@@ -3,7 +3,7 @@
  "name": "E001 冒烟批次",
  "workflow_id": "h3-t2v",
  "created": "2026-08-29 20:27",
- "updated": "2026-09-02 20:31",
+ "updated": "2026-09-02 20:36",
  "items": [
   {
    "name": "S01E01_SHOT01·V3·2D 前世记忆",
@@ -12,7 +12,8 @@
   },
   {
    "name": "S01E01_SHOT02·V3·2D 前世记忆",
-   "prompt": "integrated_multimodal_description: [Shot 1] Premium Chinese comic animation style, 2D guoman aesthetic with clean bold linework and cel shading, expressive stylized eyes, the visual quality of top-tier domestic comic adaptation shorts. Vertical 9:16. The same young Chinese man with metal-framed glasses and blue-grey checked shirt suddenly tightens; one hand clutches his chest over the shirt, knuckles white, his breathing turns shallow and fast. On the desk a small pill bottle rolls and falls. His glasses slide down; sweat beads on his temple under the cold monitor glow. The camera holds static, then makes a subtle push-in toward his clenched hand. Restrained coloring, ink-wash accents. no readable text, no watermark, no extra fingers, no deformed hands.\noverall_soundscape: A deep amplified heartbeat thumps unevenly; the plastic pill bottle rattles across the desk and thuds on the floor, his breath comes in short strained gasps under the air-conditioning hum.\nnon_diegetic_music: N/A."
+   "prompt": "integrated_multimodal_description: [Shot 1] Premium Chinese comic animation style, 2D guoman aesthetic with clean bold linework and cel shading, expressive stylized eyes, the visual quality of top-tier domestic comic adaptation shorts. Vertical 9:16. The same young Chinese man with metal-framed glasses and blue-grey checked shirt suddenly tightens; one hand clutches his chest over the shirt, knuckles white, his breathing turns shallow and fast. On the desk a small pill bottle rolls and falls. His glasses slide down; sweat beads on his temple under the cold monitor glow. The camera holds static, then makes a subtle push-in toward his clenched hand. Restrained coloring, ink-wash accents. no readable text, no watermark, no extra fingers, no deformed hands.\noverall_soundscape: A deep amplified heartbeat thumps unevenly; the plastic pill bottle rattles across the desk and thuds on the floor, his breath comes in short strained gasps under the air-conditioning hum.\nnon_diegetic_music: N/A.",
+   "priority": false
   },
   {
    "name": "S01E01_SHOT03·V3·2D 前世记忆",
