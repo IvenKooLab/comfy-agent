@@ -133,19 +133,27 @@ async function fillWfSelect() {
 
 function renderItems() {
   const box = $("#pl-items");
-  if (!cur || !cur.items || !cur.items.length) { box.innerHTML = `<div class="muted">${t("empty.batch")}</div>`; return; }
+  if (!cur || !cur.items || !cur.items.length) {
+    box.innerHTML = `<div class="muted" style="padding:24px 0">${t("empty.batch")}<div style="margin-top:10px"><button class="btn sm primary" id="pl-empty-new">${t("pl.new")}</button></div></div>`;
+    $("#pl-empty-new")?.addEventListener("click", newBatch);
+    return;
+  }
   const stMap = { success: [t("status.success"), "success"], error: [t("status.error"), "error"], queued: ["⏳ " + t("status.queued"), "queued"] };
   box.innerHTML = cur.items.map((it, i) => {
     const [txt, cls] = stMap[it.status] || [t("pl.notqueued"), ""];
     const ff = it.first_frame
       ? `<button class="btn sm pl-ff set" data-i="${i}" title="${it.first_frame}">${t("pl.ff.set")}</button>`
       : `<button class="btn sm ghost pl-ff" data-i="${i}">${t("pl.ff")}</button>`;
+    const prio = it.priority
+      ? `<button class="btn sm pl-prio set" data-i="${i}" title="${t("pl.prio.on.tip")}">⏫</button>`
+      : `<button class="btn sm ghost pl-prio" data-i="${i}" title="${t("pl.prio.tip")}">⏫</button>`;
     const retryN = it.retry_count ? ` <span class="muted">↻${it.retry_count}</span>` : "";
     const chain = i > 0 ? `<button class="btn sm ghost pl-chain" data-i="${i}" title="${t("pl.chain.tip")}">↳</button>` : "";
     return `<div class="pl-item">
       <span class="run-status ${cls}">${txt}</span>
       <input class="input pl-item-name" data-i="${i}" value="${it.name.replace(/"/g, "&quot;")}">
       ${ff}
+      ${prio}
       ${chain}
       <button class="btn sm ghost pl-retry" data-i="${i}" title="${t("pl.retry.one")}">↻</button>
     </div>
@@ -176,6 +184,12 @@ function renderItems() {
     if (r.ok && r.batch) { cur = r.batch; renderItems(); refresh(); }
   }));
   box.querySelectorAll(".pl-chain").forEach((b) => b.addEventListener("click", () => chainFromPrev(+b.dataset.i)));
+  box.querySelectorAll(".pl-prio").forEach((b) => b.addEventListener("click", () => {
+    const it2 = cur.items[+b.dataset.i];
+    it2.priority = !it2.priority;
+    saveBatch(true);
+    renderItems();
+  }));
 }
 
 /* 镜头接龙：抽上一镜（最近一个成功且带输出的）末帧，设为本镜 i2v 首帧 */

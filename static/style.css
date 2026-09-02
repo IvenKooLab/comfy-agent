@@ -584,9 +584,10 @@ textarea.input { height: auto; padding: 9px 12px; }
 .help-item { margin-bottom: 14px; padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; }
 .help-q { font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 6px; }
 .help-a { font-size: 12.5px; color: var(--text-2); line-height: 1.8; white-space: pre-wrap; }
-
-/* ---------- 帮助页 ---------- */
-.help-mod { font-size: 15px; font-weight: 700; margin: 22px 0 10px; color: var(--brand-2); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
-.help-item { margin-bottom: 14px; padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; }
-.help-q { font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 6px; }
 .help-a { font-size: 12.5px; color: var(--text-2); line-height: 1.8; white-space: pre-wrap; }
+
+/* ---------- 设置卡折叠 ---------- */
+.card.collapsible > h3 { cursor: pointer; user-select: none; }
+.card.collapsible > h3::after { content: "▾"; float: right; opacity: .45; transition: transform .15s ease; }
+.card.collapsible.collapsed > h3::after { transform: rotate(-90deg); }
+.card.collapsible.collapsed > :not(h3) { display: none !important; }

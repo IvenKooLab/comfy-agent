@@ -369,6 +369,22 @@ function initSettings() {
     toast(r.ok ? t("toast.saved") : t("toast.save.fail"), r.ok ? "ok" : "err");
   });
   $("#s-lang").addEventListener("change", (e) => setLang(e.target.value));
+
+  // 设置卡折叠（记忆展开/收起状态）
+  try {
+    const folded = JSON.parse(localStorage.getItem("ca_set_fold") || "[]");
+    document.querySelectorAll("#view-settings .card.collapsible").forEach((card) => {
+      const key = card.dataset.fold;
+      if (!key) return;
+      if (folded.includes(key)) card.classList.add("collapsed");
+      card.querySelector("h3")?.addEventListener("click", () => {
+        card.classList.toggle("collapsed");
+        const now = JSON.parse(localStorage.getItem("ca_set_fold") || "[]").filter((k) => k !== key);
+        if (card.classList.contains("collapsed")) now.push(key);
+        localStorage.setItem("ca_set_fold", JSON.stringify(now));
+      });
+    });
+  } catch { }
   $("#s-update").addEventListener("click", async () => {
     const info = $("#s-update-info");
     info.hidden = false;

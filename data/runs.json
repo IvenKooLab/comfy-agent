@@ -4,7 +4,7 @@
     "name": "关键帧验证·KF_01",
     "seed": 1849621066,
     "submitted": "2026-08-29 23:58:17",
-    "status": "queued",
+    "status": "superseded",
     "graph": {
       "4": {
         "inputs": {
@@ -199,14 +199,15 @@
         },
         "class_type": "BasicScheduler"
       }
-    }
+    },
+    "resumed_as": "93cd3605-6632-4e32-a957-9023224df006"
   },
   {
     "prompt_id": "07d87d58-6a6d-4a4f-a7f2-2768604e649f",
     "name": "关键帧验证·KF_01",
     "seed": 452518011,
     "submitted": "2026-08-29 23:56:34",
-    "status": "queued",
+    "status": "superseded",
     "graph": {
       "4": {
         "inputs": {
@@ -398,14 +399,15 @@
         },
         "class_type": "BasicScheduler"
       }
-    }
+    },
+    "resumed_as": "61597428-d785-493a-b0d5-d4f56e5c203f"
   },
   {
     "prompt_id": "78880192-aa2b-4efb-81a6-6fd20a9d2fb2",
     "name": "关键帧验证·KF_01",
     "seed": 1650974807,
     "submitted": "2026-08-29 23:56:06",
-    "status": "queued",
+    "status": "superseded",
     "graph": {
       "4": {
         "inputs": {
@@ -597,14 +599,15 @@
         },
         "class_type": "BasicScheduler"
       }
-    }
+    },
+    "resumed_as": "5a150174-67fa-47cf-9b44-02ddce135898"
   },
   {
     "prompt_id": "aa1e5386-8c53-49d7-a3cc-e3c1804354b3",
     "name": "管线运行验证·MICRO_01",
     "seed": 460846771,
     "submitted": "2026-08-29 20:27:43",
-    "status": "queued",
+    "status": "superseded",
     "graph": {
       "1": {
         "class_type": "CheckpointLoaderSimple",
@@ -690,14 +693,15 @@
           "filename_prefix": "flux"
         }
       }
-    }
+    },
+    "resumed_as": "3e7b3575-dfc5-4191-90ad-171656a68ca5"
   },
   {
     "prompt_id": "2fb189c1-7f5d-483d-96a9-dfb7a4b6d5cb",
     "name": "logo候选B",
     "seed": 1170902670,
     "submitted": "2026-08-29 19:07:06",
-    "status": "queued",
+    "status": "superseded",
     "graph": {
       "1": {
         "class_type": "CheckpointLoaderSimple",
@@ -783,14 +787,15 @@
           "filename_prefix": "logo_B"
         }
       }
-    }
+    },
+    "resumed_as": "39348b43-ab1c-47d2-9c9c-a489211bdcfb"
   },
   {
     "prompt_id": "1e63575a-b860-485b-ada5-f551f1f1a28c",
     "name": "logo候选A",
     "seed": 393036942,
     "submitted": "2026-08-29 19:07:06",
-    "status": "queued",
+    "status": "superseded",
     "graph": {
       "1": {
         "class_type": "CheckpointLoaderSimple",
@@ -876,14 +881,15 @@
           "filename_prefix": "logo_A"
         }
       }
-    }
+    },
+    "resumed_as": "246e12d1-1e48-4530-8781-75c5a2e0878b"
   },
   {
     "prompt_id": "c92997cf-834b-403f-9d28-66245abc7171",
     "name": "风格SOP验证·国漫史诗",
     "seed": 99,
     "submitted": "2026-08-29 18:06:45",
-    "status": "queued",
+    "status": "superseded",
     "graph": {
       "1": {
         "class_type": "CheckpointLoaderSimple",
@@ -969,7 +975,8 @@
           "filename_prefix": "stylecheck"
         }
       }
-    }
+    },
+    "resumed_as": "8e246192-e146-4f5e-a7fa-930d54ac01c6"
   },
   {
     "prompt_id": "9ac199c2-499f-4730-addc-6310559305e6",
