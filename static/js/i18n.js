@@ -168,6 +168,7 @@ const WF_EN = {
   "builtin-smoke": "Smoke test LoadImage→SaveImage (builtin)",
   "h3-t2v": "H3 t2v W4A8 · 4-step fast lane (640×352)",
   "h3-i2v": "H3 i2v W4A8 · 4-step fast lane (640×352)",
+  "h3-t2v-t8draft": "H3 t2v T8 draft (fast, -43%, non-reproducible)",
 };
 export function wfLabel(w) {
   return (lang === "en" && WF_EN[w.id]) ? WF_EN[w.id] : (w.name || w.id || "");
