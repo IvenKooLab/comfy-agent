@@ -140,10 +140,11 @@ export function t(key) {
   if (!e) return key;
   return lang === "en" ? e[1] : e[0];
 }
-/* 带占位符的动态文案：tf("pl.queue.all", 12) → "把 12 个镜头…"（依次替换 %s/%n/%m） */
+/* 带占位符的动态文案：tf("pl.queue.all", 12) → "把 12 个镜头…"
+   占位符为 % 开头加任意字母（%s/%n/%m/%a/%b/%p…），按出现顺序依次用实参替换 */
 export function tf(key, ...vals) {
   let s = t(key);
-  for (const v of vals) s = s.replace(/%[smn]/, String(v));
+  for (const v of vals) s = s.replace(/%[a-zA-Z]/, String(v));
   return s;
 }
 export function getLang() { return lang; }

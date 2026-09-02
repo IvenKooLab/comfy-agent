@@ -51,7 +51,7 @@ export function initGallery() {
     });
   });
   $("#g-folder").addEventListener("change", (e) => { filter.folder = e.target.value; saveFilter(); renderLimit = PAGE; render(); });
-  window.addEventListener("langchange", syncFolderOptions);
+  window.addEventListener("langchange", () => { syncFolderOptions(); render(); });
   $("#g-sort").addEventListener("change", (e) => { filter.sort = e.target.value; saveFilter(); render(); });
   $("#g-refresh").addEventListener("click", () => galleryRefresh(true));
   $("#g-empty-go")?.addEventListener("click", () => goto("create"));
@@ -197,6 +197,14 @@ function render() {
   const list = visible();
   $("#g-count").textContent = tf("g.count.tpl", list.length, items.length);
   $("#gallery-empty").hidden = list.length > 0;
+  // 搜索/筛选无结果 ≠ 没有成果物：区分文案与「去创作」CTA
+  if (!list.length) {
+    const hasData = items.length > 0;
+    const p = $("#gallery-empty p");
+    if (p) p.textContent = t(hasData ? "empty.gallery.search" : "gallery.empty");
+    const go = $("#g-empty-go");
+    if (go) go.style.display = hasData ? "none" : "";
+  }
   grid.innerHTML = "";
   const shown = list.slice(0, renderLimit);
   for (const it of shown) {
