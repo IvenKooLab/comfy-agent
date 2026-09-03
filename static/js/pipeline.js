@@ -44,6 +44,7 @@ export function initPipeline() {
   $("#pl-parse").addEventListener("click", parseImport);
   $("#pl-save").addEventListener("click", saveBatch);
   $("#pl-run").addEventListener("click", runBatch);
+  $("#pl-run-draft").addEventListener("click", () => runBatch(true));
   $("#pl-concat").addEventListener("click", concatBatch);
   $("#pl-del").addEventListener("click", delBatch);
   $("#pl-episodes").addEventListener("click", toggleEpisodes);
@@ -133,6 +134,8 @@ async function fillWfSelect() {
 
 function renderItems() {
   const box = $("#pl-items");
+  const draftBtn = $("#pl-run-draft");
+  if (draftBtn) draftBtn.hidden = !cur || !DRAFT_MAP_FE[cur.workflow_id];
   if (!cur || !cur.items || !cur.items.length) {
     box.innerHTML = `<div class="muted" style="padding:24px 0">${t("empty.batch")}<div style="margin-top:10px"><button class="btn sm primary" id="pl-empty-new">${t("pl.new")}</button></div></div>`;
     $("#pl-empty-new")?.addEventListener("click", newBatch);
@@ -192,6 +195,10 @@ function renderItems() {
   }));
 }
 
+/* 草稿档映射与预估（分钟/镜，与研究实测一致）；成片档 8.5 为保守值 */
+const DRAFT_MAP_FE = { "h3-t2v": "h3-t2v-t8draft", "h3-i2v": "h3-i2v-t8draft" };
+const DRAFT_EST = { "h3-t2v": 2.7, "h3-i2v": 4.3 };
+
 /* 镜头接龙：抽上一镜（最近一个成功且带输出的）末帧，设为本镜 i2v 首帧 */
 async function chainFromPrev(i) {
   const prev = (cur.items || []).slice(0, i).reverse().find((it) => it.status === "success" && it.output);
@@ -241,12 +248,14 @@ async function saveBatch(silent) {
   } else if (!silent) toast(r.error || t("toast.save.fail"), "err");
 }
 
-async function runBatch() {
+async function runBatch(draft = false) {
   if (!cur) return;
   await saveBatch(true);
   if (!cur.items.length) { toast(t("empty.batch"), "err"); return; }
-  if (!confirm(tf("pl.queue.all", cur.items.length))) return;
-  const r = await api("/api/batches/run", { method: "POST", body: { id: cur.id } });
+  const est = draft ? (DRAFT_EST[cur.workflow_id] || 3) : 8.5;
+  if (!confirm(draft ? tf("pl.run.draft.confirm", cur.items.length, Math.ceil(cur.items.length * est))
+                     : tf("pl.queue.all", cur.items.length))) return;
+  const r = await api("/api/batches/run", { method: "POST", body: { id: cur.id, draft } });
   toast(r.msg || r.error, r.ok ? "ok" : "err");
   if (r.ok) { await openBatch(cur.id); setIntervalChecks(); }
 }
