@@ -50,6 +50,7 @@ const HELP_EN = [
     { q: "How does priority queueing work?", a: "Click ⏫ on a shot row to prioritize it — queued batches submit prioritized shots first.\nUseful for rendering key shots early to check the look before running the rest." },
     { q: "What is Audio assets?", a: "It auto-scans the output folder for audio files (mp3/wav/flac/ogg/aac/m4a) and lists them at the bottom of the Pipeline page.\nPick a BGM path from here when concatenating." },
     { q: "What is the chain button (↳)?", a: "Shot chaining: it auto-extracts the last frame of the previous successful shot and sets it as this shot's i2v first frame.\nUse it to build very long continuous shots that flow seamlessly from one to the next." },
+    { q: "How does ⚡ Draft run work?", a: "Two-lane rendering: click ⚡ Draft run to blast through all shots on the T8 draft lane (~2.7-4.3 min/shot, about half the final lane), pick the keepers, then click per-shot ↻ retry — keepers re-render on the final lane with reproducible seeds.\nNote: T8 caching makes draft runs non-reproducible; use them for shot picking only, never for final renders." },
   ]},
   { mod: "⏻ Launcher", items: [
     { q: "What does \"Start ComfyUI\" do?", a: "Starts ComfyUI with your configured args (crash-safe defaults).\nIf ComfyUI is already running you'll be told so.\nAfter startup its log streams below." },
@@ -121,6 +122,7 @@ const HELP = [
     { q: "优先级排队怎么用？", a: "镜头行点 ⏫ 设为优先——批次排队时高优先级镜头先提交。\n适合先把关键镜头跑出来看效果，再补剩余镜头。" },
     { q: "音频资产是什么？", a: "自动扫描 output 目录里的音频文件（mp3/wav/flac/ogg/aac/m4a）列在产线页底部。\n拼接成片选 BGM 时可直接从这里取路径。" },
     { q: "「接尾帧」(↳) 是干什么的？", a: "镜头接龙：自动抽取上一个成功镜头视频的最后一帧，设为当前镜头的 i2v 首帧。\n适合做超长连续镜头：一段接一段，画面无缝衔接。" },
+    { q: "⚡「草稿快跑」怎么用？", a: "两段式出片：点「⚡ 草稿快跑」用 T8 草稿档快速跑完全部镜头（约 2.7-4.3 分钟/镜，比成片档快一半），挑出满意的镜头后，点该镜头的 ↻ 单镜重试——自动用成片档重新渲染，同 seed 可复现。\n注意：草稿档因 T8 缓存命中不可复现，仅用于选镜，勿直接出成片。" },
   ]},
   { mod: "⏻ 启动器", items: [
     { q: "「启动 ComfyUI」按钮做什么？", a: "用配置的参数启动 ComfyUI（默认 h3_launch.sh 防炸参数）。\n如果 ComfyUI 已在运行则提示。\n启动后日志实时显示在下方。" },

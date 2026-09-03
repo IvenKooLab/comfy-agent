@@ -140,6 +140,23 @@ async function loadStyles() {
   }
 }
 
+/* 预估提示随所选工作流动态化（est_min/tier 由服务端注入） */
+function updateHint() {
+  const sel = $("#c-wf");
+  const hint = $("#c-hint");
+  if (!sel || !hint) return;
+  const wf = workflows.find((w) => (w.id || w.name) === sel.value);
+  if (!wf || wf.est_min == null) {
+    hint.innerHTML = `<span class="dot2"></span>${mode === "video" ? VIDEO_HINT() : IMAGE_HINT()}`;
+    return;
+  }
+  if (wf.tier === "draft") {
+    hint.innerHTML = `<span class="dot2"></span>${tf("create.hint.draft", wf.est_min)}`;
+  } else {
+    hint.innerHTML = `<span class="dot2"></span>${tf("create.hint.est", mode === "video" ? "H3 W4A8 · 640×352 · ≈5s · 4步 · 原生音频" : "Flux 文生图 · 20步", wf.est_min)}`;
+  }
+}
+
 function applyMode() {
   // 灵感词
   const box = $("#c-inspire");
@@ -152,6 +169,7 @@ function applyMode() {
   }
   // 工作流过滤 + 尺寸显隐 + 预估提示
   const sel = $("#c-wf");
+  sel.addEventListener("change", updateHint);
   const fits = workflows.filter((w) => mode === "video"
     ? /H3/.test(w.name) : !/H3/.test(w.name));
   sel.innerHTML = "";

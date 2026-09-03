@@ -170,9 +170,12 @@ const WF_EN = {
   "h3-t2v": "H3 t2v W4A8 · 4-step fast lane (640×352)",
   "h3-i2v": "H3 i2v W4A8 · 4-step fast lane (640×352)",
   "h3-t2v-t8draft": "H3 t2v T8 draft (fast, -43%, non-reproducible)",
+  "h3-i2v-t8draft": "H3 i2v T8 draft (-38%, non-reproducible)",
+  "h3-t2v-pdd8-t8": "H3 t2v PDD8+T8 (fastest, master env, non-reproducible)",
 };
 export function wfLabel(w) {
-  return (lang === "en" && WF_EN[w.id]) ? WF_EN[w.id] : (w.name || w.id || "");
+  const base = (lang === "en" && WF_EN[w.id]) ? WF_EN[w.id] : (w.name || w.id || "");
+  return w.tier === "draft" ? base + (lang === "en" ? " ⚡draft" : " ⚡草稿") : base;
 }
 
 /* ========== 动态消息文案（toast/状态/空态/验证） ========== */
@@ -374,6 +377,11 @@ Object.assign(I18N, {
   "tip.lb.prev": ["上一张（←）", "Previous (←)"],
   "tip.lb.next": ["下一张（→）", "Next (→)"],
   "tip.lb.close": ["关闭（Esc）", "Close (Esc)"],
+  "pl.run.draft": ["⚡ 草稿快跑", "⚡ Draft run"],
+  "pl.run.draft.tip": ["用 T8 草稿档快跑全部镜头（更快，适合选镜）；选镜后点单镜 ↻ 即用成片档重跑", "Draft-run all shots on the T8 lane (faster, for shot picking); then click per-shot ↻ to re-render keepers on the final lane"],
+  "pl.run.draft.confirm": ["草稿快跑 %n 个镜头（约 %m 分钟）？\nT8 缓存会让同 seed 不可复现——仅用于选镜，成片请跑完后点单镜 ↻ 重跑。", "Draft-run %n shots (~%m min)?\nT8 caching makes seeds non-reproducible — for shot picking only. Re-run keepers with per-shot ↻ on the final lane."],
+  "create.hint.draft": ["⚡ 草稿档 · 约 %m 分钟/条 · 同 seed 不可复现，勿用于成片", "⚡ Draft lane · ~%m min/clip · non-reproducible, not for final renders"],
+  "create.hint.est": ["%s · 约 %m 分钟/条（视队列而定）", "%s · ~%m min/clip (queue dependent)"],
   "pl.chain.tip": ["接上一镜尾帧（接龙生成长镜头）", "Chain from previous shot's last frame (for long continuous shots)"],
   "pl.chain.none": ["前面没有成功且带输出的镜头", "No previous successful shot with output"],
   "pl.chain.done": ["已接上上一镜尾帧（提交时自动注入 i2v 首帧）", "Chained from previous last frame (auto-injected as i2v first frame on submit)"],

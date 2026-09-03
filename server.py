@@ -606,6 +606,20 @@ BUILTIN_WORKFLOWS = {
 }
 
 
+# H3 档位元数据（实测值来自 minimax-h3-turing 研究会话，代码侧注入避免改动工作流 json 文件）
+# tier: final=成片（同 seed 可复现） draft=草稿（T8 缓存命中致采样分叉，同 seed 不可复现）
+WF_META = {
+    "builtin-flux": {"tier": "final", "est_min": 1.5},
+    "h3-t2v": {"tier": "final", "est_min": 4.7},
+    "h3-i2v": {"tier": "final", "est_min": 7.0},
+    "h3-t2v-t8draft": {"tier": "draft", "est_min": 2.7},
+    "h3-i2v-t8draft": {"tier": "draft", "est_min": 4.3},
+    "h3-t2v-pdd8-t8": {"tier": "draft", "est_min": 3.5},
+}
+# 草稿快跑映射：成片工作流 → 对应草稿档（PDD8 版需 master+PDD 权重，留手动选择）
+DRAFT_MAP = {"h3-t2v": "h3-t2v-t8draft", "h3-i2v": "h3-i2v-t8draft"}
+
+
 def list_workflows():
     out = list(BUILTIN_WORKFLOWS.values())
     for fn in os.listdir(WORKFLOW_DIR):
@@ -615,6 +629,10 @@ def list_workflows():
             if wf:
                 out.append(wf)
     out.sort(key=lambda w: (w.get("builtin", False) is False, w.get("name", "")))
+    for w in out:
+        m = WF_META.get(w.get("id"))
+        if m:
+            w.update(m)
     return out
 
 
@@ -1708,13 +1726,16 @@ def copy_to_input(src_rel, tag="frame"):
     return name
 
 
-def run_batch(bid, only_index=None):
+def run_batch(bid, only_index=None, draft=False):
     b = _load_batch(bid)
     if not b:
         return {"ok": False, "msg": "批次不存在"}
+    wf_id = b.get("workflow_id")
+    if draft and wf_id in DRAFT_MAP:
+        wf_id = DRAFT_MAP[wf_id]  # 草稿快跑：映射到对应 T8 草稿档（同 seed 不可复现，仅选镜用）
     wf = None
     for w in list_workflows():
-        if w.get("id") == b.get("workflow_id"):
+        if w.get("id") == wf_id:
             wf = w
             break
     if not wf:
@@ -2464,7 +2485,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/batches/parse" and method == "POST":
             return self.send_json({"ok": True, "items": parse_script_text(body.get("text", ""))})
         if path == "/api/batches/run" and method == "POST":
-            return self.send_json(run_batch(body.get("id", "")))
+            return self.send_json(run_batch(body.get("id", ""), draft=bool(body.get("draft"))))
         if path == "/api/batches/retry" and method == "POST":
             b = _load_batch(body.get("id", ""))
             idx = int(body.get("index", -1))
