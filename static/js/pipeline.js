@@ -148,8 +148,8 @@ function renderItems() {
       ? `<button class="btn sm pl-ff set" data-i="${i}" title="${it.first_frame}">${t("pl.ff.set")}</button>`
       : `<button class="btn sm ghost pl-ff" data-i="${i}">${t("pl.ff")}</button>`;
     const prio = it.priority
-      ? `<button class="btn sm pl-prio set" data-i="${i}" title="${t("pl.prio.on.tip")}">⏫</button>`
-      : `<button class="btn sm ghost pl-prio" data-i="${i}" title="${t("pl.prio.tip")}">⏫</button>`;
+      ? `<button class="btn sm pl-prio set" data-i="${i}" title="${t("pl.prio.on.tip")}">▲ ${t("pl.prio.short")}</button>`
+      : `<button class="btn sm ghost pl-prio" data-i="${i}" title="${t("pl.prio.tip")}">▲ ${t("pl.prio.short")}</button>`;
     const retryN = it.retry_count ? ` <span class="muted">↻${it.retry_count}</span>` : "";
     const chain = i > 0 ? `<button class="btn sm ghost pl-chain" data-i="${i}" title="${t("pl.chain.tip")}">↳</button>` : "";
     return `<div class="pl-item">

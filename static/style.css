@@ -136,6 +136,7 @@ textarea.input { height: auto; padding: 9px 12px; }
 .sec-title { margin: 24px 0 12px; font-size: 15px; font-weight: 700; }
 .margin-top { margin-top: 14px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+[hidden] { display: none !important; }
 .empty { text-align: center; padding: 90px 0; color: var(--text-3); }
 .empty-ico { font-size: 44px; margin-bottom: 12px; filter: grayscale(.3); }
 
@@ -541,8 +542,10 @@ textarea.input { height: auto; padding: 9px 12px; }
 .note-item .meta { flex: none; color: var(--text-4); font-size: 11px; }
 
 /* ---------- 产线 ---------- */
-.pl-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
-.pl-item .input { flex: 1; height: 30px; font-size: 12px; }
+.pl-item { display: grid; grid-template-columns: 84px minmax(180px, 1fr) auto auto auto auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.pl-item .input { height: 30px; font-size: 12px; width: 100%; box-sizing: border-box; }
+.pl-prompt-edit { margin: 2px 0 14px 92px; width: calc(100% - 92px); resize: vertical; line-height: 1.5; }
+.run-status { min-width: 84px; text-align: center; box-sizing: border-box; }
 .pl-prompt { font-size: 11px; color: var(--text-3); padding: 2px 4px 10px; word-break: break-all; border-bottom: 1px dashed var(--line-1); }
 
 /* ---------- 模板库 ---------- */

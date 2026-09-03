@@ -367,6 +367,7 @@ Object.assign(I18N, {
   "pl.deleted": ["已删除", "Deleted"],
   "pl.epagg": ["📊 按集聚合", "📊 By episode"],
   "pl.nobatch": ["没有批次", "No batches"],
+  "pl.prio.short": ["优先", "Prio"],
   "pl.prio.tip": ["设为优先排队（排队时先提交）", "Prioritize this shot (submitted first when queueing)"],
   "pl.prio.on.tip": ["已设优先——点击取消", "Prioritized — click to unset"],
   "tip.interrupt": ["中断当前执行中的任务（排队的不受影响）", "Interrupt the currently running job (queued ones unaffected)"],
