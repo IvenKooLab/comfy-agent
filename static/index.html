@@ -222,14 +222,22 @@
         <aside class="card pad" id="pl-list" style="width:250px;flex:none;overflow-y:auto"></aside>
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:12px">
           <div class="card pad" id="pl-detail-head" hidden>
-            <div class="row" style="justify-content:space-between">
-              <input id="pl-name" class="input grow" data-i18n-ph="pl.name.ph" placeholder="批次名">
-              <select id="pl-wf" class="input select"></select>
-              <button id="pl-save" class="btn" data-i18n="act.save">保存</button>
-              <button id="pl-run" class="btn primary" data-i18n="pl.run" data-i18n-title="tip.pl.run" title="">▶ 排队全部</button>
-              <button id="pl-run-draft" class="btn" data-i18n="pl.run.draft" data-i18n-title="pl.run.draft.tip" title="" hidden>⚡ 草稿快跑</button>
-              <button id="pl-episodes-view" class="btn" hidden data-i18n="pl.back">← 返回批次</button>
-              <button id="pl-concat" class="btn" data-i18n="pl.concat" data-i18n-title="tip.pl.concat" title="">🎬 拼接成片</button>
+            <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div class="row" style="flex:1;min-width:300px;gap:8px">
+                <input id="pl-name" class="input grow" data-i18n-ph="pl.name.ph" placeholder="批次名">
+                <select id="pl-wf" class="input select" style="flex:1.3;min-width:220px"></select>
+              </div>
+              <div class="row" style="gap:8px">
+                <button id="pl-save" class="btn" data-i18n="act.save">保存</button>
+                <button id="pl-run-draft" class="btn" data-i18n="pl.run.draft" data-i18n-title="pl.run.draft.tip" title="" hidden>⚡ 草稿快跑</button>
+                <button id="pl-run" class="btn primary" data-i18n="pl.run" data-i18n-title="tip.pl.run" title="">▶ 排队全部</button>
+              </div>
+            </div>
+            <div class="row margin-top" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div class="row" style="gap:8px">
+                <button id="pl-episodes-view" class="btn" hidden data-i18n="pl.back">← 返回批次</button>
+                <button id="pl-concat" class="btn" data-i18n="pl.concat" data-i18n-title="tip.pl.concat" title="">🎬 拼接成片</button>
+              </div>
               <button id="pl-del" class="btn danger ghost" data-i18n="act.delete">删除</button>
             </div>
             <div class="row margin-top" style="flex-wrap:wrap">
