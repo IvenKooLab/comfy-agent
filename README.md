@@ -1,5 +1,7 @@
 # ComfyAgent · AI 创作台
 
+[English](README_EN.md) | 简体中文
+
 本地优先的 AI 创作台：一个原生窗口管理你的 ComfyUI —— 中文提示词生图/生视频、成果画廊、可视化工作流、600+ 模板库、任务队列、产线批次、Obsidian 知识库、硬件监控。
 
 ![创作页](docs/screenshot-create.png)
