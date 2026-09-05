@@ -16,15 +16,15 @@
       <div class="brand-name">ComfyAgent</div>
     </div>
     <div class="nav-items">
-      <a class="nav-item active" data-view="create" href="#create"><span class="ico">✦</span><span class="txt" data-i18n="nav.create">创作</span></a>
-      <a class="nav-item" data-view="gallery" href="#gallery"><span class="ico">▦</span><span class="txt" data-i18n="nav.gallery">画廊</span></a>
-      <a class="nav-item" data-view="editor" href="#editor"><span class="ico">⑃</span><span class="txt" data-i18n="nav.editor">工作流</span></a>
+      <a class="nav-item active" data-view="create" href="#create"><span class="ico">✦</span><span class="txt" data-i18n="nav.create">创作</span><span class="nav-key">1</span></a>
+      <a class="nav-item" data-view="gallery" href="#gallery"><span class="ico">▦</span><span class="txt" data-i18n="nav.gallery">画廊</span><span class="nav-key">2</span></a>
+      <a class="nav-item" data-view="editor" href="#editor"><span class="ico">⑃</span><span class="txt" data-i18n="nav.editor">工作流</span><span class="nav-key">3</span></a>
       <a class="nav-item" data-view="templates" href="#templates"><span class="ico">❏</span><span class="txt" data-i18n="nav.templates">模板</span></a>
-      <a class="nav-item" data-view="runs" href="#runs"><span class="ico">◷</span><span class="txt" data-i18n="nav.runs">任务</span></a>
-      <a class="nav-item" data-view="pipeline" href="#pipeline"><span class="ico">⛓</span><span class="txt" data-i18n="nav.pipeline">产线</span></a>
-      <a class="nav-item" data-view="launcher" href="#launcher"><span class="ico">⏻</span><span class="txt" data-i18n="nav.launcher">启动器</span></a>
-      <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">◈</span><span class="txt" data-i18n="nav.obsidian">知识库</span></a>
-      <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✧</span><span class="txt" data-i18n="nav.agent">助手</span></a>
+      <a class="nav-item" data-view="runs" href="#runs"><span class="ico">◷</span><span class="txt" data-i18n="nav.runs">任务</span><span class="nav-key">4</span></a>
+      <a class="nav-item" data-view="pipeline" href="#pipeline"><span class="ico">⛓</span><span class="txt" data-i18n="nav.pipeline">产线</span><span class="nav-key">5</span></a>
+      <a class="nav-item" data-view="launcher" href="#launcher"><span class="ico">⏻</span><span class="txt" data-i18n="nav.launcher">启动器</span><span class="nav-key">6</span></a>
+      <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">◈</span><span class="txt" data-i18n="nav.obsidian">知识库</span><span class="nav-key">7</span></a>
+      <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✧</span><span class="txt" data-i18n="nav.agent">助手</span><span class="nav-key">8</span></a>
     </div>
     <div class="nav-foot">
       <a class="nav-item small" data-view="help" href="#help"><span class="ico">❓</span><span class="txt" data-i18n="nav.help">帮助</span></a>
@@ -128,6 +128,7 @@
         </div>
       </header>
       <div id="gallery-grid" class="masonry"></div>
+      <button id="to-top" title="↑">↑</button>
       <div id="gallery-empty" class="empty" hidden>
         <div class="empty-ico">📭</div>
         <p data-i18n="gallery.empty">还没有成果物。去创作页生成第一个，或让助手「画：xxx」。</p>

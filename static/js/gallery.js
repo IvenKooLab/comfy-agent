@@ -60,6 +60,7 @@ export function initGallery() {
   $("#g-sort").addEventListener("change", (e) => { filter.sort = e.target.value; saveFilter(); render(); });
   $("#g-refresh").addEventListener("click", () => galleryRefresh(true));
   $("#g-empty-go")?.addEventListener("click", () => goto("create"));
+  $("#to-top")?.addEventListener("click", () => $("#gallery-grid").scrollIntoView({ behavior: "smooth", block: "start" }));
   // 批量操作
   $("#b-archive").addEventListener("click", () => batchArchive());
   $("#b-trash").addEventListener("click", () => batchTrash());
@@ -350,6 +351,18 @@ function step(delta) {
   if (!list.length) return;
   lbIndex = (lbIndex + delta + list.length) % list.length;
   renderLightbox(list);
+  preloadNeighbors(list);
+}
+/* 预加载相邻两张，切换瞬时显示 */
+function preloadNeighbors(list) {
+  if (!list.length) return;
+  for (const d of [-1, 1]) {
+    const it = list[(lbIndex + d + list.length) % list.length];
+    if (it && it.kind !== "video") {
+      const img = new Image();
+      img.src = mediaUrl(it.path);
+    }
+  }
 }
 export function openLightboxPublic(list, idx) { openLightbox(list, idx); }
 

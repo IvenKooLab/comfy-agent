@@ -607,3 +607,15 @@ textarea.input { height: auto; padding: 9px 12px; }
 .uid-btns .btn { min-width: 84px; }
 .uid-btns .btn.danger { background: var(--err); border-color: var(--err); color: #fff; }
 .uid-btns .btn.danger:hover { filter: brightness(1.1); }
+
+/* ---------- 导航快捷键角标 ---------- */
+.nav-key { margin-left: auto; font-size: 10px; color: var(--text-3); border: 1px solid var(--line);
+  border-radius: 5px; padding: 1px 5px; opacity: .7; }
+.nav-item.active .nav-key { color: var(--text-2); }
+
+/* ---------- 画廊回到顶部 ---------- */
+#to-top { position: fixed; right: 26px; bottom: 64px; z-index: 90; width: 40px; height: 40px;
+  border-radius: 12px; background: var(--bg-3); border: 1px solid var(--line-2); color: var(--text-2);
+  font-size: 16px; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s var(--ease); }
+#to-top.show { opacity: 1; pointer-events: auto; }
+#to-top:hover { background: var(--bg-4); color: var(--text-1); }
