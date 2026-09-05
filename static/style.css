@@ -594,3 +594,16 @@ textarea.input { height: auto; padding: 9px 12px; }
 .card.collapsible > h3::after { content: "▾"; float: right; opacity: .45; transition: transform .15s ease; }
 .card.collapsible.collapsed > h3::after { transform: rotate(-90deg); }
 .card.collapsible.collapsed > :not(h3) { display: none !important; }
+
+/* ---------- 暗色确认/输入弹窗 ---------- */
+#ui-dialog { position: fixed; inset: 0; z-index: 400; background: rgba(5, 6, 10, .62); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; }
+.uid-card { width: 400px; max-width: calc(100vw - 48px); background: var(--bg-2); border: 1px solid var(--line-2);
+  border-radius: 14px; padding: 20px 22px; box-shadow: 0 18px 60px rgba(0, 0, 0, .5);
+  animation: uidIn .16s var(--ease); }
+@keyframes uidIn { from { transform: translateY(10px) scale(.98); opacity: 0; } }
+.uid-msg { font-size: 13px; color: var(--text-1); line-height: 1.7; white-space: pre-wrap; }
+.uid-input { width: 100%; margin-top: 12px; }
+.uid-btns .btn { min-width: 84px; }
+.uid-btns .btn.danger { background: var(--err); border-color: var(--err); color: #fff; }
+.uid-btns .btn.danger:hover { filter: brightness(1.1); }

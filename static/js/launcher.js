@@ -1,6 +1,7 @@
 /* launcher.js — 启动器：ComfyUI 生命周期 + 版本维护 + 模型管理 + 环境诊断 */
 import { $, api, toast, fmtSize } from "./app.js";
 import { t, tf } from "./i18n.js";
+import { uiConfirm } from "./ui.js";
 
 let pollTimer = null;
 let comfyHead = null;
@@ -16,13 +17,13 @@ export function initLauncher() {
     setTimeout(poll, 4000);
   });
   $("#lc-restart").addEventListener("click", async () => {
-    if (!confirm(t("misc.confirm.restart"))) return;
+    if (!(await uiConfirm(t("misc.confirm.restart")))) return;
     const r = await api("/api/comfy/restart", { method: "POST", body: {} });
     toast(r.msg || r.error, r.ok ? "ok" : "err");
     setTimeout(poll, 6000);
   });
   $("#lc-stop").addEventListener("click", async () => {
-    if (!confirm(t("misc.confirm.stop"))) return;
+    if (!(await uiConfirm(t("misc.confirm.stop")))) return;
     const r = await api("/api/comfy/stop", { method: "POST", body: {} });
     toast(r.msg || r.error, r.ok ? "ok" : "err");
     setTimeout(poll, 2000);
@@ -119,7 +120,7 @@ async function checkRemote() {
 }
 
 async function doUpdate() {
-  if (!confirm(t("misc.confirm.update"))) return;
+  if (!(await uiConfirm(t("misc.confirm.update")))) return;
   const info = $("#cv-version-info");
   info.innerHTML = t("lc.updating");
   const r = await api("/api/comfy/update", { method: "POST", body: {} });
@@ -127,7 +128,7 @@ async function doUpdate() {
   if (r.ok) {
     info.innerHTML = `✓ ${r.msg} ${r.note || ""}`;
     loadVersionInfo();
-    if (confirm(t("lc.updated.ask"))) {
+    if (await uiConfirm(t("lc.updated.ask"), { danger: false })) {
       const rr = await api("/api/comfy/restart", { method: "POST", body: {} });
       toast(rr.msg || rr.error || t("status.offline"), rr.ok ? "ok" : "err");
       setTimeout(poll, 6000);

@@ -1,6 +1,7 @@
 /* pipeline.js — 产线：批次（脚本解析/排队/重试/拼接）+ 角色资产库 */
 import { $, $$, api, toast, mediaUrl } from "./app.js";
 import { t, tf } from "./i18n.js";
+import { uiConfirm, uiPrompt } from "./ui.js";
 
 let batches = [];
 let cur = null;          // 当前批次对象
@@ -66,6 +67,7 @@ export function initPipeline() {
   $("#char-save").addEventListener("click", saveChar);
   $("#char-del").addEventListener("click", delChar);
   initSceneHandlers();
+  initSubtitleBurn();
   let syncTimer = null;
   new MutationObserver(() => {
     const active = $("#view-pipeline").classList.contains("active");
@@ -165,9 +167,9 @@ function renderItems() {
   box.querySelectorAll(".pl-item-name").forEach((inp) => inp.addEventListener("change", (e) => {
     cur.items[+e.target.dataset.i].name = e.target.value; saveBatch(true);
   }));
-  box.querySelectorAll(".pl-ff").forEach((b) => b.addEventListener("click", () => {
+  box.querySelectorAll(".pl-ff").forEach((b) => b.addEventListener("click", async () => {
     const i = +b.dataset.i;
-    if (cur.items[i].first_frame && !confirm(t("pl.ff.clear"))) { /* 保留可重选 */ }
+    if (cur.items[i].first_frame && !(await uiConfirm(t("pl.ff.clear")))) { /* 保留可重选 */ }
     openPicker(tf("pick.ff", cur.items[i].name), (path) => {
       cur.items[i].first_frame = path;
       saveBatch(true);
@@ -248,13 +250,26 @@ async function saveBatch(silent) {
   } else if (!silent) toast(r.error || t("toast.save.fail"), "err");
 }
 
+let runBusy = false;
 async function runBatch(draft = false) {
+  if (!cur || runBusy) return;
+  runBusy = true;
+  const btns = [$("#pl-run"), $("#pl-run-draft")];
+  btns.forEach((b) => { if (b) { b.disabled = true; b.style.opacity = .55; } });
+  try {
+    await _runBatchInner(draft);
+  } finally {
+    runBusy = false;
+    btns.forEach((b) => { if (b) { b.disabled = false; b.style.opacity = ""; } });
+  }
+}
+async function _runBatchInner(draft = false) {
   if (!cur) return;
   await saveBatch(true);
   if (!cur.items.length) { toast(t("empty.batch"), "err"); return; }
   const est = draft ? (DRAFT_EST[cur.workflow_id] || 3) : 8.5;
-  if (!confirm(draft ? tf("pl.run.draft.confirm", cur.items.length, Math.ceil(cur.items.length * est))
-                     : tf("pl.queue.all", cur.items.length))) return;
+  if (!(await uiConfirm(draft ? tf("pl.run.draft.confirm", cur.items.length, Math.ceil(cur.items.length * est))
+                            : tf("pl.queue.all", cur.items.length), { danger: draft }))) return;
   const r = await api("/api/batches/run", { method: "POST", body: { id: cur.id, draft } });
   toast(r.msg || r.error, r.ok ? "ok" : "err");
   if (r.ok) { await openBatch(cur.id); setIntervalChecks(); }
@@ -265,18 +280,21 @@ async function concatBatch() {
   if (concatBusy) return;
   const outs = (cur?.items || []).filter((i) => i.status === "success" && i.output).map((i) => i.output);
   if (outs.length < 2) { toast(t("pl.concat.few"), "err"); return; }
-  if (!confirm(tf("pl.concat.ask", outs.length))) return;
+  if (!(await uiConfirm(tf("pl.concat.ask", outs.length)))) return;
   concatBusy = true;
+  const cbtn = $("#pl-concat");
+  if (cbtn) { cbtn.disabled = true; cbtn.style.opacity = .55; }
   toast(t("pl.concat.doing"), "");
   const bgm = $("#pl-bgm") ? $("#pl-bgm").value.trim() : "";
   const vol = $("#pl-bgm-vol") ? parseFloat($("#pl-bgm-vol").value) || 0.25 : 0.25;
   const r = await api("/api/concat", { method: "POST", body: { paths: outs, name: cur.name, bgm, bgm_volume: vol } });
   concatBusy = false;
+  if (cbtn) { cbtn.disabled = false; cbtn.style.opacity = ""; }
   r.ok ? toast(r.msg + t("st.in.gallery"), "ok") : toast(r.error, "err");
 }
 
 async function delBatch() {
-  if (!cur || !confirm(tf("misc.confirm.delete.batch", cur.name))) return;
+  if (!cur || !(await uiConfirm(tf("misc.confirm.delete.batch", cur.name)))) return;
   await api("/api/batches/delete", { method: "POST", body: { id: cur.id } });
   cur = null; $("#pl-detail-head").hidden = true; $("#pl-items").innerHTML = `<div class="muted">${t("pl.deleted")}</div>`;
   refresh();
@@ -341,7 +359,7 @@ async function saveChar() {
 
 async function delChar() {
   if (!curChar) return;
-  if (!confirm(tf("misc.confirm.delete.char", curChar.name))) return;
+  if (!(await uiConfirm(tf("misc.confirm.delete.char", curChar.name)))) return;
   await api("/api/characters/delete", { method: "POST", body: { id: curChar.id } });
   curChar = null; $("#char-editor").hidden = true; loadChars();
 }
@@ -387,7 +405,7 @@ function initSceneHandlers() {
     loadScenes();
   });
   $("#scene-del").addEventListener("click", async () => {
-    if (!curScene || !confirm(t("misc.confirm.scene"))) return;
+    if (!curScene || !(await uiConfirm(t("misc.confirm.scene")))) return;
     await api("/api/scenes/delete", { method: "POST", body: { id: curScene.id } });
     curScene = null; $("#scene-editor").hidden = true; loadScenes();
   });
@@ -421,8 +439,8 @@ function initSubtitleBurn() {
   const subBtn = $("#pl-subtitle");
   if (!subBtn) return;
   subBtn.addEventListener("click", async () => {
-    const video = prompt(t("sub.video.path"));
-    const srt = prompt(t("sub.srt.path"));
+    const video = await uiPrompt(t("sub.video.path"));
+    const srt = await uiPrompt(t("sub.srt.path"));
     if (!video || !srt) return;
     const r = await api("/api/subtitle_burn", { method: "POST", body: { video, srt_path: srt } });
     toast(r.ok ? t("sub.done") + r.output : r.error, r.ok ? "ok" : "err");

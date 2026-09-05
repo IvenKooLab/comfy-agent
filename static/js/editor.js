@@ -1,6 +1,7 @@
 /* editor.js — 工作流可视化编辑器：SVG 节点图 + 参数检查器 + 导入导出 */
 import { $, $$, api, toast, goto } from "./app.js";
 import { t, tf, wfLabel } from "./i18n.js";
+import { uiConfirm, uiPrompt } from "./ui.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const NODE_W = 195, HEAD_H = 26, ROW_H = 20, PORT_R = 5.5;
@@ -118,7 +119,7 @@ async function loadList(selectId) {
     el.addEventListener("click", () => { cur = JSON.parse(JSON.stringify(wf)); afterLoad(); renderListSel(); });
     el.querySelector(".del")?.addEventListener("click", async (e) => {
       e.stopPropagation();
-      if (!confirm(tf("ed.del.ask", wf.name))) return;
+      if (!(await uiConfirm(tf("ed.del.ask", wf.name)))) return;
       const rr = await api("/api/workflows/delete", { method: "POST", body: { id: wf.id } });
       rr.ok ? loadList() : toast(rr.error, "err");
     });
@@ -267,9 +268,9 @@ function renderGraph() {
       if (ii < 0) continue;
       const b = portXY(id, "in", ii);
       const path = mk("path", { class: "edge", d: edgePath(a, b) });
-      path.addEventListener("click", (e) => {
+      path.addEventListener("click", async (e) => {
         e.stopPropagation();
-        if (confirm(tf("ed.unlink.ask", cur.api[src].class_type, iname))) {
+        if (await uiConfirm(tf("ed.unlink.ask", cur.api[src].class_type, iname))) {
           delete cur.api[id].inputs[iname];
           renderGraph();
         }
@@ -564,7 +565,7 @@ async function saveWorkflow() {
 
 async function runWorkflow() {
   if (!Object.keys(cur.api).length) { toast(t("err.empty.workflow"), "err"); return; }
-  const times = prompt(t("ed.run.times"), "1");
+  const times = await uiPrompt(t("ed.run.times"), { value: "1" });
   if (times === null) return;
   const r = await api("/api/prompt", {
     method: "POST",

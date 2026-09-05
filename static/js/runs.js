@@ -1,6 +1,7 @@
 /* runs.js — 任务页：队列 + 实时进度 + 历史（ETA/重试） */
 import { $, $$, api, toast, goto } from "./app.js";
 import { t, tf } from "./i18n.js";
+import { uiConfirm } from "./ui.js";
 
 export function initRuns() {
   $("#q-interrupt").addEventListener("click", async () => {
@@ -8,7 +9,7 @@ export function initRuns() {
     toast(r.msg || r.error, r.ok ? "ok" : "err");
   });
   $("#q-clear").addEventListener("click", async () => {
-    if (!confirm(t("misc.confirm.clear.queue"))) return;
+    if (!(await uiConfirm(t("misc.confirm.clear.queue")))) return;
     const r = await api("/api/clear_queue", { method: "POST", body: {} });
     toast(r.msg || r.error, r.ok ? "ok" : "err");
     refresh();

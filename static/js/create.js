@@ -1,6 +1,7 @@
 /* create.js — 创作首页：Composer + 最新创作流 */
 import { $, $$, api, toast, mediaUrl, fmtTime, goto } from "./app.js";
 import { t, tf, getLang, wfLabel } from "./i18n.js";
+import { uiConfirm } from "./ui.js";
 import { copyText } from "./gallery.js";
 
 const PARAMS_KEY = "comfyagent_params";
@@ -198,7 +199,7 @@ async function loadWorkflows() {
 async function create() {
   const promptText = $("#c-prompt").value.trim();
   if (!promptText) { toast(t("err.no.prompt"), "err"); $("#c-prompt").focus(); return; }
-  if (mode === "video" && selCount > 2 && !confirm(tf("misc.confirm.video.count", selCount, Math.ceil(8.5 * selCount)))) return;
+  if (mode === "video" && selCount > 2 && !(await uiConfirm(tf("misc.confirm.video.count", selCount, Math.ceil(8.5 * selCount)), { danger: false }))) return;
   const sel = $("#c-wf");
   const wf = workflows.find((w) => (w.id || w.name) === sel.value);
   if (!wf) { toast(t("err.no.workflow"), "err"); return; }
