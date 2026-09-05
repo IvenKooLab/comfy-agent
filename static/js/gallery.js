@@ -1,6 +1,7 @@
 /* gallery.js — 画廊：瀑布流 + 灯箱 + 批量选择/批量归档删除 + 文件夹筛选 */
 import { $, $$, api, toast, fmtSize, fmtTime, mediaUrl, goto } from "./app.js";
 import { t, tf } from "./i18n.js";
+import { uiConfirm } from "./ui.js";
 
 let items = [];
 let filter = { q: "", kind: "all", sort: "new", folder: "" };
@@ -40,7 +41,11 @@ function loadFilter() {
 
 export function initGallery() {
   loadFilter();
-  $("#g-search").addEventListener("input", (e) => { filter.q = e.target.value.trim().toLowerCase(); renderLimit = PAGE; render(); });
+  let searchT = null;
+  $("#g-search").addEventListener("input", (e) => {
+    clearTimeout(searchT);
+    searchT = setTimeout(() => { filter.q = e.target.value.trim().toLowerCase(); renderLimit = PAGE; render(); }, 150);
+  });
   $$("#g-kind .chip").forEach((c) => {
     c.classList.toggle("active", c.dataset.k === filter.kind);
     c.addEventListener("click", () => {
@@ -132,7 +137,7 @@ export function initGallery() {
   });
   $("#lb-trash").addEventListener("click", async () => {
     const it = visible()[lbIndex];
-    if (!it || !confirm(tf("misc.confirm.delete", it.name))) return;
+    if (!it || !(await uiConfirm(tf("misc.confirm.delete", it.name)))) return;
     const r = await api("/api/media/trash", { method: "POST", body: { paths: [it.path] } });
     if (r.ok) { toast(t("toast.trashed"), "ok"); selected.delete(it.path); syncBatchBar(); closeLightbox(); galleryRefresh(true); }
     else toast(r.error, "err");
@@ -291,7 +296,7 @@ function wireActions(card, it) {
   });
   card.querySelector('[data-act="del"]')?.addEventListener("click", async (e) => {
     e.stopPropagation();
-    if (!confirm(tf("misc.confirm.delete", it.name))) return;
+    if (!(await uiConfirm(tf("misc.confirm.delete", it.name)))) return;
     const r = await api("/api/media/trash", { method: "POST", body: { paths: [it.path] } });
     if (r.ok) { toast(t("toast.trashed"), "ok"); galleryRefresh(true); }
     else toast(r.error, "err");
@@ -317,7 +322,7 @@ function syncBatchBar() {
 async function batchConcat() {
   const vids = [...selected].filter((p) => /\.(mp4|webm|mov|mkv)$/i.test(p));
   if (vids.length < 2) return;
-  if (!confirm(tf("misc.confirm.concat", vids.length))) return;
+  if (!(await uiConfirm(tf("misc.confirm.concat", vids.length)))) return;
   const r = await api("/api/concat", { method: "POST", body: { paths: vids, name: t("name.concat") } });
   if (r.ok) { toast(r.msg + t("st.in.gallery"), "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
   else toast(r.error, "err");
@@ -331,7 +336,7 @@ async function batchArchive() {
 }
 async function batchTrash() {
   const paths = [...selected];
-  if (!paths.length || !confirm(tf("misc.confirm.del.multi", paths.length))) return;
+  if (!paths.length || !(await uiConfirm(tf("misc.confirm.del.multi", paths.length)))) return;
   const r = await api("/api/media/trash", { method: "POST", body: { paths } });
   if (r.ok) { toast(tf("toast.trashed.n", r.count), "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
   else toast(r.error, "err");
