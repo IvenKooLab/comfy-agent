@@ -227,10 +227,20 @@ function saveChatHistory(log) {
 
 function initAgent() {
   const log = $("#chat-log");
-  const say = (text, who = "bot", actions = null, silent = false) => {
+  const say = (text, who = "bot", actions = null, silent = false, toolTrace = null) => {
     const el = document.createElement("div");
     el.className = `msg ${who}`;
     el.textContent = text;
+    if (toolTrace?.length && who === "bot") {
+      for (const tt of toolTrace) {
+        const line = document.createElement("div");
+        line.className = "tool-trace";
+        let argsStr = "";
+        try { argsStr = JSON.stringify(tt.args || {}); } catch { }
+        line.textContent = `🔧 ${tt.tool}(${(argsStr || "{}").slice(0, 70)}) → ${String(tt.summary || "").slice(0, 90)}`;
+        el.appendChild(line);
+      }
+    }
     if (actions?.length && who === "bot") {
       const box = document.createElement("div");
       box.className = "msg-actions";
@@ -281,7 +291,7 @@ function initAgent() {
     log.appendChild(holder); log.scrollTop = log.scrollHeight;
     const r = await api("/api/agent", { method: "POST", body: { text } });
     holder.remove();
-    say(r.ok ? r.reply : (r.error || t("agent.error")), "bot", r.actions);
+    say(r.ok ? r.reply : (r.error || t("agent.error")), "bot", r.actions, false, r.tool_trace);
   };
   $("#chat-send").addEventListener("click", send);
   $("#chat-input").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });

@@ -619,3 +619,7 @@ textarea.input { height: auto; padding: 9px 12px; }
   font-size: 16px; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s var(--ease); }
 #to-top.show { opacity: 1; pointer-events: auto; }
 #to-top:hover { background: var(--bg-4); color: var(--text-1); }
+
+/* ---------- 助手工具调用过程 ---------- */
+.tool-trace { font-family: var(--mono); font-size: 10.5px; color: var(--text-3); margin-top: 5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
