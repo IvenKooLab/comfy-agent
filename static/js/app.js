@@ -69,6 +69,8 @@ function applyHash() {
     if (bb && !bb.hidden && v !== "gallery") bb.hidden = true; // 批量操作只在画廊生效
   }
   if (v === "create") refreshFeed();
+  const tt = $("#to-top");
+  if (tt) tt.classList.toggle("show", v === "gallery");
 }
 window.addEventListener("hashchange", applyHash);
 
