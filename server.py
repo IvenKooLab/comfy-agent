@@ -1021,8 +1021,8 @@ def image_to_prompt(path):
         return {"ok": False, "error": f"反推失败：{e}"}
 
 
-def _llm_chat(messages, temperature=0.3, timeout=60):
-    """统一 LLM 通道：OpenAI 兼容协议，按设置里的厂商/BaseURL/Key/模型调用。"""
+def _llm_chat_full(messages, tools=None, temperature=0.3, timeout=60):
+    """统一 LLM 通道（完整版）：返回 choices[0].message 对象（含 tool_calls 时 content 可能为 None）。"""
     provider = SETTINGS.get("llm_provider", "zhipu")
     base = (SETTINGS.get("llm_base_url") or LLM_PRESETS.get(provider, {}).get("base", "")).rstrip("/")
     key = SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key") or ""
@@ -1031,12 +1031,19 @@ def _llm_chat(messages, temperature=0.3, timeout=60):
         raise RuntimeError("未配置 API Key（设置页 → AI 厂商）")
     if not base:
         raise RuntimeError("未配置接口地址（设置页 → AI 厂商）")
-    body = json.dumps({"model": model, "messages": messages, "temperature": temperature}).encode()
-    req = urllib.request.Request(base + "/chat/completions", data=body,
+    payload = {"model": model, "messages": messages, "temperature": temperature}
+    if tools:
+        payload["tools"] = tools
+    req = urllib.request.Request(base + "/chat/completions", data=json.dumps(payload).encode(),
                                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         data = json.loads(r.read())
-    return data["choices"][0]["message"]["content"].strip()
+    return data["choices"][0]["message"]
+
+
+def _llm_chat(messages, temperature=0.3, timeout=60):
+    """统一 LLM 通道：OpenAI 兼容协议，按设置里的厂商/BaseURL/Key/模型调用。"""
+    return (_llm_chat_full(messages, temperature=temperature, timeout=timeout).get("content") or "").strip()
 
 
 def llm_models_fetch(provider, base_url=None, key=None):
@@ -1098,6 +1105,135 @@ def enhance_prompt(text, style_id=None, mode="image"):
         return {"ok": False, "error": f"翻译失败：{e}" + ("；" + note if note else "") + "（将按原文提交）"}
 
 
+
+
+# ---------------- 助手 function calling 工具循环 ----------------
+AGENT_TOOLS = [
+    {"type": "function", "function": {
+        "name": "query_queue",
+        "description": "查询 ComfyUI 当前状态：正在执行/排队的任务数、GPU 显存。用户问「状态/队列/现在怎么样」时用。",
+        "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {
+        "name": "search_gallery",
+        "description": "按关键词搜索本地画廊（output 目录）成果文件，返回文件名/类型/时间。用户问「有没有…图/视频」时用。",
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "文件名关键词，空字符串=列出最新"},
+            "limit": {"type": "integer", "description": "返回条数，默认 8，上限 20"}}, "required": ["query"]}}},
+    {"type": "function", "function": {
+        "name": "read_log",
+        "description": "读取应用运行日志（data/app.log）尾部若干行，用于排查错误。",
+        "parameters": {"type": "object", "properties": {
+            "lines": {"type": "integer", "description": "行数，默认 30，上限 200"}}, "required": []}}},
+    {"type": "function", "function": {
+        "name": "launcher",
+        "description": "操作 ComfyUI 启动器。action=status 只查状态；start/stop/restart 会真实启停 ComfyUI（用户明确要求时才用）。",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["status", "start", "stop", "restart"]}}, "required": ["action"]}}},
+    {"type": "function", "function": {
+        "name": "submit_generation",
+        "description": "提交生成任务到 ComfyUI（会占用 GPU）。仅当用户明确要求生成图片/视频时使用；count 上限 4。",
+        "parameters": {"type": "object", "properties": {
+            "prompt": {"type": "string", "description": "画面描述（中文即可，会自动增强为英文）"},
+            "mode": {"type": "string", "enum": ["image", "video"]},
+            "count": {"type": "integer", "description": "张数/条数，默认 1"}},
+            "required": ["prompt"]}}},
+]
+
+
+def _tool_exec(name, args):
+    """执行工具并返回摘要字符串（控制体积，供 LLM 阅读）。"""
+    try:
+        if name == "query_queue":
+            q = COMFY.http("/queue", timeout=5)
+            st = COMFY.probe() or {}
+            dev = (st.get("devices") or [{}])[0]
+            return (f"online={comfy_running()} running={len(q.get('queue_running', []))} "
+                    f"pending={len(q.get('queue_pending', []))} "
+                    f"vram_total_MB={dev.get('vram_total', 0) // (1 << 20)} "
+                    f"vram_free_MB={dev.get('vram_free', 0) // (1 << 20)}")
+        if name == "search_gallery":
+            q = (args.get("query") or "").lower()
+            limit = max(1, min(int(args.get("limit") or 8), 20))
+            items = scan_gallery()
+            if q:
+                items = [i for i in items if q in i.get("name", "").lower() or q in i.get("path", "").lower()]
+            if not items:
+                return "no results"
+            return "; ".join(f"{i.get('name')}|{'video' if i.get('kind') == 'video' else 'image'}|"
+                             f"{i.get('mtime') and ''}{i.get('path')}" for i in items[:limit])
+        if name == "read_log":
+            n = max(1, min(int(args.get("lines") or 30), 200))
+            logp = os.path.join(DATA_DIR, "app.log")
+            if not os.path.isfile(logp):
+                return "(log file not found)"
+            with open(logp, "r", encoding="utf-8", errors="replace") as fh:
+                tail = fh.readlines()[-n:]
+            return "".join(l[-200:] if len(l) > 200 else l for l in tail) or "(empty)"
+        if name == "launcher":
+            action = args.get("action", "status")
+            if action == "status":
+                port = _comfy_port()
+                return f"comfy_running={comfy_running()} port={port}"
+            if action == "stop":
+                return str(comfy_stop())
+            if action == "start":
+                return str(comfy_launch())
+            if action == "restart":
+                r1 = comfy_stop()
+                time.sleep(1)
+                return str(r1) + " -> " + str(comfy_launch())
+            return "unknown action"
+        if name == "submit_generation":
+            prompt = (args.get("prompt") or "").strip()
+            if not prompt:
+                return "error: prompt is required"
+            mode = args.get("mode", "image")
+            count = max(1, min(int(args.get("count") or 1), 4))
+            if mode == "video":
+                wf = next((w for w in list_workflows() if w.get("id") == "h3-t2v"), None)
+                if not wf:
+                    return "error: video workflow not found"
+                res = submit_workflow(wf, times=count, seed=None, overrides={"text": prompt})
+                return str(res.get("msg") or res.get("error") or "submitted")
+            enh = enhance_prompt(prompt)
+            if enh.get("ok"):
+                prompt = enh["english"]
+            wf = BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
+            res = submit_workflow(wf, times=count, seed=None, overrides={"text": prompt})
+            return str(res.get("msg") or res.get("error") or "submitted")
+        return f"unknown tool: {name}"
+    except Exception as e:
+        return f"tool error: {e}"
+
+
+AGENT_SYS = (
+    "你是 ComfyAgent（本地 AI 创作台）的控制台助手。回答用户关于本机生成状态、画廊成果、日志、ComfyUI 启停的问题时，"
+    "必须调用工具获取真实数据，禁止编造。生成类操作只在用户明确要求时执行，count 不超过 4。"
+    "用简短中文回复，把工具返回的关键数字转成人话。"
+)
+
+
+def agent_tool_loop(text, max_rounds=6):
+    """function calling 工具循环。厂商不支持 tools（HTTP 400 等）时抛异常由调用方回落。"""
+    msgs = [{"role": "system", "content": AGENT_SYS}, {"role": "user", "content": text}]
+    trace = []
+    for _ in range(max_rounds):
+        msg = _llm_chat_full(msgs, tools=AGENT_TOOLS, temperature=0.2, timeout=45)
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            return {"reply": (msg.get("content") or "").strip() or "（无回复）", "tool_trace": trace}
+        msgs.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})
+        for tc in calls:
+            fn = (tc.get("function") or {}).get("name", "")
+            try:
+                args = json.loads((tc.get("function") or {}).get("arguments") or "{}")
+            except Exception:
+                args = {}
+            result = _tool_exec(fn, args)
+            trace.append({"tool": fn, "args": args, "summary": str(result)[:160]})
+            msgs.append({"role": "tool", "tool_call_id": tc.get("id"), "content": result})
+    return {"reply": "（工具轮次达到上限，以下是目前掌握的信息）\n" + "\n".join(
+        f"{t2['tool']}: {t2['summary']}" for t2 in trace), "tool_trace": trace}
 
 
 def agent_intent_llm(text):
@@ -1196,6 +1332,12 @@ def agent_execute(text):
         acts.append({"type": "submitted", "prompt_ids": res.get("prompt_ids", [])})
     else:
         if SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key"):
+            try:
+                r = agent_tool_loop(t)
+                if r and r.get("reply"):
+                    return {"reply": r["reply"], "actions": acts, "tool_trace": r.get("tool_trace") or []}
+            except Exception:
+                pass  # 厂商不支持 tools / 网络失败 → 回落旧意图链路
             try:
                 raw = agent_intent_llm(t)
                 raw = raw.strip().strip("`")
