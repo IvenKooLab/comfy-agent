@@ -66,7 +66,7 @@ DEFAULT_SETTINGS = {
     "llm_base_url": "https://open.bigmodel.cn/api/paas/v4",
     "llm_key": "",
     "llm_model": "glm-4-flash",
-    "comfy_watchdog": True,
+    "comfy_watchdog": False,  # 默认关闭：避免用户手动停 ComfyUI（如打游戏）时被自动拉起抢 GPU
     "comfy_autorequeue": True,
     "batch_auto_retry": 2,
     "lan_access": False,
@@ -1770,7 +1770,7 @@ def watchdog_loop():
         was = _watch["last_online"]
         if was is None:
             _watch["last_online"] = online
-            if not online and not startup_probed and SETTINGS.get("comfy_watchdog", True):
+            if not online and not startup_probed and SETTINGS.get("comfy_watchdog", False):
                 # 应用启动时 ComfyUI 就不在线 → 直接自动拉起（补盲区）
                 startup_probed = True
                 _watch["last_restart"] = time.time()
@@ -1785,7 +1785,7 @@ def watchdog_loop():
                 still_down = COMFY.probe() is None
             except Exception:
                 pass
-            if still_down and time.time() - _watch["last_restart"] > 180 and SETTINGS.get("comfy_watchdog", True):
+            if still_down and time.time() - _watch["last_restart"] > 180 and SETTINGS.get("comfy_watchdog", False):
                 _watch["last_restart"] = time.time()
                 r = comfy_launch()
                 HUB.publish({"type": "watchdog", "data": {"phase": "restart", "ok": r.get("ok"), "msg": r.get("msg", r.get("error", ""))}})
