@@ -1209,6 +1209,7 @@ def _tool_exec(name, args):
 AGENT_SYS = (
     "你是 ComfyAgent（本地 AI 创作台）的控制台助手。回答用户关于本机生成状态、画廊成果、日志、ComfyUI 启停的问题时，"
     "必须调用工具获取真实数据，禁止编造。生成类操作只在用户明确要求时执行，count 不超过 4。"
+    "工具选择规则：问状态/队列→query_queue；问画廊/成果/找图找视频→search_gallery；问报错/日志→read_log；问 ComfyUI 开关→launcher；明确要生成→submit_generation。"
     "用简短中文回复，把工具返回的关键数字转成人话。"
 )
 
@@ -1306,8 +1307,12 @@ def agent_execute(text):
             re.match(r"^打开\s*(最新|画廊|知识库|工作流|任务)?", t).group(1) or "画廊", "gallery")
         acts.append({"type": "open", "view": view})
         reply = f"已切换到{view}。"
-    elif re.search(r"^(画|生成|来)\s*(一张|一幅)?\s*(?:图|图片)?\s*[:：]?\s*(.+)", t):
-        prompt_text = re.search(r"^(?:画|生成|来)\s*(?:一张|一幅)?\s*(?:图|图片)?\s*[:：]?\s*(.+)", t).group(1).strip()
+    elif re.search(r"^(?:画|生成|来)\s*[:：]\s*(.+)", t) or \
+            re.search(r"^(?:画|生成|来)\s*(?:一张|一幅|一个|张|个)\s*(?:图|图片)?\s*[:：]?\s*(.+)", t):
+        # 显式生成形态才走规则层：带冒号（画：xxx）或带量词（来一张 xxx）；
+        # 其余（画廊里…/来源…/来看看…）落到 LLM 工具循环，由模型判断是否真要生成
+        prompt_text = (re.search(r"^(?:画|生成|来)\s*[:：]\s*(.+)", t) or
+                       re.search(r"^(?:画|生成|来)\s*(?:一张|一幅|一个|张|个)\s*(?:图|图片)?\s*[:：]?\s*(.+)", t)).group(1).strip()
         size = None
         ms = re.search(r"(\d{3,4})\s*[xX×]\s*(\d{3,4})", prompt_text)
         if ms:
