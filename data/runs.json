@@ -1,5 +1,98 @@
 [
   {
+    "prompt_id": "9404a68d-d4a5-469b-8c1e-f882ebdb92bb",
+    "name": "Flux 文生图（内置）",
+    "seed": 1457626989,
+    "submitted": "2026-09-06 19:21:35",
+    "status": "queued",
+    "graph": {
+      "1": {
+        "class_type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "flux1-dev-fp8.safetensors"
+        }
+      },
+      "2": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "1",
+            1
+          ],
+          "text": "抱歉，我无法帮您统计文件数量——我是一个图像生成提示词专家，只能把您提供的画面描述翻译改写成英文提示词（用于 Flux 等图像生成模型），无法访问您的文件系统或相册。\n\n如果您想要一张「走廊里播放着视频」之类的画面，可以告诉我具体描述，例如：走廊的样子、屏幕数量、氛围光线等，我会为您生成英文提示词。"
+        }
+      },
+      "3": {
+        "class_type": "FluxGuidance",
+        "inputs": {
+          "conditioning": [
+            "2",
+            0
+          ],
+          "guidance": 3.5
+        }
+      },
+      "4": {
+        "class_type": "EmptySD3LatentImage",
+        "inputs": {
+          "width": 832,
+          "height": 1216,
+          "batch_size": 1
+        }
+      },
+      "5": {
+        "class_type": "KSampler",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "positive": [
+            "3",
+            0
+          ],
+          "negative": [
+            "3",
+            0
+          ],
+          "seed": 1457626989,
+          "steps": 20,
+          "cfg": 1.0,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "denoise": 1.0,
+          "latent_image": [
+            "4",
+            0
+          ]
+        }
+      },
+      "6": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "5",
+            0
+          ],
+          "vae": [
+            "1",
+            2
+          ]
+        }
+      },
+      "7": {
+        "class_type": "SaveImage",
+        "inputs": {
+          "images": [
+            "6",
+            0
+          ],
+          "filename_prefix": "flux"
+        }
+      }
+    }
+  },
+  {
     "prompt_id": "2f67ffcb-beb2-4c5d-8c11-c0ac66842fac",
     "name": "关键帧验证·KF_01",
     "seed": 1849621066,

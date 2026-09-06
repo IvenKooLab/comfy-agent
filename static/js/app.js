@@ -177,7 +177,7 @@ function initCmdk() {
   const close = () => { box.hidden = true; };
   const buildItems = async () => {
     const items = [];
-    const labels = { create: t("cmd.goto.create"), gallery: t("cmd.goto.gallery"), editor: t("cmd.goto.editor"), runs: t("cmd.goto.runs"), obsidian: t("cmd.goto.obsidian"), agent: t("cmd.goto.agent"), settings: t("cmd.goto.settings") };
+    const labels = { create: t("cmd.goto.create"), gallery: t("cmd.goto.gallery"), editor: t("cmd.goto.editor"), templates: t("cmd.goto.templates"), help: t("cmd.goto.help"), runs: t("cmd.goto.runs"), pipeline: t("cmd.goto.pipeline"), launcher: t("cmd.goto.launcher"), obsidian: t("cmd.goto.obsidian"), agent: t("cmd.goto.agent"), settings: t("cmd.goto.settings") };
     for (const v of views) items.push({ label: labels[v], key: t("cmd.pages"), run: () => goto(v) });
     try {
       const r = await api("/api/workflows");

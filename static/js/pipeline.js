@@ -105,7 +105,7 @@ async function refresh() {
     el.addEventListener("click", async () => { await openBatch(b.id); });
     box.appendChild(el);
   }
-  if (cur) await renderBatch();
+  if (cur) renderItems();  // 轻量刷新当前批次镜头行（原 renderBatch 已并入 renderItems）
 }
 
 async function openBatch(id) {
