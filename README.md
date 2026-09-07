@@ -37,6 +37,27 @@
 
 前提：本机 ComfyUI（默认 127.0.0.1:8188）；ffmpeg 在 PATH（视频海报帧）；WebView2 运行时。
 
+## MCP Server（外部 Agent 接入）
+
+内置零依赖 MCP 服务器（stdio + JSON-RPC 2.0），把本机 ComfyAgent 暴露给任何 MCP host（ZCode / Claude Desktop / Cursor 等）：
+
+| 工具 | 说明 |
+|---|---|
+| `query_status` | 查询 ComfyUI 在线状态、执行/排队数、显存 |
+| `submit_generation` | 提交生成（image=Flux / video=H3，中文自动增强，count≤4） |
+| `list_workflows` | 工作流列表（含草稿/成片档位与耗时） |
+| `search_gallery` | 搜索本地画廊成果 |
+
+配置（mcpServers 片段，需要 ComfyAgent 正在运行）：
+
+```json
+"comfyagent": {
+  "command": "python",
+  "args": ["<repo路径>/mcp_server.py"],
+  "env": { "COMFYAGENT_URL": "http://127.0.0.1:8190" }
+}
+```
+
 ## 开发
 
 ```bash

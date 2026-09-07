@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.1（2026-09-04）— MCP Server 接口 + 看门狗默认关闭
+
+- **MCP Server**（`mcp_server.py`，stdio + JSON-RPC 2.0，零依赖）：外部 Agent/编辑器（ZCode/Claude Desktop/Cursor）可直连本机 ComfyAgent——工具：query_status / submit_generation / list_workflows / search_gallery
+- 新增 `POST /api/generate`（生成提交的干净入口，助手工具循环与 MCP 共用）
+- **看门狗默认关闭**：用户手动停 ComfyUI（如游戏时段）不再被自动拉起抢 GPU（默认值 + fallback + 存量配置三处关闭）
+- bug 修复：「画」正则缺词边界致「画廊里…」误提交生成（事故级）；产线切页 renderBatch 未定义 rejection；命令面板 4 页 undefined 标签 + 搜索必空白
+
 ## v1.5.0（2026-09-03）— 助手 Function Calling 工具循环
 
 - **助手接入 function calling**：5 个内置工具——查任务队列 / 搜索画廊 / 读运行日志 / 操作启动器（status·start·stop·restart）/ 提交生成（图片/视频，count≤4）
