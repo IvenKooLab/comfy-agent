@@ -1140,6 +1140,30 @@ AGENT_TOOLS = [
 ]
 
 
+def generate_submit(args):
+    """提交生成（图片=Flux / 视频=H3）。中文 prompt 自动增强英文。返回 dict（含 prompt_ids）。"""
+    prompt = (args.get("prompt") or "").strip()
+    if not prompt:
+        return {"ok": False, "error": "prompt is required"}
+    mode = args.get("mode", "image")
+    count = max(1, min(int(args.get("count") or 1), 4))
+    seed = args.get("seed")
+    try:
+        seed = int(seed) if seed is not None else None
+    except (TypeError, ValueError):
+        seed = None
+    if mode == "video":
+        wf = next((w for w in list_workflows() if w.get("id") == "h3-t2v"), None)
+        if not wf:
+            return {"ok": False, "error": "video workflow not found"}
+        return submit_workflow(wf, times=count, seed=seed, overrides={"text": prompt})
+    enh = enhance_prompt(prompt)
+    if enh.get("ok") and enh.get("english"):
+        prompt = enh["english"]
+    wf = BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
+    return submit_workflow(wf, times=count, seed=seed, overrides={"text": prompt})
+
+
 def _tool_exec(name, args):
     """执行工具并返回摘要字符串（控制体积，供 LLM 阅读）。"""
     try:
@@ -1184,23 +1208,7 @@ def _tool_exec(name, args):
                 return str(r1) + " -> " + str(comfy_launch())
             return "unknown action"
         if name == "submit_generation":
-            prompt = (args.get("prompt") or "").strip()
-            if not prompt:
-                return "error: prompt is required"
-            mode = args.get("mode", "image")
-            count = max(1, min(int(args.get("count") or 1), 4))
-            if mode == "video":
-                wf = next((w for w in list_workflows() if w.get("id") == "h3-t2v"), None)
-                if not wf:
-                    return "error: video workflow not found"
-                res = submit_workflow(wf, times=count, seed=None, overrides={"text": prompt})
-                return str(res.get("msg") or res.get("error") or "submitted")
-            enh = enhance_prompt(prompt)
-            if enh.get("ok"):
-                prompt = enh["english"]
-            wf = BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
-            res = submit_workflow(wf, times=count, seed=None, overrides={"text": prompt})
-            return str(res.get("msg") or res.get("error") or "submitted")
+            return str(generate_submit(args))
         return f"unknown tool: {name}"
     except Exception as e:
         return f"tool error: {e}"
@@ -2874,6 +2882,8 @@ class Handler(BaseHTTPRequestHandler):
                                                  mode=body.get("mode", "image")))
         if path == "/api/agent" and method == "POST":
             return self.send_json({"ok": True, **agent_execute(body.get("text", ""))})
+        if path == "/api/generate" and method == "POST":
+            return self.send_json(generate_submit(body))
 
         return self.send_json({"ok": False, "error": "unknown endpoint " + path}, 404)
 
