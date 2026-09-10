@@ -440,6 +440,12 @@ function initSettings() {
       ? tf("set.test.ok", dev?.name || "?", Math.round((dev?.vram_total || 0) / 1048576))
       : "✗ Offline (is ComfyUI running?)";
   });
+  $("#s-openui").addEventListener("click", async () => {
+    const r = await api("/api/settings");
+    const url = (r.settings || {}).comfy_url;
+    if (!url) { toast(t("st.testing"), "err"); return; }
+    window.open(url, "_blank");
+  });
 }
 async function loadForm() {
   const r = await api("/api/settings");

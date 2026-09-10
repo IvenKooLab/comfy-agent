@@ -114,6 +114,7 @@ const I18N = {
   "settings.llm.pull": ["↻ 拉取模型", "↻ Fetch models"],
   "settings.lang": ["界面语言 Language", "Interface language"],
   "settings.save": ["保存设置", "Save settings"],
+  "settings.openui": ["⧉ 打开 ComfyUI 界面", "⧉ Open ComfyUI UI"],
   "settings.test": ["测试 ComfyUI 连接", "Test ComfyUI connection"],
   "settings.gitee.repo": ["Gitee 仓库（owner/repo，用于检查更新）", "Gitee repo (owner/repo, for update check)"],
   "settings.gitee.token": ["Gitee 私人令牌（私有仓检查更新用，选填）", "Gitee token (for private repos, optional)"],

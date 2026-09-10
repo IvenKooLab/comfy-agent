@@ -34,6 +34,7 @@ const HELP_EN = [
     { q: "How do I link / unlink?", a: "Link: drag from a node's right dot to another node's left dot.\nUnlink: click a connected left dot to disconnect.\nWhile dragging you can adjust the path freely." },
     { q: "How do I edit params?", a: "Click a node card → the inspector on the right lists all params → edit in place.\nSeed params have a 🎲 button to randomize.\nRemember to click \"Save\" after editing." },
     { q: "How do I import a ComfyUI workflow?", a: "Export API-format JSON from ComfyUI → click \"Import\" in the editor → pick the JSON file.\nYou can also import a PNG directly (embedded workflow is extracted automatically).\nReview the params, then \"Save\" into the library." },
+    { q: "What is the \"Upload…\" button on node params?", a: "File params like LoadImage/LoadVideo get an Upload button to send local images/videos/audio straight into the param (files land in ComfyUI's input dir, same name overwrites).\nE.g. SCAIL-2's reference image and driving video can be uploaded right in the inspector without leaving ComfyAgent." },
     { q: "What does a red node border mean?", a: "That node type doesn't exist in the current ComfyUI (a custom-node pack may be missing).\nInstall the matching custom nodes before running." },
   ]},
   { mod: "◷ Jobs", items: [
@@ -58,7 +59,9 @@ const HELP_EN = [
     { q: "What does \"Check updates\" do?", a: "It queries the remote git repo and computes how many commits you're behind.\nIf behind, \"Update\" stashes local changes → pull → restore → prompts you to restart." },
     { q: "What does \"Models\" show?", a: "It scans ComfyUI's models folders: checkpoints/loras/vae/upscale/controlnet, with counts and sizes.\nClick to expand the file list." },
     { q: "What is the \"Models\" page (page 9)?", a: "The model hub: the top half shows recommended suites (e.g. the SCAIL-2 character-animation bundle) with per-file install status — click Download for anything missing (built-in hf-mirror direct links, resumable, live progress bars). The bottom half browses local model files by directory with search and a one-click open-folder.\nOpening a new template that requires missing models will prompt you and jump here." },
+    { q: "A template says models are missing — now what?", a: "If a template references models you don't have, a dialog lists them; click \"Go to Models\" to jump to page 9 and download the matching suite in one click. You can still load the template first and install later." },
     { q: "How do I change launch args?", a: "Edit the args in the \"Launch config\" card (space separated) and save; applies on next start.\nDefaults are a crash-optimized set (--reserve-vram 2.5 etc.)." },
+    { q: "How do I open the native ComfyUI web UI?", a: "Settings → Connection & dirs → the \"⧉ Open ComfyUI UI\" button opens your configured ComfyUI address in a new browser tab (workflow graph, official templates and node management live there).\nChange the address itself in the \"ComfyUI URL\" field on the same page." },
   ]},
   { mod: "◈ Vault", items: [
     { q: "How do I archive images to Obsidian?", a: "Select images in the gallery → \"Archive\" → a Markdown note is created under ComfyAgent/notes in your vault (with embedded images and a params table).\nBatch archive works the same, merging multiple files into one note." },
@@ -108,6 +111,7 @@ const HELP = [
     { q: "怎么连线/断线？", a: "连线：从节点右侧圆点拖到另一节点左侧圆点。\n断线：点击已连接的左侧圆点即可断开。\n连线时按住拖动可调整路径。" },
     { q: "怎么编辑参数？", a: "点击节点卡片 → 右侧检查器显示所有参数 → 直接编辑。\n种子参数带🎲按钮可随机化。\n修改后记得点「保存」。" },
     { q: "怎么导入 ComfyUI 的工作流？", a: "在 ComfyUI 导出 API 格式 JSON → 点编辑器「导入」→ 选 JSON 文件。\n也可以直接导入 PNG（自动提取内嵌工作流）。\n导入后检查参数，点「保存」入库。" },
+    { q: "节点参数里的「上传…」按钮是什么？", a: "LoadImage/LoadVideo 这类文件参数旁可以直接上传本地图片/视频/音频，传完自动填入参数（文件落在 ComfyUI 的 input 目录，同名覆盖）。\n例如 SCAIL-2 的参考图和驱动视频就在检查器里直接传，不用离开 ComfyAgent。" },
     { q: "节点有红色边框是什么意思？", a: "表示该节点类型在当前 ComfyUI 中不存在（可能缺少自定义节点包）。\n需要安装对应的自定义节点后才能运行。" },
   ]},
   { mod: "◷ 任务页", items: [
@@ -132,7 +136,9 @@ const HELP = [
     { q: "「检查更新」做什么？", a: "从远端 git 仓库拉取最新代码，计算本地落后多少提交。\n如果落后，点「一键更新」自动 stash 本地改动 → pull → 恢复 → 提示重启。" },
     { q: "「模型管理」显示什么？", a: "自动扫描 ComfyUI 的 models 目录：checkpoints/loras/vae/upscale/controlnet，显示数量和体积。\n点击可展开文件列表。" },
     { q: "「模型」页（第 9 页）是做什么的？", a: "模型管理中心：上半部分是推荐套件（如 SCAIL-2 角色动画全家桶），列出套件内每个模型文件的安装状态，缺的直接点「下载」（内置 hf-mirror 直连，断点续传，进度条实时）；下半部分按目录分类浏览本地模型文件，支持搜索和一键打开文件夹。\n从模板库打开新模板时，如果缺模型会自动弹出提示并可跳转来下载。" },
+    { q: "打开模板提示缺模型怎么办？", a: "点模板时若工作流引用的模型本地没有，会弹出缺失清单，点「去模型页下载」直达第 9 页对应套件一键下载；也可以选继续载入稍后再装。" },
     { q: "启动参数怎么改？", a: "「启动配置」卡片中编辑启动参数（空格分隔），保存后下次启动生效。\n默认参数是防炸优化版（--reserve-vram 2.5 等）。" },
+    { q: "怎么打开原生 ComfyUI 网页？", a: "「设置」页 → 连接与目录 → 「⧉ 打开 ComfyUI 界面」按钮，会用配置的 ComfyUI 地址新开浏览器标签页（工作流编辑、官方模板、节点开关都在那边）。\n地址本身可在同页「ComfyUI 地址」一栏修改。" },
   ]},
   { mod: "◈ 知识库", items: [
     { q: "怎么把图片归档到 Obsidian？", a: "画廊中选中图片 → 点「归档到知识库」→ 自动在 Obsidian vault 的 ComfyAgent/notes 下创建 Markdown 笔记（含嵌入图片和参数表格）。\n批量归档同理，多个文件合并为一篇笔记。" },
