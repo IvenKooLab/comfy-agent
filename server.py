@@ -645,16 +645,204 @@ def workflow_path(wid):
 LINK_TYPE_TOKENS = {"MODEL", "CLIP", "VAE", "CONDITIONING", "LATENT", "IMAGE", "MASK", "CONTROL_NET",
                     "SAMPLER", "SIGMAS", "NOISE", "GUIDER", "LATENT_KEYFRAME"}
 
+# 前端专属节点：不进执行图
+_SKIP_UI_TYPES = {"MarkdownNote", "Note"}
+
+_IN_BORDER, _OUT_BORDER = -10, -20  # 子图输入/输出虚拟节点 id（官方约定）
+_INNER_LNK_BASE, _BRIDGE_LNK_BASE = 100000, 200000  # 展开后内部连线/桥接连线的新 id 基址
+
+
+def _flatten_subgraphs(ui):
+    """展开 definitions.subgraphs 的引用节点为扁平执行图（单层；嵌套子图抛错）。
+    数据流：子图输入槽的外部值 → 内部终点（fan-out 复制）；子图输出槽 → 主图消费者
+    （UUID 链式相连时递归解析到最终内部源）。widget 值留在子图内部 Primitive 节点上的
+    官方模板风格：widget 绑定连线忽略，Primitive 用自己的 widgets_values。"""
+    subdefs = {s.get("id"): s for s in (ui.get("definitions") or {}).get("subgraphs") or []}
+    if not subdefs:
+        return ui
+
+    def norm(l):
+        # 主图 links 为 list [id,o,os,t,ts,type]；子图 links 为 dict
+        if isinstance(l, dict):
+            return [l["id"], l.get("origin_id"), l.get("origin_slot", 0),
+                    l.get("target_id"), l.get("target_slot", 0), l.get("type", "*")]
+        return list(l)
+
+    instances = {}  # uuid节点id -> 实例信息
+    out_nodes, out_links = [], []
+    pending = []  # (uuid_id, in_name, 终点id_str, 终点slot, type)
+    max_lid = max([l[0] for l in (ui.get("links") or [])] or [0])
+
+    for n in ui.get("nodes") or []:
+        if n.get("type") in _SKIP_UI_TYPES:
+            continue
+        if n.get("type") in subdefs:
+            sub = subdefs[n.get("type")]
+            inner = [x for x in sub.get("nodes") or [] if x.get("type") not in _SKIP_UI_TYPES]
+            if any(x.get("type") in subdefs for x in inner):
+                raise ValueError("嵌套子图暂不支持，请用 ComfyUI 前端导出 API 格式")
+            instances[n.get("id")] = {
+                "pref": f"{n.get('id')}x", "sub": sub, "inner": inner,
+                "in_by_name": {s.get("name"): s for s in sub.get("inputs") or []},
+                "out_by_idx": sub.get("outputs") or [],
+                "links": {norm(l)[0]: norm(l) for l in sub.get("links") or []},
+                "slot_default": {},  # 槽名 -> 从 widget 绑定端点提取的当前值
+            }
+        else:
+            out_nodes.append(n)
+
+    # 输出槽解析：UUID(id, slot) -> 最终实体 (id_str, slot)
+    def resolve_out(nid, slot):
+        inst = instances.get(nid)
+        if not inst:
+            return str(nid), slot
+        for L in (inst["out_by_idx"][slot].get("linkIds") or [] if slot < len(inst["out_by_idx"]) else []):
+            l = inst["links"].get(L)
+            if l and l[1] not in (_IN_BORDER, _OUT_BORDER):
+                return f"{inst['pref']}{l[1]}", l[2]
+        return None
+
+    def _is_widget_bind(l, inst):
+        """子图输入槽 -> 内部节点 widget 的穿透线（值在节点自己的 widgets_values 上）。
+        UI json 把 widget 槽也列在 inputs 数组里（带 widget 标记），据此精确区分。"""
+        tgt = next((x for x in inst["inner"] if x.get("id") == l[3]), None)
+        if not tgt:
+            return True
+        t_ins = tgt.get("inputs") or []
+        if l[4] >= len(t_ins):
+            return True
+        return "widget" in t_ins[l[4]]
+
+    _PRIM_BY_TYPE = {"INT": "PrimitiveInt", "FLOAT": "PrimitiveFloat", "BOOLEAN": "PrimitiveBoolean", "STRING": "PrimitiveString"}
+
+    for inst in instances.values():
+        pref = inst["pref"]
+        # 槽默认值：widget 绑定端点承载了槽的当前值（UI 里外层 widget 是它的镜像）
+        for s in (inst["sub"].get("inputs") or []):
+            for L in s.get("linkIds") or []:
+                l = inst["links"].get(L)
+                if not l or l[1] != _IN_BORDER or not _is_widget_bind(l, inst):
+                    continue
+                t = next((x for x in inst["inner"] if x.get("id") == l[3]), None)
+                if not t or not t.get("widgets_values"):
+                    continue
+                widx = l[4] - sum(1 for i in (t.get("inputs") or [])[:l[4]] if "widget" not in i)
+                if 0 <= widx < len(t["widgets_values"]):
+                    inst["slot_default"][s.get("name")] = t["widgets_values"][widx]
+                break
+        # widget 绑定线的 id 集合：引用直接清 None，让 schema 消费 widgets_values
+        wbound = {_INNER_LNK_BASE + l[0] for l in inst["links"].values() if l[1] == _IN_BORDER and _is_widget_bind(l, inst)}
+        for x in inst["inner"]:
+            c = dict(x)
+            c["id"] = f"{pref}{x.get('id')}"
+            for inp in c.get("inputs") or []:
+                if inp.get("link") is None:
+                    continue
+                newl = _INNER_LNK_BASE + inp["link"]
+                inp["link"] = None if newl in wbound else newl
+            out_nodes.append(c)
+        for l in inst["links"].values():
+            if l[1] == _IN_BORDER:
+                if _is_widget_bind(l, inst):
+                    continue  # widget 绑定连线：值在节点 widgets_values 上
+                s_in = next((s for s in (inst["sub"].get("inputs") or []) if s.get("linkIds") and l[0] in s["linkIds"]), None)
+                if s_in:
+                    pending.append((l, s_in, f"{pref}{l[3]}", l[4], l[5]))
+                continue
+            if l[3] == _OUT_BORDER:
+                continue
+            nid = _INNER_LNK_BASE + l[0]
+            out_links.append([nid, f"{pref}{l[1]}", l[2], f"{pref}{l[3]}", l[4], l[5]])
+
+    # 主图连线：实体→实体保留；目标/源头是 UUID 的转桥接
+    fed_slots = set()  # (uuid_id, 槽名)：已被主图连线/widget 值喂到的槽
+    for l in ui.get("links") or []:
+        src_is_uuid = l[1] in instances
+        tgt_is_uuid = l[3] in instances
+        if not src_is_uuid and not tgt_is_uuid:
+            out_links.append(list(l))
+            continue
+        if tgt_is_uuid:
+            u_in = next((i for i in next(n for n in ui["nodes"] if n.get("id") == l[3]).get("inputs") or []
+                         if i.get("link") == l[0]), None)
+            if u_in:
+                fed_slots.add((l[3], u_in.get("name")))
+                s, sslot = (resolve_out(l[1], l[2]) if src_is_uuid else (str(l[1]), l[2]))
+                if s is None:
+                    continue
+                # 找到该输入槽对应的内部终点
+                inst = instances[l[3]]
+                s_in = inst["in_by_name"].get(u_in.get("name"))
+                for L in (s_in or {}).get("linkIds") or []:
+                    il = inst["links"].get(L)
+                    if not il or il[1] != _IN_BORDER:
+                        continue
+                    if _is_widget_bind(il, inst):
+                        continue
+                    max_lid += 1
+                    tid = f"{inst['pref']}{il[3]}"
+                    out_links.append([max_lid, s, sslot, tid, il[4], l[5] or il[5]])
+                    consumer = next((n for n in out_nodes if n.get("id") == tid), None)
+                    if consumer and (consumer.get("inputs") or []) and il[4] < len(consumer["inputs"]):
+                        consumer["inputs"][il[4]]["link"] = max_lid
+                continue
+        # 源是 UUID、目标是实体
+        s = resolve_out(l[1], l[2])
+        if s is None:
+            continue
+        max_lid += 1
+        out_links.append([max_lid, s[0], s[1], l[3], l[4], l[5]])
+        consumer = next((n for n in out_nodes if str(n.get("id")) == str(l[3])), None)
+        if consumer and (consumer.get("inputs") or []) and l[4] < len(consumer["inputs"]):
+            consumer["inputs"][l[4]]["link"] = max_lid
+
+    # 未被主图连线喂到的槽：其数据穿透端点改由 Primitive 节点承载槽默认值
+    for uuid_id, inst in instances.items():
+        pref = inst["pref"]
+        for s in (inst["sub"].get("inputs") or []):
+            sname = s.get("name")
+            if (uuid_id, sname) in fed_slots or sname not in inst["slot_default"]:
+                continue
+            # 只为真正有数据穿透端点的槽生成 Primitive（纯 widget 端点的槽值已在内部节点上）
+            data_tgts = [L for L in s.get("linkIds") or []
+                         if (lambda l: l and l[1] == _IN_BORDER and not _is_widget_bind(l, inst))(inst["links"].get(L))]
+            if not data_tgts:
+                continue
+            ptype = _PRIM_BY_TYPE.get(s.get("type"))
+            if not ptype:
+                continue
+            pid = f"{pref}s_{sname}"
+            out_nodes.append({"id": pid, "type": ptype, "inputs": [],
+                              "widgets_values": [inst["slot_default"][sname]]})
+            for L in s.get("linkIds") or []:
+                l = inst["links"].get(L)
+                if not l or l[1] != _IN_BORDER or _is_widget_bind(l, inst):
+                    continue
+                max_lid += 1
+                tid = f"{pref}{l[3]}"
+                out_links.append([max_lid, pid, 0, tid, l[4], s.get("type")])
+                consumer = next((n for n in out_nodes if n.get("id") == tid), None)
+                if consumer and (consumer.get("inputs") or []) and l[4] < len(consumer["inputs"]):
+                    consumer["inputs"][l[4]]["link"] = max_lid
+
+    # 未被主图连线覆盖的 pending（理论上主图连线已消费；此处兜底跳过）
+    return {"nodes": out_nodes, "links": out_links}
+
 
 def convert_ui_to_api(ui, object_info):
-    """ComfyUI 前端导出的 UI 格式 -> API(prompt) 格式。启发式映射 widgets_values。"""
+    """ComfyUI 前端导出的 UI 格式 -> API(prompt) 格式。启发式映射 widgets_values。
+    支持 definitions.subgraphs 子图自动展开（官方 SCAIL-2 等新模板）。"""
     if not isinstance(ui, dict) or "nodes" not in ui:
         raise ValueError("不是 ComfyUI UI 格式（缺少 nodes）")
+    if (ui.get("definitions") or {}).get("subgraphs"):
+        ui = _flatten_subgraphs(ui)
     links = {l[0]: l for l in ui.get("links", [])}
     warnings = []
     api = {}
     for node in ui["nodes"]:
         ntype = node.get("type", "")
+        if ntype in _SKIP_UI_TYPES:
+            continue
         nid = str(node.get("id"))
         schema = (object_info or {}).get(ntype)
         ins_def = {}
