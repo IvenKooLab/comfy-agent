@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.2（2026-09-10）— 子图模板直连（SCAIL-2 就绪）
+
+- **模板库支持 ComfyUI subgraph 自动展开**：官方 2026 年 6 月起新模板（SCAIL-2 角色动画/替换、SAM3 分割等）用子图封装，此前一键载入会失败——现在转换器自动展开子图为 API 执行图：输入槽桥接（fan-out 复制）、UUID 链级联解析、widget 绑定线识别、无外部源的数据穿透自动生成 Primitive 节点承载默认值
+- 跳过 MarkdownNote 等前端专属节点，不再污染 API 提交图
+- 新增 `tests/test_subgraph.py`（5 单测）；官方 SCAIL-2 int8 模板（102 节点）离线结构断言全绿
+- 用法：模板库搜 "scail" → 载入 → ComfyUI 里换上自己的参考图+驱动视频。模型清单见官方模板说明（int8 主模型 15.5G + umt5 6.3G + SAM3 1.6G + VAE/LoRA），fp16 主模型 30G 需 24G+ 显存，16-22G 卡用 int8
+
 ## v1.5.1（2026-09-04）— MCP Server 接口 + 看门狗默认关闭
 
 - **MCP Server**（`mcp_server.py`，stdio + JSON-RPC 2.0，零依赖）：外部 Agent/编辑器（ZCode/Claude Desktop/Cursor）可直连本机 ComfyAgent——工具：query_status / submit_generation / list_workflows / search_gallery
