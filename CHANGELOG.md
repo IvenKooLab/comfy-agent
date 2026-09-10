@@ -2,8 +2,10 @@
 
 ## v1.5.3（2026-09-10）— 模型管理中心
 
+- **设置页新增「⧉ 打开 ComfyUI 界面」按钮**：一键新开原生 ComfyUI 网页标签（地址跟随设置）
 - **新增「模型」页（左侧第 9 菜单，快捷键 9）**：模型不再进 git，改为「清单内置 + 一键下载」——上半部分是推荐套件卡片（首发内置 SCAIL-2 角色动画 6 件套 / MiniMax H3 产线状态展示），逐文件显示安装状态，缺失的点「下载」即走内置 hf-mirror 直连（断点续传 + 实时进度条）；下半部分按目录分类浏览本地 models 文件（checkpoints/diffusion_models/text_encoders/vae/loras/clip_vision 等 10 类），支持搜索、打开文件夹
 - **模板缺模型自动检测**：从模板库打开新模板时，后端对照本地模型目录检查 UNETLoader/Checkpoint/VAE/CLIP/LoraLoader 等全部加载节点的引用文件，缺失则弹确认框一键跳转模型页下载——「打开新流程 → 确认下载」闭环
+- 帮助页同步最近功能：模型页用法、设置页直达 ComfyUI、编辑器「上传…」按钮、模板缺模型处理（中英各 3 条）
 - 新增 API：`/api/models/scan` `/api/models/presets` `/api/models/download` `/api/models/downloads` `/api/models/open_folder`
 - 新增 `tests/test_models.py` 集成测试（临时实例 + mock ComfyUI + 假模型目录，4 项断言全绿）
 
