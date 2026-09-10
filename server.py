@@ -2387,6 +2387,9 @@ class Handler(BaseHTTPRequestHandler):
     def read_body(self):
         n = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(n) if n else b"{}"
+        self._raw_body = raw  # multipart 透传等二进制场景复用，避免二次读 socket
+        if (self.headers.get("Content-Type") or "").startswith("multipart/"):
+            return {}
         try:
             return json.loads(raw)
         except Exception:
@@ -3005,6 +3008,26 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json({"ok": True, "format": "ui", "ui": data,
                                            "warnings": [f"自动转换失败（{e}），已返回 UI 原格式，请手动转换"]})
             return self.send_json({"ok": True, "format": "api", "api": data})
+
+        if path == "/api/upload_media" and method == "POST":
+            # 透传 multipart 到 ComfyUI /upload/image（视频/图片/音频上传统一入口）。
+            # body 已在 route() 的 read_body 里读入 _raw_body；上限 1GB 防误用。
+            raw = getattr(self, "_raw_body", b"")
+            if not raw or len(raw) > 1024 ** 3:
+                return self.send_json({"ok": False, "error": f"非法的请求体大小 {len(raw)}"}, 400)
+            if COMFY.probe() is None:
+                return self.send_json({"ok": False, "error": "ComfyUI 离线，无法上传"}, 502)
+            try:
+                req = urllib.request.Request(
+                    COMFY.base + "/upload/image?type=input&overwrite=true", data=raw,
+                    headers={"Content-Type": self.headers.get("Content-Type", "multipart/form-data")},
+                    method="POST")
+                with urllib.request.urlopen(req, timeout=600) as r:
+                    return self.send_json(json.loads(r.read()))
+            except urllib.error.HTTPError as e:
+                return self.send_json({"ok": False, "error": f"上传被 ComfyUI 拒绝（{e.code}）"}, 502)
+            except Exception as e:
+                return self.send_json({"ok": False, "error": str(e)[:200]}, 502)
 
         if path == "/api/image_to_prompt" and method == "POST":
             return self.send_json(image_to_prompt(body.get("path", "")))

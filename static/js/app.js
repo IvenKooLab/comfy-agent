@@ -14,10 +14,11 @@ export function $(sel) { return document.querySelector(sel); }
 export function $$(sel) { return [...document.querySelectorAll(sel)]; }
 
 export async function api(path, opts = {}) {
+  const isForm = opts.raw === true && opts.body instanceof FormData;
   const r = await fetch(path, {
     method: opts.method || "GET",
-    headers: { "Content-Type": "application/json" },
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    headers: isForm ? {} : { "Content-Type": "application/json" },
+    body: opts.body ? (isForm ? opts.body : JSON.stringify(opts.body)) : undefined,
   });
   const data = await r.json().catch(() => ({ ok: false, error: t("err.parse.fail") }));
   if (!r.ok && !data.error) data.error = `HTTP ${r.status}`;
