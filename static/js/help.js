@@ -57,6 +57,7 @@ const HELP_EN = [
     { q: "What does \"Start ComfyUI\" do?", a: "Starts ComfyUI with your configured args (crash-safe defaults).\nIf ComfyUI is already running you'll be told so.\nAfter startup its log streams below." },
     { q: "What does \"Check updates\" do?", a: "It queries the remote git repo and computes how many commits you're behind.\nIf behind, \"Update\" stashes local changes → pull → restore → prompts you to restart." },
     { q: "What does \"Models\" show?", a: "It scans ComfyUI's models folders: checkpoints/loras/vae/upscale/controlnet, with counts and sizes.\nClick to expand the file list." },
+    { q: "What is the \"Models\" page (page 9)?", a: "The model hub: the top half shows recommended suites (e.g. the SCAIL-2 character-animation bundle) with per-file install status — click Download for anything missing (built-in hf-mirror direct links, resumable, live progress bars). The bottom half browses local model files by directory with search and a one-click open-folder.\nOpening a new template that requires missing models will prompt you and jump here." },
     { q: "How do I change launch args?", a: "Edit the args in the \"Launch config\" card (space separated) and save; applies on next start.\nDefaults are a crash-optimized set (--reserve-vram 2.5 etc.)." },
   ]},
   { mod: "◈ Vault", items: [
@@ -130,6 +131,7 @@ const HELP = [
     { q: "「启动 ComfyUI」按钮做什么？", a: "用配置的参数启动 ComfyUI（默认 h3_launch.sh 防炸参数）。\n如果 ComfyUI 已在运行则提示。\n启动后日志实时显示在下方。" },
     { q: "「检查更新」做什么？", a: "从远端 git 仓库拉取最新代码，计算本地落后多少提交。\n如果落后，点「一键更新」自动 stash 本地改动 → pull → 恢复 → 提示重启。" },
     { q: "「模型管理」显示什么？", a: "自动扫描 ComfyUI 的 models 目录：checkpoints/loras/vae/upscale/controlnet，显示数量和体积。\n点击可展开文件列表。" },
+    { q: "「模型」页（第 9 页）是做什么的？", a: "模型管理中心：上半部分是推荐套件（如 SCAIL-2 角色动画全家桶），列出套件内每个模型文件的安装状态，缺的直接点「下载」（内置 hf-mirror 直连，断点续传，进度条实时）；下半部分按目录分类浏览本地模型文件，支持搜索和一键打开文件夹。\n从模板库打开新模板时，如果缺模型会自动弹出提示并可跳转来下载。" },
     { q: "启动参数怎么改？", a: "「启动配置」卡片中编辑启动参数（空格分隔），保存后下次启动生效。\n默认参数是防炸优化版（--reserve-vram 2.5 等）。" },
   ]},
   { mod: "◈ 知识库", items: [

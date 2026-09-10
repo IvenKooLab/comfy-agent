@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.3（2026-09-10）— 模型管理中心
+
+- **新增「模型」页（左侧第 9 菜单，快捷键 9）**：模型不再进 git，改为「清单内置 + 一键下载」——上半部分是推荐套件卡片（首发内置 SCAIL-2 角色动画 6 件套 / MiniMax H3 产线状态展示），逐文件显示安装状态，缺失的点「下载」即走内置 hf-mirror 直连（断点续传 + 实时进度条）；下半部分按目录分类浏览本地 models 文件（checkpoints/diffusion_models/text_encoders/vae/loras/clip_vision 等 10 类），支持搜索、打开文件夹
+- **模板缺模型自动检测**：从模板库打开新模板时，后端对照本地模型目录检查 UNETLoader/Checkpoint/VAE/CLIP/LoraLoader 等全部加载节点的引用文件，缺失则弹确认框一键跳转模型页下载——「打开新流程 → 确认下载」闭环
+- 新增 API：`/api/models/scan` `/api/models/presets` `/api/models/download` `/api/models/downloads` `/api/models/open_folder`
+- 新增 `tests/test_models.py` 集成测试（临时实例 + mock ComfyUI + 假模型目录，4 项断言全绿）
+
 ## v1.5.2（2026-09-10）— 子图模板直连（SCAIL-2 就绪）+ 编辑器媒体上传
 
 - **编辑器参数面板支持上传媒体**：LoadImage/LoadVideo/LoadAudio 等文件型参数（COMBO 列表为媒体文件）旁出现「上传…」按钮，图片/视频/音频直接传进 ComfyUI input 目录并自动填入参数——SCAIL-2 的「参考图 + 驱动视频」从此不用离开 ComfyAgent 界面

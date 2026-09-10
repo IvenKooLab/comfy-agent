@@ -2,6 +2,7 @@
 import { $, $$, api, toast, goto } from "./app.js";
 /* 本文件局部变量 t=模板对象，故翻译函数用别名 tr/trf */
 import { t as tr, tf as trf } from "./i18n.js";
+import { warnMissingModels } from "./models.js";
 
 let groups = [];
 let curGroup = localStorage.getItem("tpl_fav_only") === "1" ? "fav" : "all";
@@ -152,6 +153,7 @@ async function openTemplate(t) {
       toast(tr("tpl.uifail"), "err");
     }
     if (r.warnings?.length) toast(r.warnings[0], "err");
+    if (r.missing_models?.length) warnMissingModels(r.missing_models);
     goto("editor");
     document.dispatchEvent(new CustomEvent("templates-import"));
   } finally {

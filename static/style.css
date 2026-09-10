@@ -138,6 +138,13 @@ textarea.input { height: auto; padding: 9px 12px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 [hidden] { display: none !important; }
 .empty { text-align: center; padding: 90px 0; color: var(--text-3); }
+.tbl { border-collapse: collapse; font-size: 12px; }
+.tbl th { text-align: left; color: var(--text-3); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+.tbl td { padding: 6px 10px; border-bottom: 1px solid var(--line-1); color: var(--text-2); }
+.tbl tr:hover td { background: var(--bg-1); }
+.tbl .mono { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+.mdbar { height: 6px; border-radius: 999px; background: var(--bg-1); overflow: hidden; min-width: 120px; }
+.mdbar > div { height: 100%; background: var(--brand, rgba(139,92,246,.9)); transition: width .5s; }
 .empty-ico { font-size: 44px; margin-bottom: 12px; filter: grayscale(.3); }
 
 /* —— 骨架屏 —— */

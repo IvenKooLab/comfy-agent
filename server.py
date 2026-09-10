@@ -2253,6 +2253,165 @@ def tpl_index():
     return read_json_file(TPL_INDEX_CACHE, None)  # 过期缓存兜底
 
 
+# ---------------------------------------------------------------- models (模型管理)
+
+MODEL_SUBDIRS = ["checkpoints", "diffusion_models", "text_encoders", "vae", "loras",
+                 "clip_vision", "clip_projections", "controlnet", "upscale_models", "embeddings"]
+
+
+def models_root():
+    return os.path.join(SETTINGS.get("comfy_dir", ""), "models")
+
+
+def scan_models():
+    """扫描本地 ComfyUI 模型目录：{dir: [{name,size,mtime}]}"""
+    root = models_root()
+    out = {}
+    for d in MODEL_SUBDIRS:
+        p = os.path.join(root, d)
+        items = []
+        if os.path.isdir(p):
+            for fn in sorted(os.listdir(p)):
+                fp = os.path.join(p, fn)
+                if os.path.isfile(fp) and not fn.startswith("put_") and not fn.endswith(".part"):
+                    try:
+                        st = os.stat(fp)
+                        items.append({"name": fn, "size": st.st_size, "mtime": int(st.st_mtime)})
+                    except OSError:
+                        pass
+        out[d] = items
+    return out
+
+
+# 预设套件：清单+下载地址内置（国内直连走 hf-mirror）。url=None 表示随环境提供、无公开下载。
+PRESET_SUITES = [
+    {
+        "id": "scail2",
+        "name": "SCAIL-2 角色动画（智谱 Z.AI）",
+        "desc": "参考图人物 + 驱动视频 → 角色动画 / 角色替换（Wan2.1 14B，int8 量化 22G 卡可跑）",
+        "models": [
+            {"name": "wan2.1_14B_SCAIL_2_int8_convrot.safetensors", "dir": "diffusion_models", "size": 16650000000,
+             "url": "https://hf-mirror.com/Comfy-Org/SCAIL-2/resolve/main/diffusion_models/wan2.1_14B_SCAIL_2_int8_convrot.safetensors"},
+            {"name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors", "dir": "text_encoders", "size": 6273000000,
+             "url": "https://hf-mirror.com/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"},
+            {"name": "sam3.1_multiplex_fp16.safetensors", "dir": "checkpoints", "size": 1745546848,
+             "url": "https://hf-mirror.com/Comfy-Org/sam3.1/resolve/main/checkpoints/sam3.1_multiplex_fp16.safetensors"},
+            {"name": "Wan2_1_VAE_bf16.safetensors", "dir": "vae", "size": 253806278,
+             "url": "https://hf-mirror.com/Kijai/WanVideo_comfy/resolve/main/Wan2_1_VAE_bf16.safetensors"},
+            {"name": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors", "dir": "loras", "size": 738005744,
+             "url": "https://hf-mirror.com/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors"},
+            {"name": "wan2.1_SCAIL_2_DPO_lora_bf16.safetensors", "dir": "loras", "size": 1226936552,
+             "url": "https://hf-mirror.com/Comfy-Org/SCAIL-2/resolve/main/loras/wan2.1_SCAIL_2_DPO_lora_bf16.safetensors"},
+        ],
+    },
+    {
+        "id": "h3t2v",
+        "name": "MiniMax H3 产线（本机内置）",
+        "desc": "t2v/i2v 锁脸 · 双 VAE 原生音频 · 随环境提供，无需下载",
+        "models": [
+            {"name": "minimax_h3_fl2va_pruned_w4a8_mixed.safetensors", "dir": "diffusion_models", "size": 1723713944, "url": None},
+            {"name": "MiniMax-H3-FL2VA-Acc-8Step_comfy.safetensors", "dir": "loras", "size": 1723713944, "url": None},
+            {"name": "minimax_h3_video_vae_fp16.safetensors", "dir": "vae", "size": 0, "url": None},
+            {"name": "minimax_h3_audio_vae_fp32.safetensors", "dir": "vae", "size": 0, "url": None},
+            {"name": "qwen3vl_4b_fp8_scaled.safetensors", "dir": "text_encoders", "size": 0, "url": None},
+        ],
+    },
+]
+
+
+class ModelDownloads:
+    """模型下载任务：每文件一个后台线程，.part 断点续传，进度在内存（重启后 .part 自动续）。"""
+
+    def __init__(self):
+        self.jobs = {}
+        self.lock = threading.Lock()
+
+    def start(self, url, ddir, name):
+        key = f"{ddir}/{name}"
+        with self.lock:
+            j = self.jobs.get(key)
+            if j and j["status"] == "downloading":
+                return j
+            if os.path.isfile(os.path.join(models_root(), ddir, name)):
+                j = {"key": key, "dir": ddir, "name": name, "status": "done", "done": 1, "total": 1, "error": ""}
+            else:
+                j = {"key": key, "dir": ddir, "name": name, "url": url, "status": "downloading",
+                     "done": 0, "total": 0, "error": "", "t0": time.time()}
+            self.jobs[key] = j
+        if j["status"] == "downloading":
+            threading.Thread(target=self._run, args=(j,), daemon=True).start()
+        return j
+
+    def _run(self, job):
+        dest = os.path.join(models_root(), job["dir"], job["name"])
+        part = dest + ".part"
+        try:
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            done = os.path.getsize(part) if os.path.exists(part) else 0
+            with urllib.request.urlopen(urllib.request.Request(job["url"], method="HEAD"), timeout=30) as r:
+                total = int(r.headers.get("Content-Length") or 0)
+            job["total"] = total
+            if total and done >= total:
+                os.replace(part, dest)
+                job["status"] = "done"; job["done"] = total
+                return
+            while done < (total or done + 1):
+                job["done"] = done
+                rq = urllib.request.Request(job["url"], headers={"Range": f"bytes={done}-"})
+                with urllib.request.urlopen(rq, timeout=120) as r, open(part, "ab") as f:
+                    while True:
+                        buf = r.read(512 * 1024)
+                        if not buf:
+                            break
+                        f.write(buf); done += len(buf); job["done"] = done
+            os.replace(part, dest)
+            job["status"] = "done"
+        except Exception as e:
+            job["status"] = "error"
+            job["error"] = str(e)[:200]
+
+    def list(self):
+        return [dict(v) for v in self.jobs.values()]
+
+
+MDL = ModelDownloads()
+
+
+def check_missing_models(api_g):
+    """对照本地 models 目录，检查执行图引用的模型文件是否存在。"""
+    local = set()
+    root = models_root()
+    for d in MODEL_SUBDIRS:
+        p = os.path.join(root, d)
+        if os.path.isdir(p):
+            for fn in os.listdir(p):
+                if os.path.isfile(os.path.join(p, fn)):
+                    local.add(fn.lower())
+    _LOADER_MAP = {
+        "UNETLoader": ("unet_name", "diffusion_models"),
+        "CheckpointLoaderSimple": ("ckpt_name", "checkpoints"),
+        "CheckpointLoader": ("ckpt_name", "checkpoints"),
+        "VAELoader": ("vae_name", "vae"),
+        "CLIPLoader": ("clip_name", "text_encoders"),
+        "DualCLIPLoader": ("clip_name", "text_encoders"),
+        "CLIPVisionLoader": ("clip_name", "clip_vision"),
+        "LoraLoader": ("lora_name", "loras"),
+        "LoraLoaderModelOnly": ("lora_name", "loras"),
+        "ControlNetLoader": ("control_net_name", "controlnet"),
+        "UpscaleModelLoader": ("model_name", "upscale_models"),
+    }
+    missing = []
+    for nid, n in (api_g or {}).items():
+        mapping = _LOADER_MAP.get(n.get("class_type", ""))
+        if not mapping:
+            continue
+        pname, pdir = mapping
+        v = (n.get("inputs") or {}).get(pname)
+        if isinstance(v, str) and v and os.path.basename(v).lower() not in local:
+            missing.append({"node": nid, "param": pname, "file": v, "dir": pdir})
+    return missing
+
+
 # ---------------------------------------------------------------- scenes (场景库)
 
 SCENE_DIR = os.path.join(DATA_DIR, "scenes")
@@ -3003,10 +3162,12 @@ class Handler(BaseHTTPRequestHandler):
             if "nodes" in data and COMFY.probe() is not None:
                 try:
                     api_g, warns = convert_ui_to_api(data, COMFY.object_info())
-                    return self.send_json({"ok": True, "format": "api", "api": api_g, "warnings": warns})
+                    return self.send_json({"ok": True, "format": "api", "api": api_g, "warnings": warns,
+                                           "missing_models": check_missing_models(api_g)})
                 except Exception as e:
                     return self.send_json({"ok": True, "format": "ui", "ui": data,
-                                           "warnings": [f"自动转换失败（{e}），已返回 UI 原格式，请手动转换"]})
+                                           "warnings": [f"自动转换失败（{e}），已返回 UI 原格式，请手动转换"],
+                                           "missing_models": []})
             return self.send_json({"ok": True, "format": "api", "api": data})
 
         if path == "/api/upload_media" and method == "POST":
@@ -3028,6 +3189,37 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": False, "error": f"上传被 ComfyUI 拒绝（{e.code}）"}, 502)
             except Exception as e:
                 return self.send_json({"ok": False, "error": str(e)[:200]}, 502)
+
+        # ---- 模型管理（扫描 / 预设套件 / 下载 / 打开目录）
+        if path == "/api/models/scan":
+            return self.send_json({"ok": True, "root": models_root(), "dirs": scan_models()})
+        if path == "/api/models/presets":
+            local = {f"{d}/{i['name']}" for d, items in scan_models().items() for i in items}
+            suites = []
+            for s in PRESET_SUITES:
+                ms = [{**m, "installed": f"{m['dir']}/{m['name']}" in local} for m in s["models"]]
+                suites.append({**s, "models": ms,
+                               "installed_count": sum(1 for m in ms if m["installed"]),
+                               "model_count": len(ms)})
+            return self.send_json({"ok": True, "suites": suites, "downloads": MDL.list()})
+        if path == "/api/models/download" and method == "POST":
+            for s in PRESET_SUITES:
+                if s["id"] != body.get("suite"):
+                    continue
+                for m in s["models"]:
+                    if m["name"] == body.get("name"):
+                        if not m.get("url"):
+                            return self.send_json({"ok": False, "error": "该模型随环境提供，无公开下载通道"}, 400)
+                        return self.send_json({"ok": True, "job": MDL.start(m["url"], m["dir"], m["name"])})
+            return self.send_json({"ok": False, "error": "模型不在预设清单中"}, 404)
+        if path == "/api/models/downloads":
+            return self.send_json({"ok": True, "downloads": MDL.list()})
+        if path == "/api/models/open_folder" and method == "POST":
+            d = body.get("dir") or ""
+            target = os.path.join(models_root(), d) if d in MODEL_SUBDIRS else models_root()
+            os.makedirs(target, exist_ok=True)
+            os.startfile(target)
+            return self.send_json({"ok": True})
 
         if path == "/api/image_to_prompt" and method == "POST":
             return self.send_json(image_to_prompt(body.get("path", "")))
