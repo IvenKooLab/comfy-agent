@@ -27,6 +27,7 @@ const HELP_EN = [
     { q: "What is the template library?", a: "602 official ComfyUI workflow templates (video / image / audio / 3D / LLM etc., 9 categories) with real example previews.\nClick any template → the workflow is fetched and converted → loaded into the editor → save or run right away." },
     { q: "How does search work?", a: "The top search box fuzzy-matches titles, descriptions and model names.\nFor example, search \"H3\" to find all MiniMax H3 templates." },
     { q: "What are star favorites for?", a: "Starred templates can be quickly found via the \"⭐ Favorites only\" filter. Favorites are stored locally in your browser." },
+    { q: "How do I use the SCAIL-2 character animation template?", a: "Search \"scail\" → load SCAIL-2 Character Replacement (Int8).\nIt generates character animation from a reference image + a driving video (by Zhipu Z.AI / Tsinghua, Wan2.1 14B backbone): swap in your own reference image and driving video. replace_mode=true = replace the tracked person in the driving video; false = the reference character performs the driving motion. SAM3 text (default \"human\") auto-segments the subject — no manual masks needed.\nModel requirements: int8 main model 15.5G + umt5 6.3G + SAM3 1.6G + VAE/two LoRAs, ~25G total (int8 fits in 22G VRAM; the fp16 variant is 30G and needs a 24G+ card). Defaults use 6-step distillation for fast output; driving videos longer than 81 frames continue via the Extend subgraph in 76-frame steps." },
   ]},
   { mod: "⑃ Workflow editor", items: [
     { q: "How do I add a node?", a: "Double-click empty canvas → a search panel pops up → type the node name → click to add.\nYou can also use the \"＋\" button at the top right." },
@@ -99,6 +100,7 @@ const HELP = [
     { q: "模板库是什么？", a: "ComfyUI 官方 602 个工作流模板（视频/图像/音频/3D/LLM 等 9 大分类），带真实实例图预览。\n点击任意模板 → 自动拉取工作流并转换 → 载入编辑器 → 保存或直接运行。" },
     { q: "搜索怎么用？", a: "顶栏搜索框支持标题、描述、模型名模糊搜索。\n例如搜「H3」可找到所有 MiniMax H3 模板。" },
     { q: "星标收藏有什么用？", a: "点星标收藏的模板可通过「⭐ 只看收藏」筛选快速找到。收藏存在浏览器本地。" },
+    { q: "SCAIL-2 角色动画模板怎么用？", a: "搜「scail」→ 选 SCAIL-2 Character Replacement (Int8) 载入。\n它用参考图人物+驱动视频生成角色动画（智谱/清华开源，Wan2.1 14B 架构）：换上你的参考图和驱动视频，replace_mode=true 为「替换驱动视频里的人」，false 为「让参考图人物做驱动动作」；SAM3 文本（默认 human）自动分割主体，无需手工遮罩。\n模型需求：int8 主模型 15.5G + umt5 6.3G + SAM3 1.6G + VAE/双 LoRA，共约 25G（22G 显存内可跑 int8；fp16 版 30G 需 24G+ 卡）。默认 6 步蒸馏出片较快；长于 81 帧的驱动视频用 Extend 子图分段续写（每段步进 76 帧）。" },
   ]},
   { mod: "⑃ 工作流编辑器", items: [
     { q: "怎么添加节点？", a: "双击画布空白处 → 弹出搜索面板 → 输入节点名 → 点击添加。\n也可以点右上角「＋」按钮。" },
