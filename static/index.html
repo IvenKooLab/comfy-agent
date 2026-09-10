@@ -23,6 +23,7 @@
       <a class="nav-item" data-view="runs" href="#runs"><span class="ico">◷</span><span class="txt" data-i18n="nav.runs">任务</span><span class="nav-key">4</span></a>
       <a class="nav-item" data-view="pipeline" href="#pipeline"><span class="ico">⛓</span><span class="txt" data-i18n="nav.pipeline">产线</span><span class="nav-key">5</span></a>
       <a class="nav-item" data-view="launcher" href="#launcher"><span class="ico">⏻</span><span class="txt" data-i18n="nav.launcher">启动器</span><span class="nav-key">6</span></a>
+      <a class="nav-item" data-view="models" href="#models"><span class="ico">⬢</span><span class="txt" data-i18n="nav.models">模型</span><span class="nav-key">9</span></a>
       <a class="nav-item" data-view="obsidian" href="#obsidian"><span class="ico">◈</span><span class="txt" data-i18n="nav.obsidian">知识库</span><span class="nav-key">7</span></a>
       <a class="nav-item" data-view="agent" href="#agent"><span class="ico">✧</span><span class="txt" data-i18n="nav.agent">助手</span><span class="nav-key">8</span></a>
     </div>
@@ -347,6 +348,29 @@
       <div id="lc-models"></div>
       <h3 class="sec-title" data-i18n="launcher.nodes">自定义节点</h3>
       <div class="card pad" id="lc-nodes"></div>
+    </section>
+
+    <!-- ============ 模型管理 ============ -->
+    <section id="view-models" class="view">
+      <header class="page-head">
+        <h1 data-i18n="md.title">模型管理</h1>
+        <div class="head-tools">
+          <button id="md-open" class="btn sm" data-i18n="md.openfolder">📁 打开文件夹</button>
+          <button id="md-refresh" class="btn sm" data-i18n="md.refresh">↻ 刷新</button>
+          <input id="md-search" class="input" style="width:180px" data-i18n-ph="md.search.ph" placeholder="搜索模型…">
+        </div>
+      </header>
+      <div id="md-suites"></div>
+      <div class="card pad" style="margin-top:12px">
+        <div id="md-tabs" class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+        <table class="tbl" style="width:100%">
+          <thead><tr>
+            <th data-i18n="md.col.name">文件名</th><th data-i18n="md.col.dir">目录</th>
+            <th data-i18n="md.col.size">大小</th><th data-i18n="md.col.date">修改日期</th>
+          </tr></thead>
+          <tbody id="md-local"></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- ============ Obsidian ============ -->

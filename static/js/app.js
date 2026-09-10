@@ -3,6 +3,7 @@ import { initGallery, galleryRefresh, openLightboxPublic } from "./gallery.js";
 import { initEditor } from "./editor.js";
 import { initRuns, runsOnSSE } from "./runs.js";
 import { initMisc } from "./misc.js";
+import { initModels } from "./models.js";
 import { initCreate, refreshFeed } from "./create.js";
 import { initLauncher } from "./launcher.js";
 import { initPipeline } from "./pipeline.js";
@@ -54,7 +55,7 @@ export function mediaUrl(path, extra = {}) {
 }
 
 /* ---------- 路由 ---------- */
-const views = ["create", "gallery", "editor", "templates", "help", "runs", "pipeline", "launcher", "obsidian", "agent", "settings"];
+const views = ["create", "gallery", "editor", "templates", "help", "runs", "pipeline", "launcher", "models", "obsidian", "agent", "settings"];
 export function goto(view) {
   if (!views.includes(view)) return;
   location.hash = "#" + view;
@@ -155,7 +156,7 @@ function hwLoop() {
 window.APP_VERSION = "ComfyAgent v3.0.0";
 
 /* ---------- 全局快捷键 ---------- */
-const VIEW_KEYS = { "1": "create", "2": "gallery", "3": "editor", "4": "runs", "5": "pipeline", "6": "launcher", "7": "obsidian", "8": "agent" };
+const VIEW_KEYS = { "1": "create", "2": "gallery", "3": "editor", "4": "runs", "5": "pipeline", "6": "launcher", "7": "obsidian", "8": "agent", "9": "models" };
 document.addEventListener("keydown", (e) => {
   if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
   if (VIEW_KEYS[e.key]) goto(VIEW_KEYS[e.key]);
@@ -178,7 +179,7 @@ function initCmdk() {
   const close = () => { box.hidden = true; };
   const buildItems = async () => {
     const items = [];
-    const labels = { create: t("cmd.goto.create"), gallery: t("cmd.goto.gallery"), editor: t("cmd.goto.editor"), templates: t("cmd.goto.templates"), help: t("cmd.goto.help"), runs: t("cmd.goto.runs"), pipeline: t("cmd.goto.pipeline"), launcher: t("cmd.goto.launcher"), obsidian: t("cmd.goto.obsidian"), agent: t("cmd.goto.agent"), settings: t("cmd.goto.settings") };
+    const labels = { create: t("cmd.goto.create"), gallery: t("cmd.goto.gallery"), editor: t("cmd.goto.editor"), templates: t("cmd.goto.templates"), help: t("cmd.goto.help"), runs: t("cmd.goto.runs"), pipeline: t("cmd.goto.pipeline"), launcher: t("cmd.goto.launcher"), models: t("cmd.goto.models"), obsidian: t("cmd.goto.obsidian"), agent: t("cmd.goto.agent"), settings: t("cmd.goto.settings") };
     for (const v of views) items.push({ label: labels[v], key: t("cmd.pages"), run: () => goto(v) });
     try {
       const r = await api("/api/workflows");
@@ -256,6 +257,7 @@ async function boot() {
     initHelp(); window.__step = "initTemplates";
     initRuns(); window.__step = "initRuns";
     initLauncher(); window.__step = "initLauncher";
+    initModels(); window.__step = "initModels";
     initPipeline(); window.__step = "initPipeline";
     initMisc(); window.__step = "initMisc";
     applyHash(); window.__step = "applyHash";
