@@ -409,6 +409,7 @@ function delNode(id) {
 
 /* ================= 检查器 ================= */
 function renderInspector() {
+  const tr = t;  // 循环内 const t = f.type 会遮蔽翻译函数，先取别名
   const empty = $("#inspector-empty"), body = $("#inspector-body");
   if (!selected) { empty.hidden = false; body.hidden = true; return; }
   empty.hidden = true; body.hidden = false;
@@ -426,9 +427,13 @@ function renderInspector() {
     if (t === "COMBO" || (Array.isArray(f.def?.[0]) )) {
       const opts = Array.isArray(f.def?.[0]) ? f.def[0] : [];
       const curv = val != null ? val : (opts[0] ?? "");
-      html += `<div class="field">${label}<select data-f="${esc(f.name)}">` +
+      const isFileCombo = opts.some((o) => /\.(png|jpe?g|webp|gif|bmp|mp4|mov|webm|avi|mkv|mp3|wav|flac|ogg)$/i.test(String(o)))
+        || (/^Load/i.test(ct) && /image|video|audio|file/i.test(f.name));
+      html += `<div class="field">${label}<div class="seed-row"><select data-f="${esc(f.name)}">` +
         opts.map((o) => `<option ${String(o) === String(curv) ? "selected" : ""}>${esc(o)}</option>`).join("") +
-        (opts.length === 0 || !opts.includes(curv) ? `<option selected>${esc(curv)}</option>` : "") + `</select></div>`;
+        (opts.length === 0 || !opts.includes(curv) ? `<option selected>${esc(curv)}</option>` : "") + `</select>` +
+        (isFileCombo ? `<button class="btn sm" data-up="${esc(f.name)}" title="${tr("ed.upload.tip")}">${tr("ed.upload")}</button>` : "") +
+        `</div></div>`;
     } else if (t === "BOOLEAN") {
       html += `<div class="field">${label}<select data-f="${esc(f.name)}">
         <option value="true" ${val ? "selected" : ""}>true</option><option value="false" ${!val ? "selected" : ""}>false</option></select></div>`;
@@ -460,6 +465,33 @@ function renderInspector() {
       toast(t("ed.changed") + name, "");
     });
   });
+  body.querySelectorAll("[data-up]").forEach((b) => b.addEventListener("click", () => {
+    const name = b.dataset.up;
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = ".png,.jpg,.jpeg,.webp,.gif,.bmp,.mp4,.mov,.webm,.avi,.mkv,.mp3,.wav,.flac,.ogg";
+    inp.onchange = async () => {
+      const file = inp.files?.[0];
+      if (!file) return;
+      b.disabled = true; b.textContent = "…";
+      try {
+        const fd = new FormData();
+        fd.append("image", file);
+        const r = await api("/api/upload_media", { method: "POST", body: fd, raw: true });
+        // 成功：ComfyUI 返回 {name, subfolder, type}；失败：{ok:false, error}
+        const fname = r?.subfolder ? `${r.subfolder}/${r.name}` : r?.name;
+        if (!fname) { toast(r?.error || "upload failed", "err"); return; }
+        cur.api[selected].inputs[name] = fname;
+        renderInspector();
+        toast(tr("ed.upload.ok") + fname, "");
+      } catch (e) {
+        toast(String(e).slice(0, 120), "err");
+      } finally {
+        b.disabled = false; b.textContent = tr("ed.upload");
+      }
+    };
+    inp.click();
+  }));
   body.querySelectorAll("[data-dice]").forEach((b) => b.addEventListener("click", () => {
     const name = b.dataset.dice;
     cur.api[selected].inputs[name] = Math.floor(Math.random() * 2 ** 31);
