@@ -445,5 +445,4 @@ function initSubtitleBurn() {
     const r = await api("/api/subtitle_burn", { method: "POST", body: { video, srt_path: srt } });
     toast(r.ok ? t("sub.done") + r.output : r.error, r.ok ? "ok" : "err");
   });
-  subBtn.click();
 }
