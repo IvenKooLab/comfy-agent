@@ -1,80 +1,84 @@
-# ComfyAgent · AI 创作台
+<div align="center">
 
-[English](README_EN.md) | 简体中文
+# ComfyAgent
 
-本地优先的 AI 创作台：一个原生窗口管理你的 ComfyUI —— 中文提示词生图/生视频、成果画廊、可视化工作流、600+ 模板库、任务队列、产线批次、Obsidian 知识库、硬件监控。
+**A local-first desktop studio for ComfyUI — pure-stdlib Python, vanilla JS, zero dependencies, one 10 MB exe**
 
-![创作页](docs/screenshot-create.png)
+[![Release](https://img.shields.io/github/v/release/IvenKooLab/comfy-agent)](https://github.com/IvenKooLab/comfy-agent/releases)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows-blue)](#quick-start)
 
-![模板库](docs/screenshot-templates.png)
+English | [简体中文](README_zh-CN.md)
 
-## 为什么是它
+</div>
 
-- 🖥️ **桌面产品**：双击 exe = 原生窗口 + 系统托盘，关窗最小化、再点托盘唤回；单实例；无控制台黑框
-- 🔒 **本地优先**：生成全程在你的显卡上，数据不出机器
-- 🪶 **零依赖技术栈**：纯 Python 标准库后端 + 原生 JS 前端，发布包仅 ~10MB
-- 🌐 **中英双语**：全站界面一键切换，内置帮助同步双语
+One native window that runs your local ComfyUI end to end: prompt-to-image/video creation, a gallery, a visual workflow editor, 600+ official templates, a model manager with resumable downloads, batch pipelines for episodic video, and an MCP server so external agents can drive it too.
 
-## 功能
+![Create](docs/screenshot-create.png)
 
-- 🎨 **创作**：中文输入自动增强为英文提示词（GLM 精修，MyMemory 兜底）→ Flux 生图 / H3 W4A8 生视频（640×352·5秒·4步·原生音频）；🎨 12 种风格 SOP、👤 角色锁定串、🖼️ 图/视频双模式
-- 🖼️ **画廊**：实时瀑布流、视频悬浮预览、批量归档/删除、PNG 内嵌参数解析、📁 文件夹筛选
-- 📚 **模板库**：ComfyUI 官方 600+ 模板（9 大分类），真实实例图预览，一键载入编辑器；官方 subgraph 新模板（SCAIL-2 角色动画等）自动展开直连
-- 🔧 **工作流**：SVG 节点可视化编辑（拖拽连线/网格吸附/节点校验）；内置 Flux + H3 双工作流；导入 UI/API JSON 或 PNG 提取
-- 📋 **任务**：队列/进度/ETA/失败一键重试/GPU 耗时账本
-- 🎬 **产线**：分集脚本解析 → 镜头清单 → 批量排队 → 拼接成片（含 BGM 混音）；🖼️ 镜头关键帧锁脸（i2v）、↳ **镜头接龙**（抽上一镜尾帧续拍，长镜头无缝衔接）、⏫ **优先级排队**、🌐 场景库、🎵 音频资产、💬 字幕烧入、📊 集数聚合统计
-- 🚀 **启动器**：ComfyUI 启停/版本检查与一键更新/模型盘点/自定义节点/环境诊断（torch·triton·sage 版本探测）/日志
-- 🗂️ **知识库**：Obsidian 归档/统计/双链关系图/全库搜索预览
-- 🤖 **助手**：中文指令直达，支持多步动作序列
-- 📖 **内置帮助**：45+ 问答覆盖全部模块，可搜索，中英双语
-- 📊 全局**硬件状态条**：GPU 利用率/温度/显存/内存/队列（nvidia-smi，2s 刷新）
+![Templates](docs/screenshot-templates.png)
 
-## 安装使用
+## Highlights
 
-1. 下载/解压 `dist/ComfyAgent-win64.zip`
-2. 双击 `ComfyAgent.exe` —— 原生窗口自动打开（首次有 30 秒设置向导）
-3. 关窗最小化到托盘，托盘菜单可退出
+- 🖥️ **Real desktop app** — double-click the exe: native window + system tray. Closing the window minimizes it; single instance; no console box
+- 🔒 **Local-first** — generation runs on your GPU, data never leaves your machine
+- 🪶 **Zero dependencies** — pure Python standard library backend + vanilla JS frontend, ~10 MB installed
+- 🌐 **Bilingual** — full UI and built-in help in English & Chinese
 
-前提：本机 ComfyUI（默认 127.0.0.1:8188）；ffmpeg 在 PATH（视频海报帧）；WebView2 运行时。
+## Features
 
-## MCP Server（外部 Agent 接入）
+- 🎨 **Create** — prompt-to-image (Flux) and prompt-to-video (MiniMax H3, native audio); Chinese prompts are auto-enhanced into English (LLM-powered, dictionary fallback); 12 style presets, character lock strings, image & video modes
+- 🖼️ **Gallery** — live masonry, hover video preview, batch archive/delete, PNG parameter parsing, folder filters
+- 📚 **Templates** — 600+ official ComfyUI templates with real previews, one-click load into the editor; **new subgraph-based templates (e.g. SCAIL-2 character animation) are auto-flattened** and load like any other
+- 🔧 **Workflows** — SVG node editor (drag/link/snap/validation); built-in Flux + H3 workflows; import UI/API JSON or extract from PNG
+- 📋 **Runs** — queue, progress, ETA, one-click retry, GPU time ledger
+- 🎬 **Pipeline** — episodic script → shot list → batch queue → concat with BGM; shot-to-shot chaining (seamless long takes via last-frame continuation), priority queue, scene library, audio assets, subtitle burn-in, per-episode stats
+- ⬢ **Models** — preset suites (SCAIL-2, MiniMax H3) with **one-click resumable downloads** and live progress; browse local model dirs by category with search; opening a template that needs missing models offers a one-jump download
+- 🚀 **Launcher** — start/stop/update ComfyUI, model inventory, custom nodes, environment diagnostics (torch/triton/sage), logs
+- 🗂️ **Knowledge** — Obsidian archiving, stats, graph view, full-text search
+- 🤖 **Assistant** — natural-language control with multi-step actions
+- 🔌 **MCP Server** — expose ComfyAgent to any MCP host (see below)
+- 📖 **Built-in help** — 50+ searchable Q&A, bilingual
+- 📊 **Hardware bar** — GPU util/temp/VRAM/RAM/queue, 2s refresh
 
-内置零依赖 MCP 服务器（stdio + JSON-RPC 2.0），把本机 ComfyAgent 暴露给任何 MCP host（ZCode / Claude Desktop / Cursor 等）：
+## Quick Start
 
-| 工具 | 说明 |
+1. Grab `ComfyAgent-win64.zip` from the [latest release](https://github.com/IvenKooLab/comfy-agent/releases/latest) and unzip
+2. Double-click `ComfyAgent.exe` — a native window opens (30-second setup wizard on first run)
+3. Close to tray; right-click the tray icon to quit
+
+**Requirements:** a local ComfyUI (default `127.0.0.1:8188`); `ffmpeg` on PATH (video poster frames); WebView2 runtime.
+
+To develop against a source checkout: `python server.py --open` (browser mode), `python app.py` (desktop shell), `bash build_exe.sh` (build). See [CHANGELOG.md](CHANGELOG.md) for the design and iteration history.
+
+## MCP Server
+
+A built-in zero-dependency MCP server (stdio + JSON-RPC 2.0) exposes ComfyAgent to any MCP host (ZCode / Claude Desktop / Cursor, ...):
+
+| Tool | What it does |
 |---|---|
-| `query_status` | 查询 ComfyUI 在线状态、执行/排队数、显存 |
-| `submit_generation` | 提交生成（image=Flux / video=H3，中文自动增强，count≤4） |
-| `list_workflows` | 工作流列表（含草稿/成片档位与耗时） |
-| `search_gallery` | 搜索本地画廊成果 |
-
-配置（mcpServers 片段，需要 ComfyAgent 正在运行）：
+| `query_status` | ComfyUI online state, running/queued jobs, VRAM |
+| `submit_generation` | Submit image/video generation (auto prompt enhancement, count ≤ 4) |
+| `list_workflows` | Workflow library (draft/final tiers with real timings) |
+| `search_gallery` | Search local gallery outputs |
 
 ```json
 "comfyagent": {
   "command": "python",
-  "args": ["<repo路径>/mcp_server.py"],
+  "args": ["<repo>/mcp_server.py"],
   "env": { "COMFYAGENT_URL": "http://127.0.0.1:8190" }
 }
 ```
 
-## 开发
+(Requires ComfyAgent to be running.)
 
-```bash
-python server.py --open   # 源码模式（浏览器打开）
-python app.py             # 桌面壳模式
-bash build_exe.sh         # 构建产品 exe
-```
+## Contributing
 
-架构与迭代史见 [CHANGELOG.md](CHANGELOG.md)。
+Issues and PRs welcome (English or Chinese):
 
-## 贡献
-
-欢迎 Issue 与 PR（中英文均可）：
-
-1. Fork 本仓库 → 新建分支 → 提交改动 → 发起 PR
-2. 描述清楚「解决什么问题 / 怎么验证」即可
-3. 改动涉及后端时请保持零第三方依赖原则（Python 标准库）
+1. Fork → branch → commit → PR
+2. Describe the problem you solve and how to verify it
+3. Backend changes must stay on the zero-third-party-dependency principle (Python stdlib only)
 
 ## License
 
