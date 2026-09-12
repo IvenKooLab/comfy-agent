@@ -51,43 +51,43 @@ To develop against a source checkout: `python server.py --open` (browser mode), 
 
 **Setup Wizard**
 
-![](docs/screenshot-wizard.png)
+![](docs/thumbs/screenshot-wizard.jpg)
 
 **Create**
 
-![](docs/screenshot-create.png)
+![](docs/thumbs/screenshot-create.jpg)
 
 **Templates**
 
-![](docs/screenshot-templates.png)
+![](docs/thumbs/screenshot-templates.jpg)
 
 **Pipeline**
 
-![](docs/screenshot-pipeline.png)
+![](docs/thumbs/screenshot-pipeline.jpg)
 
 **Launcher**
 
-![](docs/screenshot-launcher.png)
+![](docs/thumbs/screenshot-launcher.jpg)
 
 **Models**
 
-![](docs/screenshot-models.png)
+![](docs/thumbs/screenshot-models.jpg)
 
 **Assistant**
 
-![](docs/screenshot-agent.png)
+![](docs/thumbs/screenshot-agent.jpg)
 
 **Help**
 
-![](docs/screenshot-help.png)
+![](docs/thumbs/screenshot-help.jpg)
 
 **Settings**
 
-![](docs/screenshot-settings.png)
+![](docs/thumbs/screenshot-settings.jpg)
 
 **About**
 
-![](docs/screenshot-about.png)
+![](docs/thumbs/screenshot-about.jpg)
 
 ## MCP Server
 

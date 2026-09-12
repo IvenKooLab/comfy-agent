@@ -59,43 +59,43 @@
 
 **开屏向导**
 
-![](docs/screenshot-wizard.png)
+![](docs/thumbs/screenshot-wizard.jpg)
 
 **创作**
 
-![](docs/screenshot-create.png)
+![](docs/thumbs/screenshot-create.jpg)
 
 **模板库**
 
-![](docs/screenshot-templates.png)
+![](docs/thumbs/screenshot-templates.jpg)
 
 **产线**
 
-![](docs/screenshot-pipeline.png)
+![](docs/thumbs/screenshot-pipeline.jpg)
 
 **启动器**
 
-![](docs/screenshot-launcher.png)
+![](docs/thumbs/screenshot-launcher.jpg)
 
 **模型管理**
 
-![](docs/screenshot-models.png)
+![](docs/thumbs/screenshot-models.jpg)
 
 **助手**
 
-![](docs/screenshot-agent.png)
+![](docs/thumbs/screenshot-agent.jpg)
 
 **帮助**
 
-![](docs/screenshot-help.png)
+![](docs/thumbs/screenshot-help.jpg)
 
 **设置**
 
-![](docs/screenshot-settings.png)
+![](docs/thumbs/screenshot-settings.jpg)
 
 **关于**
 
-![](docs/screenshot-about.png)
+![](docs/thumbs/screenshot-about.jpg)
 
 ## MCP Server（外部 Agent 接入）
 
@@ -122,13 +122,13 @@
 
 | 开屏向导 | 产线 |
 |---|---|
-| ![](docs/screenshot-wizard.png) | ![](docs/screenshot-pipeline.png) |
+| ![](docs/thumbs/screenshot-wizard.jpg) | ![](docs/thumbs/screenshot-pipeline.jpg) |
 | **启动器** | **模型管理** |
-| ![](docs/screenshot-launcher.png) | ![](docs/screenshot-models.png) |
+| ![](docs/thumbs/screenshot-launcher.jpg) | ![](docs/thumbs/screenshot-models.jpg) |
 | **助手** | **帮助** |
-| ![](docs/screenshot-agent.png) | ![](docs/screenshot-help.png) |
+| ![](docs/thumbs/screenshot-agent.jpg) | ![](docs/thumbs/screenshot-help.jpg) |
 | **设置** | **关于** |
-| ![](docs/screenshot-settings.png) | ![](docs/screenshot-about.png) |
+| ![](docs/thumbs/screenshot-settings.jpg) | ![](docs/thumbs/screenshot-about.jpg) |
 
 ## 开发
 
