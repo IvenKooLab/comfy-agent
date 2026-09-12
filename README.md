@@ -14,12 +14,6 @@ English | [简体中文](README_zh-CN.md)
 
 One native window that runs your local ComfyUI end to end: prompt-to-image/video creation, a gallery, a visual workflow editor, 600+ official templates, a model manager with resumable downloads, batch pipelines for episodic video, and an MCP server so external agents can drive it too.
 
-![Setup wizard](docs/screenshot-wizard.png)
-
-![Create](docs/screenshot-create.png)
-
-![Templates](docs/screenshot-templates.png)
-
 ## Highlights
 
 - 🖥️ **Real desktop app** — double-click the exe: native window + system tray. Closing the window minimizes it; single instance; no console box
@@ -55,15 +49,45 @@ To develop against a source checkout: `python server.py --open` (browser mode), 
 
 ## Screenshots
 
-| Setup Wizard | Pipeline |
-|---|---|
-| ![](docs/screenshot-wizard.png) | ![](docs/screenshot-pipeline.png) |
-| **Launcher** | **Models** |
-| ![](docs/screenshot-launcher.png) | ![](docs/screenshot-models.png) |
-| **Assistant** | **Help** |
-| ![](docs/screenshot-agent.png) | ![](docs/screenshot-help.png) |
-| **Settings** | **About** |
-| ![](docs/screenshot-settings.png) | ![](docs/screenshot-about.png) |
+**Setup Wizard**
+
+![](docs/screenshot-wizard.png)
+
+**Create**
+
+![](docs/screenshot-create.png)
+
+**Templates**
+
+![](docs/screenshot-templates.png)
+
+**Pipeline**
+
+![](docs/screenshot-pipeline.png)
+
+**Launcher**
+
+![](docs/screenshot-launcher.png)
+
+**Models**
+
+![](docs/screenshot-models.png)
+
+**Assistant**
+
+![](docs/screenshot-agent.png)
+
+**Help**
+
+![](docs/screenshot-help.png)
+
+**Settings**
+
+![](docs/screenshot-settings.png)
+
+**About**
+
+![](docs/screenshot-about.png)
 
 ## MCP Server
 
