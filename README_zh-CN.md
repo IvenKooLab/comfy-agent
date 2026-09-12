@@ -4,12 +4,6 @@
 
 本地优先的 AI 创作台：一个原生窗口管理你的 ComfyUI —— 中文提示词生图/生视频、成果画廊、可视化工作流、600+ 模板库、模型管理、任务队列、产线批次、Obsidian 知识库、硬件监控。
 
-![开屏向导](docs/screenshot-wizard.png)
-
-![创作页](docs/screenshot-create.png)
-
-![模板库](docs/screenshot-templates.png)
-
 ## 为什么是它
 
 - 🖥️ **桌面产品**：双击 exe = 原生窗口 + 系统托盘，关窗最小化、再点托盘唤回；单实例；无控制台黑框
@@ -39,6 +33,69 @@
 3. 关窗最小化到托盘，托盘菜单可退出
 
 前提：本机 ComfyUI（默认 127.0.0.1:8188）；ffmpeg 在 PATH（视频海报帧）；WebView2 运行时。
+
+## MCP Server（外部 Agent 接入）
+
+内置零依赖 MCP 服务器（stdio + JSON-RPC 2.0），把本机 ComfyAgent 暴露给任何 MCP host（ZCode / Claude Desktop / Cursor 等）：
+
+| 工具 | 说明 |
+|---|---|
+| `query_status` | 查询 ComfyUI 在线状态、执行/排队数、显存 |
+| `submit_generation` | 提交生成（image=Flux / video=H3，中文自动增强，count≤4） |
+| `list_workflows` | 工作流列表（含草稿/成片档位与耗时） |
+| `search_gallery` | 搜索本地画廊成果 |
+
+配置（mcpServers 片段，需要 ComfyAgent 正在运行）：
+
+```json
+"comfyagent": {
+  "command": "python",
+  "args": ["<repo路径>/mcp_server.py"],
+  "env": { "COMFYAGENT_URL": "http://127.0.0.1:8190" }
+}
+```
+
+## 界面一览
+
+**开屏向导**
+
+![](docs/screenshot-wizard.png)
+
+**创作**
+
+![](docs/screenshot-create.png)
+
+**模板库**
+
+![](docs/screenshot-templates.png)
+
+**产线**
+
+![](docs/screenshot-pipeline.png)
+
+**启动器**
+
+![](docs/screenshot-launcher.png)
+
+**模型管理**
+
+![](docs/screenshot-models.png)
+
+**助手**
+
+![](docs/screenshot-agent.png)
+
+**帮助**
+
+![](docs/screenshot-help.png)
+
+**设置**
+
+![](docs/screenshot-settings.png)
+
+**关于**
+
+![](docs/screenshot-about.png)
 
 ## MCP Server（外部 Agent 接入）
 
