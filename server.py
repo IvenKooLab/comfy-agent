@@ -593,9 +593,9 @@ BUILTIN_WORKFLOWS = {
             "7": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "flux"}},
         },
     },
-    "冒烟测试 LoadImage→SaveImage（内置）": {
+    "连通性测试（内置）": {
         "id": "builtin-smoke",
-        "name": "冒烟测试 LoadImage→SaveImage（内置）",
+        "name": "连通性测试（内置）",
         "builtin": True,
         "updated": "2026-08-29 10:00",
         "api": {
