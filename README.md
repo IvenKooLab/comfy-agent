@@ -73,6 +73,10 @@ To develop against a source checkout: `python server.py --open` (browser mode), 
 
 ![](docs/thumbs/screenshot-models.jpg)
 
+**Knowledge (Obsidian)**
+
+![](docs/thumbs/screenshot-obsidian.jpg)
+
 **Assistant**
 
 ![](docs/thumbs/screenshot-agent.jpg)

@@ -81,6 +81,10 @@
 
 ![](docs/thumbs/screenshot-models.jpg)
 
+**知识库（Obsidian）**
+
+![](docs/thumbs/screenshot-obsidian.jpg)
+
 **助手**
 
 ![](docs/thumbs/screenshot-agent.jpg)
