@@ -44,6 +44,7 @@ export function initEditor() {
     const pal = $("#node-palette");
     if (!pal.hidden && !pal.contains(e.target) && e.target.id !== "cv-add") pal.hidden = true;
   });
+  window.addEventListener("langchange", () => { loadList(cur?.id); renderInspector(); });
   loadList().then(() => {
     validate();
     doPendingImport();
