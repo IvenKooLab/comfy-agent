@@ -2792,13 +2792,23 @@ class Handler(BaseHTTPRequestHandler):
             dst_dir = os.path.join(TRASH_DIR, datetime.now().strftime("%Y%m%d_%H%M%S"))
             os.makedirs(dst_dir, exist_ok=True)
             n = 0
+            failed = []
             for rel in body.get("paths", []):
                 full = resolve_media(rel)
-                if full and os.path.isfile(full):
+                if not full or not os.path.isfile(full):
+                    failed.append({"path": rel, "error": "文件不存在"})
+                    continue
+                try:
                     shutil.move(full, os.path.join(dst_dir, os.path.basename(full)))
                     n += 1
+                except Exception as e:
+                    # 常见：视频正被预览/播放器占用（Windows 文件锁）
+                    failed.append({"path": rel, "error": str(e)[:120] or "文件被占用"})
             _gallery_cache["ts"] = 0
-            return self.send_json({"ok": True, "count": n, "msg": f"已移入回收站 {n} 个文件"})
+            msg = f"已移入回收站 {n} 个文件"
+            if failed:
+                msg += f"，{len(failed)} 个失败（多为文件被预览占用，关闭预览后重试）"
+            return self.send_json({"ok": True, "count": n, "failed": failed, "msg": msg})
         if path == "/api/media/reveal" and method == "POST":
             full = resolve_media(body.get("path", ""))
             if full and os.path.isfile(full):

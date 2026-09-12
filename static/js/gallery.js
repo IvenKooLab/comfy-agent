@@ -339,8 +339,13 @@ async function batchTrash() {
   const paths = [...selected];
   if (!paths.length || !(await uiConfirm(tf("misc.confirm.del.multi", paths.length)))) return;
   const r = await api("/api/media/trash", { method: "POST", body: { paths } });
-  if (r.ok) { toast(tf("toast.trashed.n", r.count), "ok"); selected.clear(); syncBatchBar(); galleryRefresh(true); }
-  else toast(r.error, "err");
+  if (!r.ok) { toast(r.error, "err"); return; }
+  if (r.failed?.length) {
+    toast(t("toast.trashed.fail") + r.failed.map((f) => f.path).slice(0, 3).join("、") + (r.failed.length > 3 ? "…" : ""), "err");
+  } else {
+    toast(tf("toast.trashed.n", r.count), "ok");
+  }
+  selected.clear(); syncBatchBar(); galleryRefresh(true);
 }
 
 /* —— 灯箱 —— */
