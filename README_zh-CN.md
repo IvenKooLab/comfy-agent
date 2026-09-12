@@ -63,11 +63,11 @@
 
 ## 界面一览
 
-| 产线 | 启动器 |
+| 开屏向导 | 产线 |
 |---|---|
-| ![](docs/screenshot-pipeline.png) | ![](docs/screenshot-launcher.png) |
-| **模型管理** | **知识库（Obsidian）** |
-| ![](docs/screenshot-models.png) | ![](docs/screenshot-obsidian.png) |
+| ![](docs/screenshot-wizard.png) | ![](docs/screenshot-pipeline.png) |
+| **启动器** | **模型管理** |
+| ![](docs/screenshot-launcher.png) | ![](docs/screenshot-models.png) |
 | **助手** | **帮助** |
 | ![](docs/screenshot-agent.png) | ![](docs/screenshot-help.png) |
 | **设置** | **关于** |
