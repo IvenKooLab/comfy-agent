@@ -55,11 +55,11 @@ To develop against a source checkout: `python server.py --open` (browser mode), 
 
 ## Screenshots
 
-| Pipeline | Launcher |
+| Setup Wizard | Pipeline |
 |---|---|
-| ![](docs/screenshot-pipeline.png) | ![](docs/screenshot-launcher.png) |
-| **Models** | **Knowledge (Obsidian)** |
-| ![](docs/screenshot-models.png) | ![](docs/screenshot-obsidian.png) |
+| ![](docs/screenshot-wizard.png) | ![](docs/screenshot-pipeline.png) |
+| **Launcher** | **Models** |
+| ![](docs/screenshot-launcher.png) | ![](docs/screenshot-models.png) |
 | **Assistant** | **Help** |
 | ![](docs/screenshot-agent.png) | ![](docs/screenshot-help.png) |
 | **Settings** | **About** |
