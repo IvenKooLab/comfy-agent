@@ -4,6 +4,8 @@
 
 本地优先的 AI 创作台：一个原生窗口管理你的 ComfyUI —— 中文提示词生图/生视频、成果画廊、可视化工作流、600+ 模板库、模型管理、任务队列、产线批次、Obsidian 知识库、硬件监控。
 
+![开屏向导](docs/screenshot-wizard.png)
+
 ![创作页](docs/screenshot-create.png)
 
 ![模板库](docs/screenshot-templates.png)
@@ -58,6 +60,18 @@
   "env": { "COMFYAGENT_URL": "http://127.0.0.1:8190" }
 }
 ```
+
+## 界面一览
+
+| 产线 | 启动器 |
+|---|---|
+| ![](docs/screenshot-pipeline.png) | ![](docs/screenshot-launcher.png) |
+| **模型管理** | **知识库（Obsidian）** |
+| ![](docs/screenshot-models.png) | ![](docs/screenshot-obsidian.png) |
+| **助手** | **帮助** |
+| ![](docs/screenshot-agent.png) | ![](docs/screenshot-help.png) |
+| **设置** | **关于** |
+| ![](docs/screenshot-settings.png) | ![](docs/screenshot-about.png) |
 
 ## 开发
 

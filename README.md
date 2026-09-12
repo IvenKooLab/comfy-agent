@@ -14,6 +14,8 @@ English | [简体中文](README_zh-CN.md)
 
 One native window that runs your local ComfyUI end to end: prompt-to-image/video creation, a gallery, a visual workflow editor, 600+ official templates, a model manager with resumable downloads, batch pipelines for episodic video, and an MCP server so external agents can drive it too.
 
+![Setup wizard](docs/screenshot-wizard.png)
+
 ![Create](docs/screenshot-create.png)
 
 ![Templates](docs/screenshot-templates.png)
@@ -50,6 +52,18 @@ One native window that runs your local ComfyUI end to end: prompt-to-image/video
 **Requirements:** a local ComfyUI (default `127.0.0.1:8188`); `ffmpeg` on PATH (video poster frames); WebView2 runtime.
 
 To develop against a source checkout: `python server.py --open` (browser mode), `python app.py` (desktop shell), `bash build_exe.sh` (build). See [CHANGELOG.md](CHANGELOG.md) for the design and iteration history.
+
+## Screenshots
+
+| Pipeline | Launcher |
+|---|---|
+| ![](docs/screenshot-pipeline.png) | ![](docs/screenshot-launcher.png) |
+| **Models** | **Knowledge (Obsidian)** |
+| ![](docs/screenshot-models.png) | ![](docs/screenshot-obsidian.png) |
+| **Assistant** | **Help** |
+| ![](docs/screenshot-agent.png) | ![](docs/screenshot-help.png) |
+| **Settings** | **About** |
+| ![](docs/screenshot-settings.png) | ![](docs/screenshot-about.png) |
 
 ## MCP Server
 
