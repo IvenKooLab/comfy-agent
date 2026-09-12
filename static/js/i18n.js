@@ -186,12 +186,14 @@ export function applyI18n() {
 /* 内置工作流英文显示名（服务端/存储名为中文；自定义工作流按原名显示） */
 const WF_EN = {
   "builtin-flux": "Flux t2i (builtin)",
-  "builtin-smoke": "Smoke test LoadImage→SaveImage (builtin)",
-  "h3-t2v": "H3 t2v W4A8 · 4-step fast lane (640×352)",
-  "h3-i2v": "H3 i2v W4A8 · 4-step fast lane (640×352)",
-  "h3-t2v-t8draft": "H3 t2v T8 draft (fast, -43%, non-reproducible)",
-  "h3-i2v-t8draft": "H3 i2v T8 draft (-38%, non-reproducible)",
-  "h3-t2v-pdd8-t8": "H3 t2v PDD8+T8 (fastest, master env, non-reproducible)",
+  "builtin-smoke": "Connectivity test (builtin)",
+  "h3-t2v": "H3 t2v · final",
+  "h3-i2v": "H3 i2v · final (face lock)",
+  "h3-t2v-t8draft": "H3 t2v · draft",
+  "h3-i2v-t8draft": "H3 i2v · draft",
+  "h3-t2v-pdd8-t8": "H3 t2v · fast draft",
+  "h3-i2v-pdd8-t8": "H3 i2v · fast draft",
+  "scail2-replace": "SCAIL-2 character animation (ref image + driving video)",
 };
 export function wfLabel(w) {
   const base = (lang === "en" && WF_EN[w.id]) ? WF_EN[w.id] : (w.name || w.id || "");
