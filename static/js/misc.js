@@ -446,7 +446,9 @@ function initSettings() {
     const r = await api("/api/settings");
     const url = (r.settings || {}).comfy_url;
     if (!url) { toast(t("st.testing"), "err"); return; }
-    window.open(url, "_blank");
+    // window.open 会被桌面壳/弹窗拦截吞掉，改由后端 ShellExecute 打开
+    const o = await api("/api/open_url", { method: "POST", body: { url } });
+    if (!o.ok) toast(o.error || "open failed", "err");
   });
 }
 async function loadForm() {

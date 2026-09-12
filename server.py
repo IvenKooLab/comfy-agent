@@ -3221,6 +3221,28 @@ class Handler(BaseHTTPRequestHandler):
             os.startfile(target)
             return self.send_json({"ok": True})
 
+        if path == "/api/open_url" and method == "POST":
+            # 用系统浏览器打开 URL（设置页「打开 ComfyUI 界面」等）。
+            # os.startfile 走默认浏览器关联；关联损坏（精简系统常见）时回退探测常见浏览器。
+            url = body.get("url") or ""
+            if not re.match(r"^https?://[^\s]+$", url):
+                return self.send_json({"ok": False, "error": "非法 URL"}, 400)
+            try:
+                os.startfile(url)
+                return self.send_json({"ok": True, "how": "shell"})
+            except Exception:
+                pass
+            for b in (r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                      r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                      os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Bin\chromex.exe"),
+                      os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+                      r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                      r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"):
+                if os.path.isfile(b):
+                    subprocess.Popen([b, url], creationflags=0x08000000)
+                    return self.send_json({"ok": True, "how": "browser"})
+            return self.send_json({"ok": False, "error": "未找到可用浏览器，请设置系统默认浏览器后重试"}, 500)
+
         if path == "/api/image_to_prompt" and method == "POST":
             return self.send_json(image_to_prompt(body.get("path", "")))
         # ---- 场景库 / 集数聚合 / 音频 / 字幕 / 风格归纳
