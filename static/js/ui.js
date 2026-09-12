@@ -35,7 +35,7 @@ function settle(v) {
   const s = _settle;
   _settle = null;
   dlg.hidden = true;
-  dlg._input.blur();
+  try { if (document.activeElement) document.activeElement.blur(); } catch { }
   s(v);
 }
 
