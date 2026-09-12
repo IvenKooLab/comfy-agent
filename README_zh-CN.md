@@ -97,39 +97,6 @@
 
 ![](docs/thumbs/screenshot-about.jpg)
 
-## MCP Server（外部 Agent 接入）
-
-内置零依赖 MCP 服务器（stdio + JSON-RPC 2.0），把本机 ComfyAgent 暴露给任何 MCP host（ZCode / Claude Desktop / Cursor 等）：
-
-| 工具 | 说明 |
-|---|---|
-| `query_status` | 查询 ComfyUI 在线状态、执行/排队数、显存 |
-| `submit_generation` | 提交生成（image=Flux / video=H3，中文自动增强，count≤4） |
-| `list_workflows` | 工作流列表（含草稿/成片档位与耗时） |
-| `search_gallery` | 搜索本地画廊成果 |
-
-配置（mcpServers 片段，需要 ComfyAgent 正在运行）：
-
-```json
-"comfyagent": {
-  "command": "python",
-  "args": ["<repo路径>/mcp_server.py"],
-  "env": { "COMFYAGENT_URL": "http://127.0.0.1:8190" }
-}
-```
-
-## 界面一览
-
-| 开屏向导 | 产线 |
-|---|---|
-| ![](docs/thumbs/screenshot-wizard.jpg) | ![](docs/thumbs/screenshot-pipeline.jpg) |
-| **启动器** | **模型管理** |
-| ![](docs/thumbs/screenshot-launcher.jpg) | ![](docs/thumbs/screenshot-models.jpg) |
-| **助手** | **帮助** |
-| ![](docs/thumbs/screenshot-agent.jpg) | ![](docs/thumbs/screenshot-help.jpg) |
-| **设置** | **关于** |
-| ![](docs/thumbs/screenshot-settings.jpg) | ![](docs/thumbs/screenshot-about.jpg) |
-
 ## 开发
 
 ```bash
