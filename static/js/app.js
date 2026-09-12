@@ -153,7 +153,7 @@ function hwLoop() {
   setInterval(upd, 2000);
 }
 
-window.APP_VERSION = "ComfyAgent v3.0.0";
+// version comes from /api/status (VERSION file), see misc.js initAbout
 
 /* ---------- 全局快捷键 ---------- */
 const VIEW_KEYS = { "1": "create", "2": "gallery", "3": "editor", "4": "runs", "5": "pipeline", "6": "launcher", "7": "obsidian", "8": "agent", "9": "models" };

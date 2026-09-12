@@ -11,7 +11,9 @@ export function initMisc() {
 }
 
 function initAbout() {
-  $("#about-version").textContent = (window.APP_VERSION || "") + t("about.tag");
+  api("/api/status").then((st) => {
+    $("#about-version").textContent = "ComfyAgent " + (st.version || "") + t("about.tag");
+  });
   $("#about-close").addEventListener("click", () => { $("#about-modal").hidden = true; });
   $("#about-modal").addEventListener("click", (e) => { if (e.target.id === "about-modal") e.target.hidden = true; });
 }
