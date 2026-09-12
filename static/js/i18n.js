@@ -325,6 +325,7 @@ Object.assign(I18N, {
   "toast.interrupt.sent": ["已发送中断", "Interrupt sent"],
   "toast.prompt.updated": ["提示词已更新", "Prompt updated"],
   "toast.archived.n": ["已归档 %n 个到 %s", "Archived %n to %s"],
+  "toast.trashed.fail": ["部分删除失败（文件被占用）：", "Some deletions failed (file in use): "],
   "toast.trashed.n": ["已移入回收站 %n 个", "Moved %n to trash"],
   "st.in.gallery": ["（已进画廊）", " (now in gallery)"],
   "cmd.pages": ["页面", "Pages"],
