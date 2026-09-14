@@ -2,6 +2,8 @@
 
 [English](README.md) | 简体中文
 
+[![comfy-agent](https://img.shields.io/badge/featured_in-awesome--alternative--uis--for--comfyui-8A2BE2?logo=githubsponsors&logoColor=white)](https://github.com/light-and-ray/awesome-alternative-uis-for-comfyui#-comfyagent)
+
 本地优先的 AI 创作台：一个原生窗口管理你的 ComfyUI —— 中文提示词生图/生视频、成果画廊、可视化工作流、600+ 模板库、模型管理、任务队列、产线批次、Obsidian 知识库、硬件监控。
 
 ## 为什么是它
