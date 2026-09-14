@@ -7,6 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/IvenKooLab/comfy-agent)](https://github.com/IvenKooLab/comfy-agent/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-blue)](#quick-start)
+[![comfy-agent](https://img.shields.io/badge/featured_in-awesome--alternative--uis--for--comfyui-8A2BE2?logo=githubsponsors&logoColor=white)](https://github.com/light-and-ray/awesome-alternative-uis-for-comfyui#-comfyagent)
 
 English | [简体中文](README_zh-CN.md)
 
