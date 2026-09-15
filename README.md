@@ -25,6 +25,7 @@ One native window that runs your local ComfyUI end to end: prompt-to-image/video
 ## Features
 
 - 🎨 **Create** — prompt-to-image (Flux) and prompt-to-video (MiniMax H3, native audio); Chinese prompts are auto-enhanced into English (LLM-powered, dictionary fallback); 12 style presets, character lock strings, image & video modes
+- 👤 **Characters** — lock strings, reference images and **character LoRA binding** (auto-injected into image workflows, strength adjustable); ControlNet plan notes per character
 - 🖼️ **Gallery** — live masonry, hover video preview, batch archive/delete, PNG parameter parsing, folder filters
 - 📚 **Templates** — 600+ official ComfyUI templates with real previews, one-click load into the editor; **new subgraph-based templates (e.g. SCAIL-2 character animation) are auto-flattened** and load like any other
 - 🔧 **Workflows** — SVG node editor (drag/link/snap/validation); built-in Flux + H3 workflows; import UI/API JSON or extract from PNG
