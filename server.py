@@ -3078,6 +3078,8 @@ class Handler(BaseHTTPRequestHandler):
             c = {"id": cid, "name": body.get("name") or cid,
                  "lock": body.get("lock", ""), "ref": refs[0] if refs else body.get("ref", ""),
                  "refs": refs,
+                 "lora": body.get("lora", ""), "lora_strength": float(body.get("lora_strength") or 0.8),
+                 "cn_note": body.get("cn_note", ""),
                  "updated": datetime.now().strftime("%Y-%m-%d %H:%M")}
             write_text_atomic(_char_path(cid), json.dumps(c, ensure_ascii=False, indent=1))
             return self.send_json({"ok": True, "character": c, "msg": f"角色「{c['name']}」已保存"})
@@ -3203,6 +3205,8 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 模型管理（扫描 / 预设套件 / 下载 / 打开目录）
         if path == "/api/models/scan":
             return self.send_json({"ok": True, "root": models_root(), "dirs": scan_models()})
+        if path == "/api/loras":
+            return self.send_json({"ok": True, "loras": [i["name"] for i in scan_models().get("loras", [])]})
         if path == "/api/models/presets":
             local = {f"{d}/{i['name']}" for d, items in scan_models().items() for i in items}
             suites = []

@@ -246,9 +246,32 @@ async function create() {
   const go = $("#c-go");
   go.disabled = true; go.querySelector("span").textContent = t("st.submitting");
   try {
+    // 角色 LoRA：选中的角色配了 LoRA 时，自动注入/覆盖工作流的 LoRA 节点（ Flux 等生图工作流）
+    let api = wf.api;
+    if (charObj && charObj.lora) {
+      api = JSON.parse(JSON.stringify(api));
+      const existing = Object.entries(api).find(([, n]) => /LoraLoader/i.test(n.class_type || ""));
+      if (existing) {
+        existing[1].inputs.lora_name = charObj.lora;
+        existing[1].inputs.strength_model = +charObj.lora_strength || 0.8;
+        if ("strength_clip" in existing[1].inputs) existing[1].inputs.strength_clip = +charObj.lora_strength || 0.8;
+      } else {
+        const srcId = Object.keys(api).find((id) => ["UNETLoader", "CheckpointLoaderSimple"].includes(api[id].class_type));
+        if (srcId) {
+          const lid = "char_lora";
+          api[lid] = { class_type: "LoraLoaderModelOnly",
+            inputs: { lora_name: charObj.lora, strength_model: +charObj.lora_strength || 0.8, model: [srcId, 0] } };
+          for (const n of Object.values(api)) {
+            for (const v of Object.values(n.inputs || {})) {
+              if (Array.isArray(v) && v[0] === srcId && v[1] === 0) { v[0] = lid; v[1] = 0; }
+            }
+          }
+        }
+      }
+    }
     const r = await api("/api/prompt", {
       method: "POST",
-      body: { name: t("name.create.prefix") + promptText.slice(0, 16), prompt: wf.api, times: selCount, seed,
+      body: { name: t("name.create.prefix") + promptText.slice(0, 16), prompt: api, times: selCount, seed,
               overrides: { text, ...(hasLatentSize ? { width: w, height: h } : {}) },
               params: styleParams },
     });

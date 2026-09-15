@@ -37,6 +37,7 @@ async function loadPicker(q) {
 }
 
 export function initPipeline() {
+  loadLoraOptions();
   $("#picker-close").addEventListener("click", () => { $("#picker").hidden = true; });
   $("#picker-search").addEventListener("input", (e) => loadPicker(e.target.value.trim().toLowerCase()));
   $("#picker").addEventListener("click", (e) => { if (e.target.id === "picker") $("#picker").hidden = true; });
@@ -53,7 +54,7 @@ export function initPipeline() {
     const box = $("#scene-editor");
     if (box) box.hidden = !box.hidden;
   });
-  $("#char-new").addEventListener("click", () => { curChar = null; $("#char-editor").hidden = false; $("#char-name").value = ""; $("#char-lock").value = ""; $("#char-ref").value = ""; updateRefPreview(null); });
+  $("#char-new").addEventListener("click", () => { curChar = null; $("#char-editor").hidden = false; $("#char-name").value = ""; $("#char-lock").value = ""; $("#char-ref").value = ""; $("#char-lora").value = ""; $("#char-lora-strength").value = 0.8; $("#char-cn").value = ""; updateRefPreview(null); });
   $("#char-pick").addEventListener("click", () => openPicker(t("pick.char.refs"), (path) => {
     let refs = ($("#char-ref").dataset.refs || "").split("|").filter(Boolean);
     if (!refs.includes(path)) refs.push(path);
@@ -321,6 +322,9 @@ function editChar(id) {
   curChar = c;
   $("#char-editor").hidden = false;
   $("#char-name").value = c.name; $("#char-lock").value = c.lock || ""; $("#char-ref").value = c.ref || "";
+  $("#char-lora").value = c.lora || "";
+  $("#char-lora-strength").value = c.lora_strength ?? 0.8;
+  $("#char-cn").value = c.cn_note || "";
   updateRefPreview(c.ref);
   renderCharThumbs(c.refs && c.refs.length ? c.refs : (c.ref ? [c.ref] : []));
 }
@@ -340,6 +344,25 @@ function renderCharThumbs(refs) {
   }));
 }
 
+async function loadLoraOptions() {
+  try {
+    const r = await api("/api/loras");
+    if (!r.ok) return;
+    const sel = $("#char-lora");
+    const cur = sel.value;
+    sel.innerHTML = "";
+    const none = document.createElement("option");
+    none.value = ""; none.textContent = t("char.lora.none");
+    sel.appendChild(none);
+    for (const n of (r.loras || [])) {
+      const opt = document.createElement("option");
+      opt.textContent = n; opt.value = n;
+      sel.appendChild(opt);
+    }
+    sel.value = cur;
+  } catch { }
+}
+
 function updateRefPreview(path) {
   const img = $("#char-ref-preview");
   if (path) { img.src = "/api/media?path=" + encodeURIComponent(path) + "&thumb=1"; img.style.display = ""; }
@@ -349,7 +372,9 @@ function updateRefPreview(path) {
 async function saveChar() {
   const refs = ($("#char-ref").dataset.refs || "").split("|").filter(Boolean);
   const body = { name: $("#char-name").value.trim(), lock: $("#char-lock").value,
-                 ref: refs[0] || $("#char-ref").value.trim(), refs };
+                 ref: refs[0] || $("#char-ref").value.trim(), refs,
+                 lora: $("#char-lora").value || "", lora_strength: parseFloat($("#char-lora-strength").value) || 0.8,
+                 cn_note: $("#char-cn").value };
   if (!body.name) { toast(t("err.char.name"), "err"); return; }
   if (curChar) body.id = curChar.id;
   const r = await api("/api/characters/save", { method: "POST", body });

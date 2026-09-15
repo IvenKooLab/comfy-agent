@@ -297,6 +297,15 @@
             </div>
             <img id="char-ref-preview" src="" alt="" style="max-height:120px;border-radius:10px;margin-top:8px;display:none">
           </div>
+          <div class="field"><label data-i18n="char.lora">角色 LoRA（可选；选中的生图工作流有 LoRA 节点时自动注入）</label>
+            <div class="row">
+              <select id="char-lora" style="flex:1"></select>
+              <input id="char-lora-strength" class="input" type="number" step="0.1" min="0" max="2" value="0.8" style="width:86px" data-i18n-title="char.lora.strength" title="LoRA 强度">
+            </div>
+          </div>
+          <div class="field"><label data-i18n="char.cn">ControlNet 方案备注（预留位；姿态/构图控制可在工作流编辑器扩展）</label>
+            <textarea id="char-cn" class="input" rows="2" style="width:100%" data-i18n-ph="char.cn.ph" placeholder="如：姿势参考图 + Canny/Depth 控制（待配）"></textarea>
+          </div>
           <div class="row"><button id="char-save" class="btn sm primary" data-i18n="char.save">保存角色</button><button id="char-del" class="btn sm danger ghost" data-i18n="act.delete">删除</button></div>
         </div>
       </div>
