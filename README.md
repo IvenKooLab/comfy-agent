@@ -4,6 +4,8 @@
 
 **A local-first desktop studio for ComfyUI — pure-stdlib Python, vanilla JS, zero dependencies, one 10 MB exe**
 
+[![Gitee Stars](https://gitee.com/IvenKooLab/comfy-agent/badge/star.svg?theme=dark)](https://gitee.com/IvenKooLab/comfy-agent)
+
 [![Release](https://img.shields.io/github/v/release/IvenKooLab/comfy-agent)](https://github.com/IvenKooLab/comfy-agent/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-blue)](#quick-start)
