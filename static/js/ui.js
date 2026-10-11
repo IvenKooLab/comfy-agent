@@ -34,9 +34,15 @@ function settle(v) {
   if (!_settle) return;
   const s = _settle;
   _settle = null;
-  dlg.hidden = true;
   try { if (document.activeElement) document.activeElement.blur(); } catch { }
-  s(v);
+  dlg.classList.add("out");
+  const finish = () => {
+    dlg.classList.remove("out");
+    dlg.hidden = true;
+    s(v);
+  };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) finish();
+  else setTimeout(finish, 200);
 }
 
 function open({ msg, input = null, okText, danger }) {

@@ -224,11 +224,11 @@ function render() {
       ${it.kind === "video" ? '<div class="g-play"><span>▶</span></div>' : ""}
       <div class="g-overlay">
         <div class="g-acts">
-          <button class="g-act" data-act="rerun" title="${t("act.rerun")}">↻</button>
-          <button class="g-act" data-act="edit" title="${t("act.edit")}">⑃</button>
-          <button class="g-act" data-act="archive" title="${t("lb.archive")}">◈</button>
-          <button class="g-act" data-act="download" title="${t("lb.download")}">↓</button>
-          <button class="g-act del" data-act="del" title="${t("act.delete")}">✕</button>
+          <button class="g-act" data-act="rerun" title="${t("act.rerun")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg></button>
+          <button class="g-act" data-act="edit" title="${t("act.edit")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M10 6.5h5.5a2 2 0 0 1 2 2V14"/></svg></button>
+          <button class="g-act" data-act="archive" title="${t("lb.archive")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><path d="M10 12h4"/></svg></button>
+          <button class="g-act" data-act="download" title="${t("lb.download")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+          <button class="g-act del" data-act="del" title="${t("act.delete")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
         </div>
       </div>
       <span class="g-badge">${it.kind === "video" ? t("gallery.video") : t("gallery.image")}${it.w ? " · " + it.w + "×" + it.h : ""}</span>
@@ -350,7 +350,11 @@ async function batchTrash() {
 
 /* —— 灯箱 —— */
 function openLightbox(list, idx) { lbIndex = idx; $("#lightbox").hidden = false; renderLightbox(list); }
-function closeLightbox() { $("#lightbox").hidden = true; $("#lb-media").innerHTML = ""; }
+function closeLightbox() {
+  const lb = $("#lightbox");
+  lb.classList.add("out");
+  setTimeout(() => { lb.classList.remove("out"); lb.hidden = true; $("#lb-media").innerHTML = ""; }, 190);
+}
 function step(delta) {
   const list = visible();
   if (!list.length) return;

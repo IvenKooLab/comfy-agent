@@ -31,7 +31,10 @@ export function toast(msg, type = "") {
   el.className = `toast ${type}`;
   el.textContent = msg;
   $("#toasts").appendChild(el);
-  setTimeout(() => el.remove(), 4200);
+  setTimeout(() => {
+    el.classList.add("out");
+    setTimeout(() => el.remove(), 180);
+  }, 4200);
 }
 
 export function fmtSize(n) {
