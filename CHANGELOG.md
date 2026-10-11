@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.5（2026-09-16）— UI 大改版：动效系统 + SVG 图标集 + 全站零 emoji
+
+- **动效系统**（对标 transitions.dev 规范）：动效 token 化（--dur-1/2/3 + ease-out/spring），全部 14 处 `transition: all` 清零只动 opacity/transform；三层动效齐备——进入（弹窗/Toast/切页/列表交错入场）、过渡（按钮悬浮上浮 + 按压回缩、卡片提亮）、消失（弹窗缩退/Toast 滑出/灯箱淡出，动画播完再 hidden）；全局 prefers-reduced-motion 无障碍保护
+- **SVG 图标集**：自绘 lucide 风格 16px 描边图标 29 枚（内联零依赖）——导航 13 个、模式 Tab、约 25 个按钮、画廊卡片悬浮操作、关闭按钮全部替换；硬指标**全站零 emoji**（12 页 DOM 扫描归零，i18n 66 行值清洗 + 服务端风格名数据源一并清理）；⚡草稿徽章改样式化 .draft-tag 药丸
+- **README 11 张截图全部重摄**（新 UI + 中性演示数据，720px 轻量缩略图 304KB）
+- 收录徽章：awesome-alternative-uis-for-comfyui（PR #100 已合并）+ Gitee stars
+
 ## v1.5.4（2026-09-16）— 角色 LoRA/ControlNet 位 + 体验修复批
 
 - **角色资产库扩展**：角色卡新增 LoRA 绑定（下拉选择 loras 目录文件 + 强度）与 ControlNet 方案备注（预留位）；创作页选中角色提交生图时自动注入——工作流已有 LoRA 节点则填值，无节点则插入 `LoraLoaderModelOnly` 并重接 MODEL 链
