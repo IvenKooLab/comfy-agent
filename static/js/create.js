@@ -129,7 +129,7 @@ async function loadStyles() {
     const s = styleView(raw);
     const c = document.createElement("button");
     c.className = "style-chip" + (raw.id === selStyle ? " active" : "");
-    c.innerHTML = `<span class="em">${s.emoji}</span>${s.name}`;
+    c.innerHTML = `${s.name}`;
     c.title = s.desc;
     c.addEventListener("click", () => {
       selStyle = raw.id;
@@ -302,12 +302,12 @@ function gCard(it, list) {
   const src = it.kind === "video" ? mediaUrl(it.path, { thumb: "1" }) : mediaUrl(it.path);
   card.innerHTML = `
     <img loading="lazy" src="${src}" alt="">
-    ${it.kind === "video" ? '<div class="g-play"><span>▶</span></div>' : ""}
+    ${it.kind === "video" ? '<div class="g-play"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></div>' : ""}
     <div class="g-overlay">
       <div class="g-acts">
-        <button class="g-act" data-act="rerun" title="${t("act.rerun")}">↻</button>
-        <button class="g-act" data-act="archive" title="${t("lb.archive")}">◈</button>
-        <button class="g-act" data-act="download" title="${t("lb.download")}">↓</button>
+        <button class="g-act" data-act="rerun" title="${t("act.rerun")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg></button>
+        <button class="g-act" data-act="archive" title="${t("lb.archive")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><path d="M10 12h4"/></svg></button>
+        <button class="g-act" data-act="download" title="${t("lb.download")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
       </div>
     </div>
     <span class="g-badge">${it.kind === "video" ? t("gallery.video") : t("gallery.image")}${it.w ? " · " + it.w + "×" + it.h : ""}</span>

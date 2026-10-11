@@ -12,8 +12,8 @@ let importing = false;
 let favs = JSON.parse(localStorage.getItem("tpl_favs") || "[]");
 
 const GROUP_ICON = {
-  "Video": "🎬", "Image": "🖼", "Use Cases": "📚", "Audio": "🔊",
-  "3D Model": "🧊", "LLM": "🤖", "Image Tools": "🛠", "Video Tools": "🎬", "Node Basics": "🧱",
+  "Video": "", "Image": "", "Use Cases": "", "Audio": "",
+  "3D Model": "", "LLM": "", "Image Tools": "", "Video Tools": "", "Node Basics": "",
 };
 
 export function initTemplates() {
@@ -40,8 +40,8 @@ async function load() {
   box.innerHTML = `<div class="skeleton" style="height:200px"></div>`;
   const r = await api("/api/templates/index");
   if (!r.ok) {
-    box.innerHTML = `<div class="empty"><div class="empty-ico">📡</div><p>${r.error}</p>
-      <button class="btn" id="tpl-retry" style="margin-top:12px">↻ ${tr("act.retry")}</button></div>`;
+    box.innerHTML = `<div class="empty"><div class="empty-ico"></div><p>${r.error}</p>
+      <button class="btn" id="tpl-retry" style="margin-top:12px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg> ${tr("act.retry")}</button></div>`;
     box.querySelector("#tpl-retry").addEventListener("click", load);
     setTimeout(() => { if (!groups.length) load(); }, 5000); // 网络抖动自动重试一次
     return;
@@ -67,8 +67,8 @@ function renderGroups() {
     `<div class="tpl-group-item${curGroup === key ? " active" : ""}" data-g="${key}">
        <span>${icon} ${label}</span><span class="muted">${count}</span></div>`;
   box.innerHTML =
-    row("all", "☰", tr("tpl.all"), total) +
-    groups.map((g) => row(g.title, GROUP_ICON[g.title] || "📁", g.title, g.templates.length)).join("");
+    row("all", "", tr("tpl.all"), total) +
+    groups.map((g) => row(g.title, GROUP_ICON[g.title] || "", g.title, g.templates.length)).join("");
   box.querySelectorAll(".tpl-group-item").forEach((el) => el.addEventListener("click", () => {
     curGroup = el.dataset.g;
     shown = 24;
@@ -99,7 +99,7 @@ function renderCards() {
   });
   $("#tpl-count").textContent = trf("tpl.count", list.length);
   const shownList = list.slice(0, shown);
-  grid.innerHTML = shownList.length ? "" : `<div class="empty" style="column-span:all"><div class="empty-ico">🔍</div><p>${tr("empty.templates.search")}</p></div>`;
+  grid.innerHTML = shownList.length ? "" : `<div class="empty" style="column-span:all"><div class="empty-ico"></div><p>${tr("empty.templates.search")}</p></div>`;
   for (const t of shownList) {
     const card = document.createElement("div");
     card.className = "tpl-card";
@@ -110,7 +110,7 @@ function renderCards() {
     card.innerHTML = `
       <div class="tpl-thumb"><div class="tpl-ph"><span>${t.title.slice(0, 1)}</span></div>
         <img class="tpl-img" src="${preview}" loading="lazy" onerror="this.remove()">
-        <button class="tpl-fav" data-n="${t.name}">${isFav ? "★" : "☆"}</button>
+        <button class="tpl-fav" data-n="${t.name}">${isFav ? "" : ""}</button>
         <div class="tpl-badges">${badge}${tags}</div></div>
       <div class="tpl-info">
         <div class="tpl-title" title="${t.title}">${t.title}</div>
@@ -121,7 +121,7 @@ function renderCards() {
       const n = e.target.dataset.n;
       favs = favs.includes(n) ? favs.filter((x) => x !== n) : [...favs, n];
       localStorage.setItem("tpl_favs", JSON.stringify(favs));
-      e.target.textContent = favs.includes(n) ? "★" : "☆";
+      e.target.textContent = favs.includes(n) ? "" : "";
     });
     card.addEventListener("click", () => openTemplate(t));
     grid.appendChild(card);

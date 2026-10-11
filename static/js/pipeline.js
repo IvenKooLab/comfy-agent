@@ -102,7 +102,7 @@ async function refresh() {
     const el = document.createElement("div");
     el.className = "wf-item" + (cur && cur.id === b.id ? " active" : "");
     el.innerHTML = `<div class="t">${b.name}</div>
-      <div class="m"><span>${b.total}${t("unit.shots")}</span><span>✓${b.done} ✗${b.failed}</span></div>`;
+      <div class="m"><span>${b.total}${t("unit.shots")}</span><span>成功 ${b.done} · 失败 ${b.failed}</span></div>`;
     el.addEventListener("click", async () => { await openBatch(b.id); });
     box.appendChild(el);
   }
@@ -144,24 +144,24 @@ function renderItems() {
     $("#pl-empty-new")?.addEventListener("click", newBatch);
     return;
   }
-  const stMap = { success: [t("status.success"), "success"], error: [t("status.error"), "error"], queued: ["⏳ " + t("status.queued"), "queued"] };
+  const stMap = { success: [t("status.success"), "success"], error: [t("status.error"), "error"], queued: [t("status.queued"), "queued"] };
   box.innerHTML = cur.items.map((it, i) => {
     const [txt, cls] = stMap[it.status] || [t("pl.notqueued"), ""];
     const ff = it.first_frame
       ? `<button class="btn sm pl-ff set" data-i="${i}" title="${it.first_frame}">${t("pl.ff.set")}</button>`
       : `<button class="btn sm ghost pl-ff" data-i="${i}">${t("pl.ff")}</button>`;
     const prio = it.priority
-      ? `<button class="btn sm pl-prio set" data-i="${i}" title="${t("pl.prio.on.tip")}">▲ ${t("pl.prio.short")}</button>`
-      : `<button class="btn sm ghost pl-prio" data-i="${i}" title="${t("pl.prio.tip")}">▲ ${t("pl.prio.short")}</button>`;
-    const retryN = it.retry_count ? ` <span class="muted">↻${it.retry_count}</span>` : "";
-    const chain = i > 0 ? `<button class="btn sm ghost pl-chain" data-i="${i}" title="${t("pl.chain.tip")}">↳</button>` : "";
+      ? `<button class="btn sm pl-prio set" data-i="${i}" title="${t("pl.prio.on.tip")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg> ${t("pl.prio.short")}</button>`
+      : `<button class="btn sm ghost pl-prio" data-i="${i}" title="${t("pl.prio.tip")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg> ${t("pl.prio.short")}</button>`;
+    const retryN = it.retry_count ? ` <span class="muted">x${it.retry_count}</span>` : "";
+    const chain = i > 0 ? `<button class="btn sm ghost pl-chain" data-i="${i}" title="${t("pl.chain.tip")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v9a4 4 0 0 0 8 0V4"/><circle cx="12" cy="4" r="0"/><path d="M8 7H5a2 2 0 0 0-2 2v1a3 3 0 0 0 3 3h2"/><path d="M16 7h3a2 2 0 0 1 2 2v1a3 3 0 0 1-3 3h-2"/></svg></button>` : "";
     return `<div class="pl-item">
       <span class="run-status ${cls}">${txt}</span>
       <input class="input pl-item-name" data-i="${i}" value="${it.name.replace(/"/g, "&quot;")}">
       ${ff}
       ${prio}
       ${chain}
-      <button class="btn sm ghost pl-retry" data-i="${i}" title="${t("pl.retry.one")}">↻</button>
+      <button class="btn sm ghost pl-retry" data-i="${i}" title="${t("pl.retry.one")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg></button>
     </div>
     <textarea class="input pl-prompt-edit" data-i="${i}" rows="2">${it.prompt.replace(/"/g, "&quot;").replace(/</g, "&lt;")}</textarea>`;
   }).join("");
@@ -310,7 +310,7 @@ async function loadChars() {
   characters = r.characters;
   const box = $("#char-list");
   box.innerHTML = characters.length
-    ? characters.map((c) => `<div class="note-item" data-id="${c.id}"><span class="nm">🧑‍🎤 ${c.name}</span><span class="meta">${(c.lock || "").length}${t("unit.lock")}</span></div>`).join("")
+    ? characters.map((c) => `<div class="note-item" data-id="${c.id}"><span class="nm">${c.name}</span><span class="meta">${(c.lock || "").length}${t("unit.lock")}</span></div>`).join("")
     : `<div class="muted">${t("empty.chars")}</div>`;
   box.querySelectorAll(".note-item").forEach((el) => el.addEventListener("click", () => editChar(el.dataset.id)));
   document.dispatchEvent(new CustomEvent("characters-updated", { detail: characters }));
@@ -334,7 +334,7 @@ function renderCharThumbs(refs) {
   if (!box) return;
   box.innerHTML = (refs || []).map((r, i) =>
     `<div style="position:relative"><img src="/api/media?path=${encodeURIComponent(r)}&thumb=1" style="height:60px;border-radius:8px">
-     <button class="btn sm danger ghost" data-i="${i}" style="position:absolute;top:-6px;right:-6px;padding:0 6px">✕</button></div>`).join("");
+     <button class="btn sm danger ghost" data-i="${i}" style="position:absolute;top:-6px;right:-6px;padding:0 6px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button></div>`).join("");
   box.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     const refs = ($("#char-ref").dataset.refs || "").split("|").filter(Boolean);
     refs.splice(+b.dataset.i, 1);
@@ -401,7 +401,7 @@ async function loadScenes() {
   const box = $("#scene-list");
   if (!box) return;
   box.innerHTML = scenes.length
-    ? scenes.map((s) => `<div class="note-item" data-id="${s.id}"><span class="nm">🌐 ${s.name}</span><span class="meta">${(s.tokens || "").length}${t("unit.words")}</span></div>`).join("")
+    ? scenes.map((s) => `<div class="note-item" data-id="${s.id}"><span class="nm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></svg> ${s.name}</span><span class="meta">${(s.tokens || "").length}${t("unit.words")}</span></div>`).join("")
     : `<div class="muted">${t("empty.nodes")}</div>`;
   box.querySelectorAll(".note-item").forEach((el) => el.addEventListener("click", () => editScene(el.dataset.id)));
 }
@@ -454,7 +454,7 @@ async function renderEpisodes() {
   box.innerHTML = r.episodes.length
     ? `<div class="card pad"><h3 style="font-size:13px;margin-bottom:10px">${t("pl.epagg")}</h3>
        ${r.episodes.map((e) => `<div class="pl-item">
-           <b>${e.name}</b> · ${e.total}${t("unit.shots")} · ✓${e.done} ✗${e.failed} · ⏱${e.gpu_minutes.toFixed(1)}min
+           <b>${e.name}</b> · ${e.total}${t("unit.shots")} · 成功 ${e.done} / 失败 ${e.failed} · ${e.gpu_minutes.toFixed(1)}min
          </div>`).join("")}</div>`
     : `<div class="muted">${t("pl.nobatch")}</div>`;
 }

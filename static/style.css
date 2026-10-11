@@ -684,3 +684,7 @@ textarea.input { height: auto; padding: 9px 12px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* 草稿徽章（替代 ⚡ emoji） */
+.draft-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; line-height: 16px; vertical-align: 1px; background: rgba(251, 191, 36, .16); color: var(--warn); border: 1px solid rgba(251, 191, 36, .35); }
+.wf-item .del svg { display: block; }

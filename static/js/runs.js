@@ -90,7 +90,7 @@ async function renderHistory() {
     const info = byPid[h.prompt_id] || {};
     const name = info.name || h.name || h.prompt_id.slice(0, 8);
     const st = h.status === "success" || h.completed ? "success" : (h.status === "error" ? "error" : (h.status === "executing" ? "running" : "queued"));
-    const stTxt = { success: "✓ " + t("status.success"), error: "✗ " + t("status.error"), running: t("status.running"), queued: t("status.queued") }[st] || h.status;
+    const stTxt = { success: " " + t("status.success"), error: "" + t("status.error"), running: t("status.running"), queued: t("status.queued") }[st] || h.status;
     let meta = h.prompt_id.slice(0, 8);
     if (st === "running" || st === "queued") {
       const el = elapsedMin(info.submitted || "");
@@ -105,7 +105,7 @@ async function renderHistory() {
       const tSrc = (o.type === "output" && /\.(mp4|webm|gif|mov|mkv)$/i.test(o.filename)) ? mediaUrl(rel, { thumb: "1" }) : src;
       return `<img src="${tSrc}" loading="lazy" title="${esc(o.filename)}" data-full="${src}">`;
     }).join("");
-    const retryable = info.graph ? `<button class="btn ghost run-retry" data-pid="${h.prompt_id}">↻ ${t("act.retry")}</button>` : "";
+    const retryable = info.graph ? `<button class="btn ghost run-retry" data-pid="${h.prompt_id}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg> ${t("act.retry")}</button>` : "";
     const prog = rowProgress[h.prompt_id];
     const progHtml = (st === "running" && prog?.max)
       ? `<div class="row-progress"><i style="width:${Math.round(prog.value / prog.max * 100)}%"></i></div>` : "";

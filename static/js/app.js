@@ -238,7 +238,7 @@ async function waitServerAndBoot() {
     await fetch("/api/status", { cache: "no-store" });
   } catch {
     document.body.innerHTML = `<div style="position:fixed;inset:0;background:#08090d;color:#a8aec2;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;gap:14px;z-index:999">
-      <div style="font-size:40px">⏳</div>
+      <div style="font-size:40px"></div>
       <div style="font-size:15px;color:#f0f2f8">${t("heal.title")}</div>
       <div style="font-size:12px">${t("heal.sub")}</div></div>`;
     for (;;) {

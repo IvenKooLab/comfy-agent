@@ -1,6 +1,6 @@
 /* editor.js — 工作流可视化编辑器：SVG 节点图 + 参数检查器 + 导入导出 */
 import { $, $$, api, toast, goto } from "./app.js";
-import { t, tf, wfLabel } from "./i18n.js";
+import { t, tf, wfLabel, wfBadge } from "./i18n.js";
 import { uiConfirm, uiPrompt } from "./ui.js";
 
 const NS = "http://www.w3.org/2000/svg";
@@ -114,9 +114,9 @@ async function loadList(selectId) {
   for (const wf of workflows) {
     const el = document.createElement("div");
     el.className = "wf-item" + (cur && cur.id === wf.id ? " active" : "");
-    el.innerHTML = `<div class="t">${esc(wfLabel(wf))}</div>
+    el.innerHTML = `<div class="t">${esc(wfLabel(wf))}${wfBadge(wf)}</div>
       <div class="m"><span>${wf.builtin ? t("ed.builtin") : esc((wf.updated || "").slice(5))} · ${Object.keys(wf.api || {}).length}${t("unit.nodes")}</span>
-      ${wf.builtin ? "" : `<span class="del" title="${t("act.delete")}">✕</span>`}</div>`;
+      ${wf.builtin ? "" : `<span class="del" title="${t("act.delete")}"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></span>`}</div>`;
     el.addEventListener("click", () => { cur = JSON.parse(JSON.stringify(wf)); afterLoad(); renderListSel(); });
     el.querySelector(".del")?.addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -442,7 +442,7 @@ function renderInspector() {
       const isSeed = /seed/i.test(f.name);
       html += `<div class="field">${label}<div class="seed-row">
         <input class="input" type="number" step="${t === "FLOAT" ? "0.1" : "1"}" data-f="${esc(f.name)}" value="${val ?? 0}">
-        ${isSeed ? `<button class="dice" data-dice="${esc(f.name)}" title="${t("create.dice.tip")}">🎲</button>` : ""}</div></div>`;
+        ${isSeed ? `<button class="dice" data-dice="${esc(f.name)}" title="${t("create.dice.tip")}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.2" cy="8.2" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.8" cy="8.2" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.2" cy="15.8" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.8" cy="15.8" r="1.15" fill="currentColor" stroke="none"/></svg></button>` : ""}</div></div>`;
     } else {
       const long = typeof val === "string" && (val.length > 60 || /text|prompt|caption|negative/i.test(f.name));
       html += `<div class="field">${label}${long

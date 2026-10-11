@@ -114,7 +114,7 @@ function renderNoteList() {
   const q = ($("#obs-search").value || "").trim().toLowerCase();
   const list = vaultNotes.filter((n) => !q || n.name.toLowerCase().includes(q) || n.path.toLowerCase().includes(q));
   $("#obs-notelist").innerHTML = list.length
-    ? list.map((n) => `<div class="note-item" data-p="${n.path}"><span class="nm">📄 ${n.name}</span><span class="meta">${n.words}${t("unit.words")}</span></div>`).join("")
+    ? list.map((n) => `<div class="note-item" data-p="${n.path}"><span class="nm">${n.name}</span><span class="meta">${n.words}${t("unit.words")}</span></div>`).join("")
     : `<div class="muted">${t("kb.search.none")}</div>`;
   $$("#obs-notelist .note-item").forEach((el) => el.addEventListener("click", () => openNotePreview(el.dataset.p)));
 }
@@ -239,7 +239,7 @@ function initAgent() {
         line.className = "tool-trace";
         let argsStr = "";
         try { argsStr = JSON.stringify(tt.args || {}); } catch { }
-        line.textContent = `🔧 ${tt.tool}(${(argsStr || "{}").slice(0, 70)}) → ${String(tt.summary || "").slice(0, 90)}`;
+        line.textContent = `${tt.tool}(${(argsStr || "{}").slice(0, 70)}) → ${String(tt.summary || "").slice(0, 90)}`;
         el.appendChild(line);
       }
     }
@@ -440,7 +440,7 @@ function initSettings() {
     const dev = (st.system_stats?.devices || [])[0];
     $("#s-msg").textContent = st.comfy_online
       ? tf("set.test.ok", dev?.name || "?", Math.round((dev?.vram_total || 0) / 1048576))
-      : "✗ Offline (is ComfyUI running?)";
+      : " Offline (is ComfyUI running?)";
   });
   $("#s-openui").addEventListener("click", async () => {
     const r = await api("/api/settings");

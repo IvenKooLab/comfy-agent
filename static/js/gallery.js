@@ -112,12 +112,12 @@ export function initGallery() {
     }
   });
   // 参数行：悬停复制 + 长文本展开（委托，一次绑定）
-  // 复制反馈用按钮内联状态（✓ 已复制），不弹全局 toast——避免遮挡灯箱关闭按钮
+  // 复制反馈用按钮内联状态（已复制），不弹全局 toast——避免遮挡灯箱关闭按钮
   $("#lb-summary").addEventListener("click", async (e) => {
     const cp = e.target.closest(".kv-copy");
     if (cp) {
       const ok = await copyText(cp.dataset.copy);
-      cp.textContent = ok ? "✓ " + t("toast.copied") : t("toast.copy.fail");
+      cp.textContent = ok ? t("toast.copied") : t("toast.copy.fail");
       setTimeout(() => { cp.textContent = t("lb.copy"); }, 1500);
       return;
     }
@@ -219,9 +219,9 @@ function render() {
     card.dataset.path = it.path;
     const src = it.kind === "video" ? mediaUrl(it.path, { thumb: "1" }) : mediaUrl(it.path);
     card.innerHTML = `
-      <div class="g-check" title="${t("lb.select")}">✓</div>
+      <div class="g-check" title="${t("lb.select")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></div>
       <img loading="lazy" src="${src}" alt="">
-      ${it.kind === "video" ? '<div class="g-play"><span>▶</span></div>' : ""}
+      ${it.kind === "video" ? '<div class="g-play"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></div>' : ""}
       <div class="g-overlay">
         <div class="g-acts">
           <button class="g-act" data-act="rerun" title="${t("act.rerun")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg></button>
@@ -380,8 +380,8 @@ async function renderLightbox(list) {
   if (!it) return;
   $("#lb-title").textContent = it.name;
   $("#lb-info").innerHTML = `
-    <div>📁 ${it.path}</div>
-    <div>💾 ${fmtSize(it.size)} · ${new Date(it.mtime * 1000).toLocaleString("zh-CN")}${it.w ? ` · ${it.w}×${it.h}` : ""}</div>
+    <div><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> ${it.path}</div>
+    <div><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ${fmtSize(it.size)} · ${new Date(it.mtime * 1000).toLocaleString("zh-CN")}${it.w ? ` · ${it.w}×${it.h}` : ""}</div>
     <div>${lbIndex + 1} / ${list.length}</div>`;
   const box = $("#lb-media");
   box.innerHTML = "";

@@ -103,7 +103,7 @@ async function loadVersionInfo() {
   const info = $("#cv-version-info");
   const r = await api("/api/comfy/git");
   if (!r.ok) { info.textContent = "Load failed"; return; }
-  if (!r.git) { info.innerHTML = "⚠ Not a git repo, one-click update unavailable"; return; }
+  if (!r.git) { info.innerHTML = "Not a git repo, one-click update unavailable"; return; }
   comfyHead = r.head;
   info.innerHTML = tf("lc.ver.line", r.head, r.branch, r.ui_version || t("lc.uinotrun"), r.dirty_tracked);
 }
@@ -126,7 +126,7 @@ async function doUpdate() {
   const r = await api("/api/comfy/update", { method: "POST", body: {} });
   toast(r.msg || r.error, r.ok ? "ok" : "err");
   if (r.ok) {
-    info.innerHTML = `✓ ${r.msg} ${r.note || ""}`;
+    info.innerHTML = ` ${r.msg} ${r.note || ""}`;
     loadVersionInfo();
     if (await uiConfirm(t("lc.updated.ask"), { danger: false })) {
       const rr = await api("/api/comfy/restart", { method: "POST", body: {} });
@@ -134,6 +134,6 @@ async function doUpdate() {
       setTimeout(poll, 6000);
     }
   } else {
-    info.innerHTML = "✗ " + (r.msg || r.error);
+    info.innerHTML = "" + (r.msg || r.error);
   }
 }

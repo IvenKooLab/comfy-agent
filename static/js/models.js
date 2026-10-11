@@ -41,15 +41,15 @@ function renderSuitesOnce(dls) {
       const j = dls[key];
       let status, action = "";
       if (m.installed) {
-        status = `<span class="badge" style="color:var(--brand-2)">✓ ${t("md.installed")}</span>`;
+        status = `<span class="badge" style="color:var(--brand-2)"> ${t("md.installed")}</span>`;
       } else if (j && j.status === "downloading") {
         const pct = j.total ? Math.min(100, Math.round((j.done / j.total) * 100)) : 0;
         status = `<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="mdbar"><div style="width:${pct}%"></div></div><span class="muted">${pct}%</span></div>`;
       } else if (j && j.status === "error") {
-        status = `<span class="badge" style="color:#f66">✗ ${esc((j.error || "").slice(0, 40))}</span>`;
+        status = `<span class="badge" style="color:#f66"> ${esc((j.error || "").slice(0, 40))}</span>`;
         action = m.url ? `<button class="btn sm" data-dl="${s.id}" data-name="${esc(m.name)}">${t("md.retry")}</button>` : "";
       } else if (j && j.status === "done") {
-        status = `<span class="badge" style="color:var(--brand-2)">✓ ${t("md.dl.done")}</span>`;
+        status = `<span class="badge" style="color:var(--brand-2)"> ${t("md.dl.done")}</span>`;
         action = "";
       } else {
         status = `<span class="muted">${fmtSize(m.size)}</span>`;
