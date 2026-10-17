@@ -21,6 +21,7 @@ import struct
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 import traceback
 import urllib.error
@@ -117,10 +118,14 @@ def write_text_atomic(path, text):
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        f.write(text)
-    os.replace(tmp, path)
+    fd, tmp = tempfile.mkstemp(prefix=".comfy-", suffix=".tmp", dir=d or ".")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 
 def save_settings(s):
@@ -167,10 +172,7 @@ def read_json_file(path, default):
 
 
 def write_json_file(path, obj):
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
+    write_text_atomic(path, json.dumps(obj, ensure_ascii=False, indent=2))
 
 
 def human_size(n):
@@ -312,9 +314,11 @@ class MiniWS:
         try:
             if self.sock:
                 self._send_frame(0x8)
-                self.sock.close()
         except Exception:
             pass
+        finally:
+            if self.sock:
+                self.sock.close()
 
 
 COMFY = None  # set in main()
@@ -372,15 +376,27 @@ HUB = SSEHub()
 def ws_monitor_loop():
     """维持与 ComfyUI 的 WS 长连，事件转发到 SSE hub。"""
     while True:
-        ws_url = COMFY.base.replace("http://", "ws://").replace("https://", "wss://")
+        client = COMFY
+        ws_url = client.base.replace("http://", "ws://").replace("https://", "wss://")
         ws_url += "/ws?clientId=" + SETTINGS["client_id"]
         ws = MiniWS(ws_url)
         try:
             ws.connect()
-            COMFY.online = True
+            client.online = True
             HUB.state["comfy_online"] = True
             HUB.publish({"type": "comfy_status", "data": {"online": True}})
+            def close_on_change(ws=ws, client=client):
+                while ws.alive and COMFY is client:
+                    time.sleep(0.2)
+                if ws.alive and ws.sock:
+                    try:
+                        ws.sock.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+            threading.Thread(target=close_on_change, daemon=True).start()
             while True:
+                if COMFY is not client:
+                    break
                 opcode, text = ws.recv_text()
                 if opcode != 1:
                     continue
@@ -394,7 +410,7 @@ def ws_monitor_loop():
             pass
         finally:
             ws.close()
-            COMFY.online = False
+            client.online = False
             HUB.state["comfy_online"] = False
             HUB.state["progress"] = None
             HUB.state["executing"] = None
@@ -564,13 +580,18 @@ def make_image_thumb(src, dst):
         return False
 
 
-def resolve_media(rel):
-    """把画廊相对路径解析成绝对路径，并防目录穿越。"""
-    root = os.path.abspath(SETTINGS["output_dir"])
-    full = os.path.abspath(os.path.join(root, rel))
-    if not full.lower().startswith(root.lower()):
+def path_within(root, rel):
+    """Resolve symlinks and require a complete directory boundary."""
+    root = os.path.realpath(root)
+    full = os.path.realpath(os.path.join(root, rel))
+    try:
+        return full if os.path.commonpath([root, full]) == root else None
+    except ValueError:
         return None
-    return full
+
+
+def resolve_media(rel):
+    return path_within(SETTINGS["output_dir"], rel)
 
 
 # ---------------------------------------------------------------- workflows store
@@ -889,19 +910,24 @@ def load_runs():
     return read_json_file(RUNS_FILE, [])
 
 
+_runs_lock = threading.RLock()
+
+
 def add_run(run):
-    runs = load_runs()
-    runs.insert(0, run)
-    write_json_file(RUNS_FILE, runs[:300])
+    with _runs_lock:
+        runs = load_runs()
+        runs.insert(0, run)
+        write_json_file(RUNS_FILE, runs[:300])
 
 
 def update_run(prompt_id, **kw):
-    runs = load_runs()
-    for r in runs:
-        if r.get("prompt_id") == prompt_id:
-            r.update(kw)
-            break
-    write_json_file(RUNS_FILE, runs[:300])
+    with _runs_lock:
+        runs = load_runs()
+        for r in runs:
+            if r.get("prompt_id") == prompt_id:
+                r.update(kw)
+                break
+        write_json_file(RUNS_FILE, runs[:300])
 
 
 # ---------------------------------------------------------------- obsidian
@@ -1925,8 +1951,8 @@ def vault_scan():
 
 def vault_note_content(rel):
     v = os.path.abspath(SETTINGS.get("vault_path", ""))
-    fp = os.path.abspath(os.path.join(v, rel))
-    if not fp.lower().startswith(v.lower()) or not fp.endswith(".md") or not os.path.isfile(fp):
+    fp = path_within(v, rel)
+    if not fp or not fp.endswith(".md") or not os.path.isfile(fp):
         return None
     with open(fp, encoding="utf-8", errors="replace") as f:
         return f.read(8000)
@@ -2564,14 +2590,21 @@ class Handler(BaseHTTPRequestHandler):
         start, end = 0, size - 1
         code = 200
         if ranges:
-            m = re.match(r"bytes=(\d*)-(\d*)", ranges)
+            m = re.fullmatch(r"bytes=(\d*)-(\d*)", ranges)
             if m and (m.group(1) or m.group(2)):
                 if m.group(1):
                     start = int(m.group(1))
-                if m.group(2):
-                    end = min(int(m.group(2)), size - 1)
-                elif not m.group(1):
-                    start = max(0, size - int(m.group(2) or size))
+                    end = min(int(m.group(2)), size - 1) if m.group(2) else size - 1
+                else:
+                    length = int(m.group(2))
+                    start = max(0, size - length) if length else size
+                if start >= size or start > end:
+                    f.close()
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{size}")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
                 code = 206
         clen = end - start + 1
         self.send_response(code)
@@ -2621,8 +2654,8 @@ class Handler(BaseHTTPRequestHandler):
             # 静态文件
             if path in ("/", "/index.html"):
                 return self.send_file(os.path.join(STATIC_DIR, "index.html"), "text/html; charset=utf-8")
-            fp = os.path.abspath(os.path.join(STATIC_DIR, path.lstrip("/")))
-            if not fp.lower().startswith(os.path.abspath(STATIC_DIR).lower()) or not os.path.isfile(fp):
+            fp = path_within(STATIC_DIR, urllib.parse.unquote(path).lstrip("/"))
+            if not fp or not os.path.isfile(fp):
                 return self.send_json({"ok": False, "error": "not found"}, 404)
             mime = mimetypes.guess_type(fp)[0] or "application/octet-stream"
             if fp.endswith(".js"):
@@ -2638,6 +2671,7 @@ class Handler(BaseHTTPRequestHandler):
                 pass
 
     def api(self, method, path, q, body):
+        global COMFY
         # ---- 设置/状态
         if path == "/api/settings" and method == "GET":
             s = dict(SETTINGS)
@@ -2663,6 +2697,8 @@ class Handler(BaseHTTPRequestHandler):
             if body.get("llm_key"):
                 SETTINGS["llm_key"] = body["llm_key"]
             save_settings(SETTINGS)
+            if COMFY is None or COMFY.base != SETTINGS["comfy_url"].rstrip("/"):
+                COMFY = ComfyClient(SETTINGS["comfy_url"])
             _gallery_cache["ts"] = 0
             return self.send_json({"ok": True, "msg": "已保存（端口改动需重启服务）"})
 
