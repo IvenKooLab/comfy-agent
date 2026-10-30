@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.6.0（2026-10-30）— 十月生态同步：MOSS-Image / FLUX 3 Klein 双新生图线
+
+> 距 v1.5.5 六周，ComfyUI 与开源生态密集更新：v0.42.0（10-18）原生支持 MOSS-Image，v0.43.0（10-27）给 MiniMax H3 加单头 LoRA（PDD head banks），10-15 FLUX 3 Image Klein 开源（5.6B）。本次把两条新开源生图线产品化进 ComfyAgent。
+
+- **MOSS-Image 文生图（内置）**（OpenMOSS · Apache-2.0）：按官方模板（image_moss_image_t2i）还原——SFT int8 主模型 + qwen3.5-9b w4a8 编码器（CLIPLoader type=moss_image）+ flux2-vae_small；25 步 er_sde / cfg 2.5，`SkipLayerGuidanceDiTSimple` 跳层 22 细节锚定；中英长文本渲染与 JSON 排版控制直击短剧「文字卡点」刚需。需 ComfyUI ≥ 0.42
+- **FLUX 3 Klein 文生图（内置）**（Black Forest Labs）：蒸馏 int8 16 步 euler/simple（追求官方质感可在编辑器换 base 权重走 50 步 cfg 3.5）；原生 4K、文字渲染、边界框排版、多参考图编辑——官方模板 image_flux3_klein_t2i / image_edit 经子图展开一键直连。需 ComfyUI ≥ 0.42
+- **模型页新增两个套件**：MOSS-Image 三件套 + edit LoRA + 色深控制 LoRA 全部 hf-mirror 一键断点续传（Comfy-Org 仓库无门控）；FLUX 3 Klein 套件如实标注 gated——主模型/编码器需登录 HF 接受 flux-kommunity-license 后手动放入 models 目录（flux2-vae 与 MOSS 仓库逐字节相同，可一键下载）
+- **修复（事故级）：text 覆盖污染负向编码**——submit_workflow 的 text 类覆盖此前会写进所有含 text 键的节点，双 CLIPTextEncode 工作流（MOSS 即是）的负向提示词会被正向内容覆盖；现在只写第一个命中的文本节点（正向约定在前）。H3 单文本节点行为不变，回归测试覆盖
+- 创作页图像模式工作流下拉自动出现两个新内置；尺寸注入经 EmptyFlux2LatentImage 生效（1024×1024 起，MOSS 支持到 2M 像素、宽高 16 的倍数）；预估提示不再写死「Flux · 20步」——按所选工作流实时显示名称与采样步数，模式切换即刷新
+- 帮助页同步（中英各 2 条：新内置工作流说明、模型页套件清单更新）
+- 测试可移植性修复：tests/test_models.py / test_upload_media.py 硬编码开发机绝对路径（`E:/work/gitee/...`），任何其他机器上都直接崩——改为从测试文件位置推导仓库根，非 Windows 环境也能跑通集成链路
+- 路线图对齐（详见 docs/竞品分析与路线图.md 2026-10-30 节）：NVIDIA VFX 节点（本地视频放大/补帧/SDR→HDR，10-13 发布）列入 AI 放大导出的候选实现；H3 单头 LoRA 等权重公开；ComfyUI 官方 Comfy Agent（10-01 发布）与本项目的命名重叠及 v1 agent host 接入点注记
+
+**升级注意**：两个新内置工作流依赖 ComfyUI ≥ 0.42 的原生节点（`SkipLayerGuidanceDiTSimple` / `EmptyFlux2LatentImage` / `CLIPLoader` 的 flux3·moss_image 类型）；旧版 ComfyUI 会报节点不存在——启动器页「检查更新 → 一键更新」即可。
+
 ## v1.5.5（2026-09-16）— UI 大改版：动效系统 + SVG 图标集 + 全站零 emoji
 
 - **动效系统**（对标 transitions.dev 规范）：动效 token 化（--dur-1/2/3 + ease-out/spring），全部 14 处 `transition: all` 清零只动 opacity/transform；三层动效齐备——进入（弹窗/Toast/切页/列表交错入场）、过渡（按钮悬浮上浮 + 按压回缩、卡片提亮）、消失（弹窗缩退/Toast 滑出/灯箱淡出，动画播完再 hidden）；全局 prefers-reduced-motion 无障碍保护

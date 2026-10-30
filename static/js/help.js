@@ -15,6 +15,7 @@ const HELP_EN = [
     { q: "When should I turn off \"ZH→EN\"?", a: "Turn it off when your input is already an English prompt to skip translation.\nEven when off, the English style tokens of the current style SOP are still appended." },
     { q: "What is the \"Character\" dropdown for?", a: "Pick a character from the Character Library; its lock string is appended to the prompt so the character looks consistent across renders.\nCharacters are managed in the Pipeline page's Character Library." },
     { q: "Does count 4 generate 4 different images?", a: "Yes. Each image uses a different random seed, so layout and details vary. Great for exploring before settling on a final." },
+    { q: "What are the MOSS-Image / FLUX 3 Klein built-in workflows?", a: "Two image models open-sourced in October 2026, now built in (pick them in the Create page workflow dropdown; the editor and Jobs pages list them too):\n· MOSS-Image (OpenMOSS, Apache-2.0): strong bilingual long-text rendering and layout control, 25 steps er_sde / cfg 2.5 with layer-22 skip guidance; the Models page \"MOSS-Image\" suite downloads its three files in one click.\n· FLUX 3 Klein (Black Forest Labs): 5.6B distilled int8, 16-step fast renders, native 4K / text rendering / bounding-box layout. The BFL repo is gated — grab the main model and text encoder manually after accepting the license on Hugging Face (the VAE downloads in one click).\nBoth require ComfyUI ≥ 0.42." },
   ]},
   { mod: "▦ Gallery", items: [
     { q: "How do I batch delete / archive?", a: "1. Hover a card and a checkbox appears at its top-right; click to select (or Ctrl+click for multi-select)\n2. The batch bar appears at the bottom → \"Archive\" or \"Delete\"\n3. Ctrl+A selects all visible items, Esc clears selection" },
@@ -58,7 +59,7 @@ const HELP_EN = [
     { q: "What does \"Start ComfyUI\" do?", a: "Starts ComfyUI with your configured args (crash-safe defaults).\nIf ComfyUI is already running you'll be told so.\nAfter startup its log streams below." },
     { q: "What does \"Check updates\" do?", a: "It queries the remote git repo and computes how many commits you're behind.\nIf behind, \"Update\" stashes local changes → pull → restore → prompts you to restart." },
     { q: "What does \"Models\" show?", a: "It scans ComfyUI's models folders: checkpoints/loras/vae/upscale/controlnet, with counts and sizes.\nClick to expand the file list." },
-    { q: "What is the \"Models\" page (page 9)?", a: "The model hub: the top half shows recommended suites (e.g. the SCAIL-2 character-animation bundle) with per-file install status — click Download for anything missing (built-in hf-mirror direct links, resumable, live progress bars). The bottom half browses local model files by directory with search and a one-click open-folder.\nOpening a new template that requires missing models will prompt you and jump here." },
+    { q: "What is the \"Models\" page (page 9)?", a: "The model hub: the top half shows recommended suites (SCAIL-2 character animation / MiniMax H3 / MOSS-Image / FLUX 3 Klein) with per-file install status — click Download for anything missing (built-in hf-mirror direct links, resumable, live progress bars; gated files show \"Bundled\" and follow the manual steps in the suite description). The bottom half browses local model files by directory with search and a one-click open-folder.\nOpening a new template that requires missing models will prompt you and jump here." },
     { q: "A template says models are missing — now what?", a: "If a template references models you don't have, a dialog lists them; click \"Go to Models\" to jump to page 9 and download the matching suite in one click. You can still load the template first and install later." },
     { q: "How do I change launch args?", a: "Edit the args in the \"Launch config\" card (space separated) and save; applies on next start.\nDefaults are a crash-optimized set (--reserve-vram 2.5 etc.)." },
     { q: "How do I open the native ComfyUI web UI?", a: "Settings → Connection & dirs → the \"⧉ Open ComfyUI UI\" button opens your configured ComfyUI address in a new browser tab (workflow graph, official templates and node management live there).\nChange the address itself in the \"ComfyUI URL\" field on the same page." },
@@ -92,6 +93,7 @@ const HELP = [
     { q: "「中文→英文」开关什么时候关？", a: "如果输入本身就是英文提示词，可以关掉跳过翻译。\n关闭后系统仍会追加当前风格 SOP 的英文风格令牌。" },
     { q: "「角色」下拉是干什么的？", a: "从「角色资产库」选一个角色，其锁定串会自动追加到提示词尾部，保证多次生成角色外观一致。\n角色在「产线」页的角色资产库中管理。" },
     { q: "数量选 4 是生成 4 张不同的图吗？", a: "是的，每张用不同的随机种子，布局和细节各不相同。适合先出多张挑选再定稿。" },
+    { q: "MOSS-Image / FLUX 3 Klein 内置工作流是什么？", a: "2026 年 10 月新开源的两个生图模型，已内置成工作流（创作页工作流下拉可选，编辑器/任务页同样可用）：\n· MOSS-Image（OpenMOSS，Apache-2.0）：中英长文本渲染、排版控制强，25 步 er_sde/cfg 2.5，跳层 22 细节锚定；模型页「MOSS-Image」套件三件套可一键下载\n· FLUX 3 Klein（Black Forest Labs）：5.6B 蒸馏 int8，16 步快速出图，原生 4K/文字渲染/边界框排版；BFL 仓库 gated，主模型与编码器需登录 HF 接受协议后手动下载（VAE 可一键下载）\n两者都要求 ComfyUI ≥ 0.42。" },
   ]},
   { mod: "▦ 画廊", items: [
     { q: "怎么批量删除/归档？", a: "1. 鼠标悬停图片右上角出现勾选框，点选（或 Ctrl+点击多选）\n2. 底部出现批量操作条 → 点「批量归档」或「批量删除」\n3. Ctrl+A 全选可见项，Esc 取消选择" },
@@ -135,7 +137,7 @@ const HELP = [
     { q: "「启动 ComfyUI」按钮做什么？", a: "用配置的参数启动 ComfyUI（默认 h3_launch.sh 防炸参数）。\n如果 ComfyUI 已在运行则提示。\n启动后日志实时显示在下方。" },
     { q: "「检查更新」做什么？", a: "从远端 git 仓库拉取最新代码，计算本地落后多少提交。\n如果落后，点「一键更新」自动 stash 本地改动 → pull → 恢复 → 提示重启。" },
     { q: "「模型管理」显示什么？", a: "自动扫描 ComfyUI 的 models 目录：checkpoints/loras/vae/upscale/controlnet，显示数量和体积。\n点击可展开文件列表。" },
-    { q: "「模型」页（第 9 页）是做什么的？", a: "模型管理中心：上半部分是推荐套件（如 SCAIL-2 角色动画全家桶），列出套件内每个模型文件的安装状态，缺的直接点「下载」（内置 hf-mirror 直连，断点续传，进度条实时）；下半部分按目录分类浏览本地模型文件，支持搜索和一键打开文件夹。\n从模板库打开新模板时，如果缺模型会自动弹出提示并可跳转来下载。" },
+    { q: "「模型」页（第 9 页）是做什么的？", a: "模型管理中心：上半部分是推荐套件（SCAIL-2 角色动画 / MiniMax H3 / MOSS-Image / FLUX 3 Klein），列出套件内每个模型文件的安装状态，缺的直接点「下载」（内置 hf-mirror 直连，断点续传，进度条实时；gated 文件显示「随环境提供」，需按套件说明手动获取）；下半部分按目录分类浏览本地模型文件，支持搜索和一键打开文件夹。\n从模板库打开新模板时，如果缺模型会自动弹出提示并可跳转来下载。" },
     { q: "打开模板提示缺模型怎么办？", a: "点模板时若工作流引用的模型本地没有，会弹出缺失清单，点「去模型页下载」直达第 9 页对应套件一键下载；也可以选继续载入稍后再装。" },
     { q: "启动参数怎么改？", a: "「启动配置」卡片中编辑启动参数（空格分隔），保存后下次启动生效。\n默认参数是防炸优化版（--reserve-vram 2.5 等）。" },
     { q: "怎么打开原生 ComfyUI 网页？", a: "「设置」页 → 连接与目录 → 「⧉ 打开 ComfyUI 界面」按钮，会用配置的 ComfyUI 地址新开浏览器标签页（工作流编辑、官方模板、节点开关都在那边）。\n地址本身可在同页「ComfyUI 地址」一栏修改。" },

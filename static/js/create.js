@@ -142,6 +142,13 @@ async function loadStyles() {
 }
 
 /* 预估提示随所选工作流动态化（est_min/tier 由服务端注入） */
+function wfStepsDesc(wf) {
+  // 从执行图读采样步数，显示名跟随语言——MOSS/Klein 等新内置不再写死「Flux · 20步」
+  const ks = Object.values(wf.api || {}).find((n) => /KSampler/.test(n.class_type || ""));
+  const steps = ks && ks.inputs && ks.inputs.steps ? `${ks.inputs.steps}${getLang() === "en" ? " steps" : "步"}` : "";
+  return `${wfLabel(wf)}${steps ? " · " + steps : ""}`;
+}
+
 function updateHint() {
   const sel = $("#c-wf");
   const hint = $("#c-hint");
@@ -154,7 +161,8 @@ function updateHint() {
   if (wf.tier === "draft") {
     hint.innerHTML = `<span class="dot2"></span>${tf("create.hint.draft", wf.est_min)}`;
   } else {
-    hint.innerHTML = `<span class="dot2"></span>${tf("create.hint.est", mode === "video" ? "H3 W4A8 · 640×352 · ≈5s · 4步 · 原生音频" : "Flux 文生图 · 20步", wf.est_min)}`;
+    const desc = mode === "video" ? "H3 W4A8 · 640×352 · ≈5s · 4步 · 原生音频" : wfStepsDesc(wf);
+    hint.innerHTML = `<span class="dot2"></span>${tf("create.hint.est", desc, wf.est_min)}`;
   }
 }
 
@@ -186,7 +194,7 @@ function applyMode() {
   if (!sel.value) sel.selectedIndex = 0;
   sel.onchange = () => saveParams({ ["wf_" + mode]: sel.value });
   $("#c-size-box").style.display = mode === "video" ? "none" : "";
-  $("#c-hint").innerHTML = `<span class="dot2"></span>${mode === "video" ? VIDEO_HINT() : IMAGE_HINT()}`;
+  updateHint();  // 按当前选中工作流显示预估（无 est_min 时自动回落静态文案）
 }
 
 async function loadWorkflows() {

@@ -2,7 +2,7 @@
 起 mock(8189) + 临时 ComfyAgent server 实例(8191)，发 multipart 断言转发完整性。"""
 import http.server, json, os, shutil, subprocess, sys, time, urllib.request, threading
 
-ROOT = r"E:/work/gitee/comfy-agent"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP = os.path.join(os.environ.get("TEMP", "/tmp"), "ca_upload_test")
 MOCK_PORT, SRV_PORT = 8189, 8191
 received = {}

@@ -2,7 +2,7 @@
 临时 ComfyAgent 实例(8192) + mock ComfyUI(8189) + 假 models 目录。"""
 import http.server, json, os, shutil, subprocess, sys, time, urllib.request, threading
 
-ROOT = r"E:/work/gitee/comfy-agent"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP = os.path.join(os.environ.get("TEMP", "/tmp"), "ca_models_test")
 MOCK_PORT, SRV_PORT = 8189, 8192
 FAKE_COMFY = os.path.join(TMP, "ComfyUI")

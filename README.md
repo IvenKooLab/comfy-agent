@@ -26,14 +26,14 @@ One native window that runs your local ComfyUI end to end: prompt-to-image/video
 
 ## Features
 
-- 🎨 **Create** — prompt-to-image (Flux) and prompt-to-video (MiniMax H3, native audio); Chinese prompts are auto-enhanced into English (LLM-powered, dictionary fallback); 12 style presets, character lock strings, image & video modes
+- 🎨 **Create** — prompt-to-image (Flux, **MOSS-Image**, **FLUX 3 Klein** — the two open-source October releases, built in) and prompt-to-video (MiniMax H3, native audio); Chinese prompts are auto-enhanced into English (LLM-powered, dictionary fallback); 12 style presets, character lock strings, image & video modes
 - 👤 **Characters** — lock strings, reference images and **character LoRA binding** (auto-injected into image workflows, strength adjustable); ControlNet plan notes per character
 - 🖼️ **Gallery** — live masonry, hover video preview, batch archive/delete, PNG parameter parsing, folder filters
 - 📚 **Templates** — 600+ official ComfyUI templates with real previews, one-click load into the editor; **new subgraph-based templates (e.g. SCAIL-2 character animation) are auto-flattened** and load like any other
 - 🔧 **Workflows** — SVG node editor (drag/link/snap/validation); built-in Flux + H3 workflows; import UI/API JSON or extract from PNG
 - 📋 **Runs** — queue, progress, ETA, one-click retry, GPU time ledger
 - 🎬 **Pipeline** — episodic script → shot list → batch queue → concat with BGM; shot-to-shot chaining (seamless long takes via last-frame continuation), priority queue, scene library, audio assets, subtitle burn-in, per-episode stats
-- ⬢ **Models** — preset suites (SCAIL-2, MiniMax H3) with **one-click resumable downloads** and live progress; browse local model dirs by category with search; opening a template that needs missing models offers a one-jump download
+- ⬢ **Models** — preset suites (SCAIL-2, MiniMax H3, MOSS-Image, FLUX 3 Klein) with **one-click resumable downloads** and live progress; browse local model dirs by category with search; opening a template that needs missing models offers a one-jump download
 - 🚀 **Launcher** — start/stop/update ComfyUI, model inventory, custom nodes, environment diagnostics (torch/triton/sage), logs
 - 🗂️ **Knowledge** — Obsidian archiving, stats, graph view, full-text search
 - 🤖 **Assistant** — natural-language control with multi-step actions

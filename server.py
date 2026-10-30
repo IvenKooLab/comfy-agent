@@ -614,6 +614,45 @@ BUILTIN_WORKFLOWS = {
             "7": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "flux"}},
         },
     },
+    "MOSS-Image 文生图（内置）": {
+        "id": "builtin-moss",
+        "name": "MOSS-Image 文生图（内置）",
+        "builtin": True,
+        "updated": "2026-10-30 10:00",
+        "api": {
+            "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "moss_image_sft_int8_convrot.safetensors", "weight_dtype": "default"}},
+            "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen3.5_9b_w4a8_gptq.safetensors", "type": "moss_image", "device": "default"}},
+            "3": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": "masterpiece, best quality"}},
+            "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": "nsfw, worst quality, bad anatomy, watermark, jpeg artifact"}},
+            "5": {"class_type": "SkipLayerGuidanceDiTSimple", "inputs": {"model": ["1", 0], "double_layers": "",
+                                                                         "single_layers": "22", "start_percent": 0, "end_percent": 0.5}},
+            "6": {"class_type": "EmptyFlux2LatentImage", "inputs": {"width": 1024, "height": 1024, "batch_size": 1}},
+            "7": {"class_type": "KSampler", "inputs": {"model": ["5", 0], "positive": ["3", 0], "negative": ["4", 0],
+                                                       "seed": 0, "steps": 25, "cfg": 2.5, "sampler_name": "er_sde",
+                                                       "scheduler": "simple", "denoise": 1.0, "latent_image": ["6", 0]}},
+            "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["9", 0]}},
+            "9": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae_small.safetensors"}},
+            "10": {"class_type": "SaveImage", "inputs": {"images": ["8", 0], "filename_prefix": "moss"}},
+        },
+    },
+    "FLUX 3 Klein 文生图（内置）": {
+        "id": "builtin-klein",
+        "name": "FLUX 3 Klein 文生图（内置）",
+        "builtin": True,
+        "updated": "2026-10-30 10:00",
+        "api": {
+            "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "flux3-image-klein-int8-convrot.safetensors", "weight_dtype": "default"}},
+            "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen3vl_4b_int8_convrot.safetensors", "type": "flux3", "device": "default"}},
+            "3": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": "masterpiece, best quality"}},
+            "4": {"class_type": "EmptyFlux2LatentImage", "inputs": {"width": 1024, "height": 1024, "batch_size": 1}},
+            "5": {"class_type": "KSampler", "inputs": {"model": ["1", 0], "positive": ["3", 0], "negative": ["3", 0],
+                                                       "seed": 0, "steps": 16, "cfg": 1.0, "sampler_name": "euler",
+                                                       "scheduler": "simple", "denoise": 1.0, "latent_image": ["4", 0]}},
+            "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["7", 0]}},
+            "7": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}},
+            "8": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "flux3-klein"}},
+        },
+    },
     "连通性测试（内置）": {
         "id": "builtin-smoke",
         "name": "连通性测试（内置）",
@@ -631,6 +670,8 @@ BUILTIN_WORKFLOWS = {
 # tier: final=成片（同 seed 可复现） draft=草稿（T8 缓存命中致采样分叉，同 seed 不可复现）
 WF_META = {
     "builtin-flux": {"tier": "final", "est_min": 1.5},
+    "builtin-moss": {"tier": "final", "est_min": 2.0},
+    "builtin-klein": {"tier": "final", "est_min": 1.0},
     "h3-t2v": {"tier": "final", "est_min": 4.7},
     "h3-i2v": {"tier": "final", "est_min": 7.0},
     "h3-t2v-t8draft": {"tier": "draft", "est_min": 2.7},
@@ -1654,20 +1695,31 @@ def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
     if overrides:
         applied = 0
         image_name = overrides.pop("__image__", None)
+        # 「text」类覆盖只写第一个命中的文本节点：正向 CLIPTextEncode 约定排在负向之前，
+        # 不做限定会把同一段提示词灌进负向编码节点（MOSS 等双编码工作流直接坏档）
+        text_applied = False
         for nid, node in api.items():
             ins = node.get("inputs", {})
             ct = node.get("class_type", "")
             for k, v in overrides.items():
-                if k in ins and isinstance(ins[k], (str, int, float)):
+                if k == "text":
+                    if text_applied:
+                        continue
+                    if "text" in ins and isinstance(ins["text"], (str, int, float)):
+                        ins["text"] = v
+                        applied += 1
+                        text_applied = True
+                    else:
+                        # H3 等视频工作流的文本键叫 prompt/caption
+                        for alt in ("prompt", "caption"):
+                            if alt in ins and isinstance(ins[alt], str):
+                                ins[alt] = v
+                                applied += 1
+                                text_applied = True
+                                break
+                elif k in ins and isinstance(ins[k], (str, int, float)):
                     ins[k] = v
                     applied += 1
-                elif k == "text":
-                    # H3 等视频工作流的文本键叫 prompt/caption
-                    for alt in ("prompt", "caption"):
-                        if alt in ins and isinstance(ins[alt], str):
-                            ins[alt] = v
-                            applied += 1
-                            break
             if image_name:
                 # i2v 首帧：只改 LoadImage 的源图选择；first_frame 等连线输入保持不动
                 # （i2v 模板里 first_frame 是 ["LoadImage节点", 0] 连线，覆盖会破坏图）
@@ -2340,6 +2392,34 @@ PRESET_SUITES = [
             {"name": "minimax_h3_video_vae_fp16.safetensors", "dir": "vae", "size": 0, "url": None},
             {"name": "minimax_h3_audio_vae_fp32.safetensors", "dir": "vae", "size": 0, "url": None},
             {"name": "qwen3vl_4b_fp8_scaled.safetensors", "dir": "text_encoders", "size": 0, "url": None},
+        ],
+    },
+    {
+        "id": "mossimage",
+        "name": "MOSS-Image 文生图（OpenMOSS · 2026-10 开源）",
+        "desc": "5B 双语文生图（Apache-2.0）：中英长文本渲染、JSON 排版控制、跳层细节锚定；25 步 er_sde/cfg 2.5。三件套可一键下载（int8 主模型 5.4G + qwen3.5 编码器 w4a8 7.3G + Flux2 VAE），另附 edit LoRA（改图）与色深控制 LoRA。需 ComfyUI ≥ 0.42",
+        "models": [
+            {"name": "moss_image_sft_int8_convrot.safetensors", "dir": "diffusion_models", "size": 5413698958,
+             "url": "https://hf-mirror.com/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors"},
+            {"name": "qwen3.5_9b_w4a8_gptq.safetensors", "dir": "text_encoders", "size": 7343591088,
+             "url": "https://hf-mirror.com/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors"},
+            {"name": "flux2-vae_small.safetensors", "dir": "vae", "size": 249521340,
+             "url": "https://hf-mirror.com/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors"},
+            {"name": "moss_image_edit_lora_rank_64_bf16.safetensors", "dir": "loras", "size": 297382216,
+             "url": "https://hf-mirror.com/Comfy-Org/MOSS-Image/resolve/main/loras/moss_image_edit_lora_rank_64_bf16.safetensors"},
+            {"name": "moss_image_color_depth_control.safetensors", "dir": "loras", "size": 313063368,
+             "url": "https://hf-mirror.com/Comfy-Org/MOSS-Image/resolve/main/loras/moss_image_color_depth_control.safetensors"},
+        ],
+    },
+    {
+        "id": "flux3klein",
+        "name": "FLUX 3 Image Klein（Black Forest Labs · 2026-10 开源）",
+        "desc": "5.6B 图像模型（flux-kommunity-license）：原生 4K、文字渲染、边界框排版、多参考图编辑；蒸馏 int8 16 步出图。BFL 仓库 gated——主模型与文本编码器需登录 Hugging Face 接受协议后手动放入 models 目录（VAE 与 MOSS 仓库逐字节相同可一键下载）。需 ComfyUI ≥ 0.42",
+        "models": [
+            {"name": "flux3-image-klein-int8-convrot.safetensors", "dir": "diffusion_models", "size": 5827874779, "url": None},
+            {"name": "qwen3vl_4b_int8_convrot.safetensors", "dir": "text_encoders", "size": 4858559240, "url": None},
+            {"name": "flux2-vae.safetensors", "dir": "vae", "size": 336211292,
+             "url": "https://hf-mirror.com/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae.safetensors"},
         ],
     },
 ]
