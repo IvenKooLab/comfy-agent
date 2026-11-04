@@ -1680,6 +1680,8 @@ AGENT_HELP = ("我可以：\n"
 
 def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
     """提交工作流到 ComfyUI，返回 {ok, msg, prompt_ids}。支持批量变 seed、参数覆盖与风格参数。"""
+    if COMFY.probe() is None:
+        return {"ok": False, "error": "ComfyUI 未启动。请到「启动器」页一键启动后再生成。"}
     api = json.loads(json.dumps(wf.get("api", {})))  # deep copy
     if not api:
         return {"ok": False, "msg": "工作流为空"}
