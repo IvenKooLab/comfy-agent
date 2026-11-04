@@ -55,6 +55,14 @@ let characters = [];
 let selChar = "";
 
 export function initCreate() {
+  // 离线引导：banner 上一键启动 ComfyUI（成功后 body.comfy-offline 由状态轮询自动摘除）
+  $("#c-offline-launch")?.addEventListener("click", async (e) => {
+    const b = e.currentTarget;
+    b.disabled = true;
+    const r = await api("/api/comfy/launch", { method: "POST", body: {} });
+    toast(r.msg || r.error, r.ok ? "ok" : "err");
+    b.textContent = t("st.submitting");
+  });
   // 恢复上次参数（迭代17）
   const saved = loadParams();
   if (saved.size) {
@@ -284,7 +292,7 @@ async function create() {
               params: styleParams },
     });
     r.ok ? toast(r.msg + (hasLatentSize ? "" : t("video.mode.warn")), "ok") : toast(r.msg || r.error, "err");
-    if (r.ok) $("#c-seed").value = "";
+    if (r.ok) { $("#c-seed").value = ""; $("#c-queued").hidden = false; }
   } finally {
     go.disabled = false; go.querySelector("span").textContent = t("act.generate");
   }

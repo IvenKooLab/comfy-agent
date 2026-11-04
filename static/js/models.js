@@ -57,10 +57,14 @@ function renderSuitesOnce(dls) {
       }
       return `<tr><td class="mono">${esc(m.name)}</td><td class="muted">${esc(m.dir)}</td><td>${status}</td><td style="text-align:right">${action}</td></tr>`;
     }).join("");
+    const missing = s.models.filter((m) => !m.installed && m.url).length;
+    const dlAll = missing > 0
+      ? `<button class="btn sm primary" data-dl-all="${s.id}">${tf("md.download.all", missing)}</button>` : "";
     return `<div class="card pad" style="margin-bottom:12px">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
         <div><b>${esc(s.name)}</b> <span class="badge">${okN}/${s.model_count} ${t("md.ready")}</span>
           <div class="muted" style="margin-top:4px">${esc(s.desc)}</div></div>
+        ${dlAll}
       </div>
       <table class="tbl" style="width:100%"><tbody>${rows}</tbody></table>
     </div>`;
@@ -69,6 +73,16 @@ function renderSuitesOnce(dls) {
     b.disabled = true;
     const r = await api("/api/models/download", { method: "POST", body: { suite: b.dataset.dl, name: b.dataset.name } });
     if (!r.ok) { toast(r.error, "err"); b.disabled = false; return; }
+    renderSuites();
+  }));
+  box.querySelectorAll("[data-dl-all]").forEach((b) => b.addEventListener("click", async () => {
+    b.disabled = true; b.textContent = t("st.submitting");
+    const suite = suites.find((x) => x.id === b.dataset.dlAll);
+    const missing = (suite?.models || []).filter((m) => !m.installed && m.url);
+    for (const m of missing) {
+      const r = await api("/api/models/download", { method: "POST", body: { suite: suite.id, name: m.name } });
+      if (!r.ok) { toast(m.name + ": " + (r.error || "failed"), "err"); break; }
+    }
     renderSuites();
   }));
 }

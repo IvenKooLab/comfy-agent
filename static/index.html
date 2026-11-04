@@ -40,6 +40,13 @@
     <!-- ============ 创作（Composer 首页） ============ -->
     <section id="view-create" class="view active">
       <div class="create-wrap">
+        <div id="c-offline-banner" class="offline-banner">
+          <div>
+            <b data-i18n="create.offline.title">ComfyUI 未启动，无法生成</b>
+            <div class="muted" data-i18n="create.offline.tip">点「一键启动」后等几十秒即就绪；详情见「启动器」页。</div>
+          </div>
+          <button id="c-offline-launch" class="btn primary" data-i18n="create.offline.launch">一键启动 ComfyUI</button>
+        </div>
         <h1 class="create-title" data-i18n-html="create.title.html">今天想<em>创作</em>什么？</h1>
         <div class="create-sub" data-i18n="create.sub">本地 ComfyUI · 生成全程在你的显卡上进行</div>
         <div class="mode-tabs" id="c-mode">
@@ -92,6 +99,7 @@
               </div>
             </div>
             <button id="c-go" class="btn-go"><span data-i18n="create.go">生 成</span></button>
+            <a id="c-queued" class="queued-link" href="#runs" hidden data-i18n="create.queued.link">已加入队列，去任务页看进度</a>
           </div>
         </div>
         <div class="composer-hint" id="c-hint"></div>

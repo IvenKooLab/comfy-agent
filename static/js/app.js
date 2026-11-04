@@ -118,6 +118,7 @@ export function setComfyDot(on) {
   setComfyDot._force = false;
   $("#comfy-dot").className = "dot " + (on ? "on" : "off");
   $("#comfy-dot-text").textContent = on ? t("status.online") : t("status.offline");
+  document.body.classList.toggle("comfy-offline", !on);
   if (!on && !offlineToasted) { toast(t("toast.offline"), "err"); offlineToasted = true; }
   if (on) offlineToasted = false;
 }

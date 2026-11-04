@@ -688,3 +688,14 @@ textarea.input { height: auto; padding: 9px 12px; }
 /* 草稿徽章（替代 ⚡ emoji） */
 .draft-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; line-height: 16px; vertical-align: 1px; background: rgba(251, 191, 36, .16); color: var(--warn); border: 1px solid rgba(251, 191, 36, .35); }
 .wf-item .del svg { display: block; }
+
+
+/* ============ 创作页离线引导 + 队列链接 ============ */
+.offline-banner { display: none; align-items: center; justify-content: space-between; gap: 14px;
+  margin: 0 auto 18px; max-width: 640px; padding: 13px 18px; text-align: left;
+  border: 1px solid rgba(251, 113, 133, .38); background: rgba(251, 113, 133, .08);
+  border-radius: var(--r-lg); }
+.offline-banner b { font-size: 13px; }
+body.comfy-offline #view-create.active .offline-banner { display: flex; animation: cardIn var(--dur-3) var(--ease-out); }
+.queued-link { display: inline-block; margin-left: 12px; font-size: 12px; color: var(--brand-2); }
+.queued-link:hover { text-decoration: underline; }

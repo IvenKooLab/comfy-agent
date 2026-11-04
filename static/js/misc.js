@@ -365,7 +365,7 @@ async function refreshLLMModels(keep) {
       toast(tf("toast.models.fetched", r.models.length), "ok");
     } else {
       manual.style.display = "block";
-      toast(t("toast.model.fetch.fail"), "err");
+      if (document.querySelector("#view-settings.active")) toast(t("toast.model.fetch.fail"), "err");
     }
   } finally {
     btn.disabled = false; btn.textContent = t("settings.llm.pull");
