@@ -1500,33 +1500,234 @@ def agent_tool_loop(text, max_rounds=6):
         f"{t2['tool']}: {t2['summary']}" for t2 in trace), "tool_trace": trace}
 
 
-def agent_intent_llm(text):
-    """助手意图理解：统一 LLM 通道，输出 JSON 动作。"""
+def agent_intent_llm(text, bind_note=""):
+    """助手意图理解：统一 LLM 通道，输出 JSON 动作。
+    bind_note 为 @选择器的显式绑定（模型必须遵守，不得另猜）。"""
+    sys_extra = ""
+    if bind_note:
+        sys_extra += f"\n用户已通过 @ 显式绑定实体（必须原样使用，不要改用其它名称或新建）：{bind_note.strip()}"
     return _llm_chat([
         {"role": "system", "content": (
             "你是 ComfyAgent 控制台助手，把用户中文指令转成 JSON 动作。单个动作用单个对象；需要多步时输出 {\"actions\":[动作1,动作2]}。可用动作："
             '{"run":{"workflow":"名称","times":1,"seed":null,"text":"提示词覆盖"},'
             '{"interrupt":{}},{"clear_queue":{}},{"status":{}},'
             '{"archive":{"count":5,"title":""}},{"open":{"view":"gallery"}}。'
-            "只输出一个 JSON 对象，不要多余文字。无法理解则输出 {\"reply\":\"解释原因\"}")},
+            "只输出一个 JSON 对象，不要多余文字。无法理解则输出 {\"reply\":\"解释原因\"}") + sys_extra},
         {"role": "user", "content": text},
     ], temperature=0.1)
 
 
-def agent_execute(text):
-    """规则式指令解析 + 执行。返回 {reply, actions}。"""
+# ---------------------------------------------------------------- 实体解析（确定性优先）
+
+def _levenshtein(a, b, cap=3):
+    """编辑距离（带 cap 早退：超 cap 直接返回 cap+1，避免长串 O(n²) 全算）。"""
+    la, lb = len(a), len(b)
+    if abs(la - lb) > cap:
+        return cap + 1
+    prev = list(range(lb + 1))
+    for i in range(1, la + 1):
+        cur = [i] + [0] * lb
+        best = cur[0]
+        for j in range(1, lb + 1):
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] != b[j - 1]))
+            best = min(best, cur[j])
+        if best > cap:
+            return cap + 1
+        prev = cur
+    return prev[lb]
+
+
+def _entity_index():
+    """本机可枚举实体集合：工作流 / 角色 / 风格。返回 [(kind, id, name, obj)]。"""
+    out = []
+    for w in list_workflows():
+        out.append(("workflow", w.get("id") or w.get("name"), w.get("name", ""), w))
+    try:
+        for c in list_characters():
+            out.append(("character", c.get("id"), c.get("name", ""), c))
+    except Exception:
+        pass
+    for sid, s in STYLE_SOPS.items():
+        out.append(("style", sid, s.get("name", sid), s))
+    return out
+
+
+def _norm_name(s):
+    """实体名归一化：去空格、去括号内容（「（内置）」等后缀不参与纠错）。"""
+    return re.sub(r"[（(].*?[)）]", "", (s or "").lower()).replace(" ", "").strip()
+
+
+def resolve_entity(kind, frag):
+    """实体解析：精确 → 前缀 → 子串 → 编辑距离纠错（阈值随长度放宽）。
+    返回 (id, name, exact) 或 None。已有实体只在本机枚举集合内收敛，不命中即 None，绝不造新 ID。"""
+    frag = (frag or "").strip()
+    if not frag:
+        return None
+    cands = [(i, n) for k, i, n, _ in _entity_index() if k == kind]
+    nf = _norm_name(frag)
+    exact = [(i, n) for i, n in cands if _norm_name(n) == nf]
+    if exact:
+        return exact[0][0], exact[0][1], True
+    pref = [(i, n) for i, n in cands if _norm_name(n).startswith(nf)]
+    if len(pref) == 1:
+        return pref[0][0], pref[0][1], False
+    sub = [(i, n) for i, n in cands if nf and nf in _norm_name(n)]
+    if len(sub) == 1:
+        return sub[0][0], sub[0][1], False
+    if len(sub) > 1:  # 多子串命中：挑最短名（指称更精确）
+        sub.sort(key=lambda x: len(x[1]))
+        return sub[0][0], sub[0][1], False
+    thr = 1 if len(nf) <= 3 else (2 if len(nf) <= 6 else 3)
+    best, bd = None, thr + 1
+    for i, n in cands:
+        d = _levenshtein(nf, _norm_name(n), cap=thr)
+        if d < bd:
+            best, bd = (i, n), d
+    return (best[0], best[1], False) if best and bd <= thr else None
+
+
+def find_wf_smart(frag):
+    """工作流解析（规则层/校验层共用）：先按 ID 精确，再 resolve_entity 名称纠错。"""
+    fl = (frag or "").strip().lower()
+    for w in list_workflows():
+        if (w.get("id") or "").lower() == fl:
+            return w
+    r = resolve_entity("workflow", frag)
+    if r:
+        for w in list_workflows():
+            if (w.get("id") or w.get("name")) == r[0] or w.get("name") == r[1]:
+                return w
+    return None
+
+
+# ---------------------------------------------------------------- LLM 动作 schema 校验
+
+_ACTION_KEYS = {"run", "interrupt", "clear_queue", "status", "archive", "open", "reply", "actions"}
+_OPEN_VIEWS = ("gallery", "obsidian", "editor", "runs", "models", "templates")
+
+
+def validate_llm_actions(obj):
+    """LLM 输出白名单校验 + 实体收敛。合法返回 {"actions":[...]} 或 {"reply":...}；
+    非法抛 ValueError（调用方降级为引导话术，不裸抛报错）。
+    - 动作键白名单：未知键直接拒绝（防输出格式漂移被静默吞掉）
+    - workflow 必须解析到本机已有实体（ID/名称/近似名纠错），解析不了转为提示
+    - times/seed/count 数值域约束；view 枚举约束"""
+    if not isinstance(obj, dict):
+        raise ValueError("输出不是 JSON 对象")
+    bad = [k for k in obj if k not in _ACTION_KEYS]
+    if bad:
+        raise ValueError(f"未知动作键：{bad}")
+    if "reply" in obj:
+        return obj
+    if "actions" in obj:
+        if not isinstance(obj["actions"], list) or not obj["actions"] or len(obj["actions"]) > 10:
+            raise ValueError("actions 必须是 1-10 个动作的数组")
+        out = []
+        for a in obj["actions"]:
+            if isinstance(a, dict):
+                out.extend(validate_llm_actions(a).get("actions", []))
+        return {"actions": out} if out else {"reply": "（LLM 未给出有效动作）"}
+    acts = []
+    if "run" in obj:
+        r = obj["run"] or {}
+        if not isinstance(r, dict):
+            raise ValueError("run 参数不是对象")
+        wf = find_wf_smart(str(r.get("workflow", "")))
+        if not wf:
+            return {"reply": f"没找到工作流「{r.get('workflow')}」。可用："
+                    + "、".join(w["name"] for w in list_workflows()[:8])}
+        try:
+            times = max(1, min(int(r.get("times", 1) or 1), 20))
+        except (TypeError, ValueError):
+            times = 1
+        seed = None
+        try:
+            seed = int(r["seed"]) if r.get("seed") is not None else None
+        except (TypeError, ValueError):
+            seed = None
+        run = {"run": {"workflow": wf.get("id") or wf.get("name"), "times": times, "seed": seed}}
+        if r.get("text") and isinstance(r["text"], str):
+            run["run"]["text"] = r["text"]
+        acts.append(run)
+    for k in ("interrupt", "clear_queue", "status"):
+        if k in obj:
+            acts.append({k: {}})
+    if "archive" in obj:
+        try:
+            n = max(1, min(int((obj["archive"] or {}).get("count", 5) or 5), 30))
+        except (TypeError, ValueError):
+            n = 5
+        acts.append({"archive": {"count": n}})
+    if "open" in obj:
+        v = (obj["open"] or {}).get("view", "gallery")
+        if v not in _OPEN_VIEWS:
+            v = "gallery"
+        acts.append({"open": {"view": v}})
+    if not acts:
+        raise ValueError("没有可执行的动作")
+    return {"actions": acts}
+
+
+def _norm_entities(entities):
+    """@选择器传入的显式绑定：按 ID 校验存在性，失效即丢弃。返回 {kind: entity_obj}。"""
+    ents = {}
+    for e in entities or []:
+        if not isinstance(e, dict) or not e.get("id"):
+            continue
+        kind = e.get("kind")
+        if kind == "workflow":
+            for w in list_workflows():
+                if (w.get("id") or w.get("name")) == e["id"]:
+                    ents["workflow"] = w
+                    break
+        elif kind == "character":
+            for c in list_characters():
+                if c.get("id") == e["id"]:
+                    ents["character"] = c
+                    break
+        elif kind == "style":
+            if e["id"] in STYLE_SOPS:
+                ents["style"] = {"id": e["id"], **STYLE_SOPS[e["id"]]}
+    return ents
+
+
+def _inject_char_lora(api_g, char):
+    """服务端版角色 LoRA 注入（与创作页同逻辑）：已有 LoRA 节点填值，否则插 LoraLoaderModelOnly。"""
+    lora = (char or {}).get("lora")
+    if not lora or not isinstance(api_g, dict):
+        return api_g
+    api_g = json.loads(json.dumps(api_g))
+    existing = next((nid for nid, n in api_g.items() if re.search(r"LoraLoader", n.get("class_type", ""))), None)
+    if existing:
+        api_g[existing]["inputs"]["lora_name"] = lora
+        api_g[existing]["inputs"]["strength_model"] = float(char.get("lora_strength") or 0.8)
+        return api_g
+    src = next((nid for nid, n in api_g.items()
+                if n.get("class_type") in ("UNETLoader", "CheckpointLoaderSimple")), None)
+    if not src:
+        return api_g
+    api_g["char_lora"] = {"class_type": "LoraLoaderModelOnly",
+                          "inputs": {"lora_name": lora, "strength_model": float(char.get("lora_strength") or 0.8),
+                                     "model": [src, 0]}}
+    for n in api_g.values():
+        for v in n.get("inputs", {}).values():
+            if isinstance(v, list) and len(v) == 2 and v[0] == src and v[1] == 0:
+                v[0] = "char_lora"
+    return api_g
+
+
+def agent_execute(text, entities=None):
+    """规则式指令解析 + 执行。entities 为 @选择器的显式 ID 绑定（优先于名称猜测）。
+    返回 {reply, actions}。"""
     t = text.strip()
     acts, reply = [], ""
-
-    def find_wf(name_frag):
-        cands = [w for w in list_workflows() if name_frag.lower() in w["name"].lower()]
-        return cands[0] if len(cands) >= 1 else None
+    ents = _norm_entities(entities)
 
     m = re.search(r"^跑\s+(.+?)(?:\s*[×xX*]\s*(\d+))?\s*(?:seed\s*=\s*(\d+))?$", t)
     m2 = re.search(r"^(?:运行|执行)\s+(.+?)(?:\s*[×xX*]\s*(\d+))?\s*(?:seed\s*=\s*(\d+))?$", t)
     mm = m or m2
     if mm:
-        wf = find_wf(mm.group(1).strip())
+        wf = ents.get("workflow") or find_wf_smart(mm.group(1).strip())
         if not wf:
             reply = f"没找到名称包含「{mm.group(1)}」的工作流。已有：" + "、".join(w["name"] for w in list_workflows()[:10])
         else:
@@ -1566,8 +1767,9 @@ def agent_execute(text):
                  if r.get("ok") else f"归档失败：{r.get('error')}")
         acts.append({"type": "archive", "uri": r.get("uri")})
     elif re.match(r"^打开\s*(最新|画廊|知识库|工作流|任务)?", t):
-        view = {"最新": "gallery", "画廊": "gallery", "知识库": "obsidian", "工作流": "editor", "任务": "runs"}.get(
-            re.match(r"^打开\s*(最新|画廊|知识库|工作流|任务)?", t).group(1) or "画廊", "gallery")
+        view = {"最新": "gallery", "画廊": "gallery", "知识库": "obsidian", "工作流": "editor", "任务": "runs",
+                "模型": "models", "模板": "templates"}.get(
+            re.match(r"^打开\s*(最新|画廊|知识库|工作流|任务|模型|模板)?", t).group(1) or "画廊", "gallery")
         acts.append({"type": "open", "view": view})
         reply = f"已切换到{view}。"
     elif re.search(r"^(?:画|生成|来)\s*[:：]\s*(.+)", t) or \
@@ -1581,66 +1783,80 @@ def agent_execute(text):
         if ms:
             size = (int(ms.group(1)), int(ms.group(2)))
             prompt_text = prompt_text[:ms.start()].strip()
-        # 「用国漫史诗画：xxx」→ 风格感知（迭代24）
-        style_id = None
-        for sid, s in STYLE_SOPS.items():
-            if s["name"] in prompt_text:
-                style_id = sid
-                prompt_text = prompt_text.replace(s["name"], "").strip("，,：: ")
-                break
-        enh = enhance_prompt(prompt_text, style_id=style_id)
+        # 风格：@显式绑定优先，其次「用国漫史诗画：xxx」文本检测（迭代24）
+        style_id = ents["style"]["id"] if "style" in ents else None
+        if not style_id:
+            for sid, s in STYLE_SOPS.items():
+                if s["name"] in prompt_text:
+                    style_id = sid
+                    prompt_text = prompt_text.replace(s["name"], "").strip("，,：: ")
+                    break
+        # 角色：@绑定 → 锁定串追加（与创作页同口径，一并增强）
+        char = ents.get("character")
+        if char and char.get("lock"):
+            prompt_text = prompt_text.rstrip("，,. 。") + "，" + char["lock"]
+        enh = enhance_prompt_tracked(prompt_text, style_id=style_id)
         if enh.get("ok") and enh.get("english"):
             prompt_text = enh["english"]
-        wf = BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
+        wf = ents.get("workflow") or BUILTIN_WORKFLOWS["Flux 文生图（内置）"]
         overrides = {"text": prompt_text}
         if size:
             overrides.update({"width": size[0], "height": size[1]})
-        res = submit_workflow(wf, times=1, seed=None, overrides=overrides)
+        res = submit_workflow({"name": wf.get("name"), "api": _inject_char_lora(wf.get("api", {}), char)},
+                              times=1, seed=None, overrides=overrides)
         reply = res.get("msg", "")
         acts.append({"type": "submitted", "prompt_ids": res.get("prompt_ids", [])})
     else:
         if SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key"):
+            bind_note = "".join(f"[已绑定{ {'workflow':'工作流','character':'角色','style':'风格'}.get(k, k)}:{v.get('name', v.get('id'))}] "
+                                for k, v in ents.items())
+            # 工具循环里的生成工具硬编码 Flux，无法承载显式工作流绑定——有绑定时跳过它，
+            # 直接走 LLM JSON 动作路径（那里绑定 ID 会强制压过模型输出）
+            if "workflow" not in ents:
+                try:
+                    r = agent_tool_loop(t + (" " + bind_note if bind_note else ""))
+                    if r and r.get("reply"):
+                        return {"reply": r["reply"], "actions": acts, "tool_trace": r.get("tool_trace") or []}
+                except Exception:
+                    pass  # 厂商不支持 tools / 网络失败 → 回落旧意图链路
             try:
-                r = agent_tool_loop(t)
-                if r and r.get("reply"):
-                    return {"reply": r["reply"], "actions": acts, "tool_trace": r.get("tool_trace") or []}
-            except Exception:
-                pass  # 厂商不支持 tools / 网络失败 → 回落旧意图链路
-            try:
-                raw = agent_intent_llm(t)
+                raw = agent_intent_llm(t, bind_note=bind_note)
                 raw = raw.strip().strip("`")
                 raw = re.sub(r"^json\s*", "", raw)
                 obj = json.loads(raw)
-                if "reply" in obj and len(obj) == 1:
+                obj = validate_llm_actions(obj)  # 白名单 + 实体收敛；非法抛 ValueError
+                if "reply" in obj and "actions" not in obj:
                     reply = obj["reply"]
-                elif "actions" in obj and isinstance(obj["actions"], list):
-                    parts, acts = [], []
-                    for a in obj["actions"][:6]:
-                        r2 = agent_execute_coerce(a)
-                        parts.append(r2.get("reply", ""))
-                        acts.extend(r2.get("actions", []))
-                    reply = "\n".join(p for p in parts if p) or "已完成全部动作"
-                    return {"reply": reply, "actions": acts}
+                elif obj.get("actions"):
+                    # @显式绑定的工作流优先级最高：压过 LLM 输出里可能出现的其它名称
+                    if "workflow" in ents:
+                        wid = ents["workflow"].get("id") or ents["workflow"].get("name")
+                        for a in obj["actions"]:
+                            if isinstance(a, dict) and "run" in a and isinstance(a["run"], dict):
+                                a["run"]["workflow"] = wid
+                    return run_action_plan(obj["actions"], t, entities or [])
                 else:
-                    return agent_execute_coerce(obj)
-            except Exception as e:
-                reply = f"（LLM 解析失败：{e}）" + AGENT_HELP
+                    reply = AGENT_HELP
+            except ValueError as e:
+                # 输出格式漂移/未知动作：降级为引导话术，不裸抛异常文本
+                reply = f"（指令没解析成功：{e}）换个说法试试，或用 @ 直接绑定工作流/角色/风格。" + AGENT_HELP
+            except Exception:
+                reply = AGENT_HELP
         else:
             reply = AGENT_HELP
     return {"reply": reply, "actions": acts}
 
 
 def agent_execute_coerce(obj):
-    """把 LLM 输出的动作对象转成实际执行（递归复用规则层动作）。"""
-    acts, reply = [], ""
+    """把（已校验的）动作对象转成实际执行（递归复用规则层动作）。
+    返回 {reply, actions, ok}：run 类动作以 prompt_ids 判成败，供动作序列断点判定。"""
+    acts, reply, ok = [], "", True
     if isinstance(obj, dict):
+        if "reply" in obj:
+            return {"reply": str(obj.get("reply", "")), "actions": [], "ok": True}
         if "run" in obj:
-            r = obj["run"]
-            wf = None
-            for w in list_workflows():
-                if str(r.get("workflow", "")).lower() in w["name"].lower():
-                    wf = w
-                    break
+            r = obj["run"] or {}
+            wf = find_wf_smart(str(r.get("workflow", "")))
             if wf:
                 ov = {}
                 if r.get("text"):
@@ -1648,31 +1864,236 @@ def agent_execute_coerce(obj):
                 res = submit_workflow(wf, times=int(r.get("times", 1) or 1),
                                       seed=r.get("seed"), overrides=ov or None)
                 reply = res.get("msg", "")
-                acts.append({"type": "submitted", "prompt_ids": res.get("prompt_ids", [])})
+                pids = res.get("prompt_ids") or []
+                ok = bool(pids) or bool(res.get("ok"))
+                acts.append({"type": "submitted", "prompt_ids": pids})
             else:
-                reply = "LLM 指定的工作流没找到。"
+                reply = f"工作流「{r.get('workflow')}」没找到。"
+                ok = False
         elif "status" in obj:
-            return agent_execute("状态")
+            return {**agent_execute("状态"), "ok": True}
         elif "interrupt" in obj:
-            return agent_execute("中断")
+            return {**agent_execute("中断"), "ok": True}
         elif "clear_queue" in obj:
-            return agent_execute("清空队列")
+            return {**agent_execute("清空队列"), "ok": True}
         elif "archive" in obj:
-            return agent_execute(f"归档最近 {obj['archive'].get('count', 5)} 个")
+            n = max(1, min(int((obj.get("archive") or {}).get("count", 5) or 5), 30))
+            r = agent_execute(f"归档最近 {n} 个")
+            return {**r, "ok": bool(r.get("actions"))}
         elif "open" in obj:
-            return agent_execute("打开" + {"gallery": "画廊", "obsidian": "知识库", "editor": "工作流", "runs": "任务"}.get(
-                obj["open"].get("view", "gallery"), "画廊"))
+            v = (obj.get("open") or {}).get("view", "gallery")
+            zh = {"gallery": "画廊", "obsidian": "知识库", "editor": "工作流", "runs": "任务",
+                  "models": "模型", "templates": "模板"}.get(v, "画廊")
+            return {**agent_execute("打开" + zh), "ok": True}
     if not reply:
         reply = AGENT_HELP
-    return {"reply": reply, "actions": acts}
+    return {"reply": reply, "actions": acts, "ok": ok}
+
+
+# ---------------------------------------------------------------- 动作序列计划（断点续跑）
+
+PLAN_FILE = os.path.join(DATA_DIR, "action_plans.json")
+_plans_lock = threading.Lock()
+
+
+def load_plans():
+    return read_json_file(PLAN_FILE, [])
+
+
+def save_plans(lst):
+    write_json_file(PLAN_FILE, lst[-50:])  # 只留最近 50 个计划
+
+
+def _persist_plan(plan):
+    """按 id 把计划对象写回磁盘（不依赖列表里的对象引用，断点续跑传进来的 plan 是独立副本）。"""
+    with _plans_lock:
+        plans = load_plans()
+        for i, p in enumerate(plans):
+            if p.get("id") == plan.get("id"):
+                plans[i] = plan
+                break
+        else:
+            plans.append(plan)
+        save_plans(plans)
+
+
+def run_action_plan(actions, source_text="", entities=None, plan=None):
+    """顺序执行动作序列并落盘进度。多步（≥2）才建计划；中途失败保留断点供续跑。
+    单步直接执行不落盘（与旧行为一致）。"""
+    actions = [a for a in actions if isinstance(a, dict) and a]
+    if not actions:
+        return {"reply": "（没有可执行的动作）", "actions": []}
+    if len(actions) == 1 and plan is None:
+        r = agent_execute_coerce(actions[0])
+        return {"reply": r.get("reply", ""), "actions": r.get("actions", [])}
+
+    with _plans_lock:
+        plans = load_plans()
+        if plan is None:
+            plan = {"id": f"plan_{int(time.time() * 1000)}", "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "source": (source_text or "")[:200], "actions": actions, "done": 0,
+                    "status": "running", "results": [], "last_error": ""}
+            plans.append(plan)
+        else:  # 断点续跑
+            plan["status"] = "running"
+            plan["last_error"] = ""
+        save_plans(plans)
+
+    start = plan.get("done", 0)
+    acts, parts = [], []
+    for i in range(start, len(actions)):
+        a = actions[i]
+        try:
+            r = agent_execute_coerce(a)
+        except Exception as e:
+            r = {"reply": f"步骤异常：{e}", "actions": [], "ok": False}
+        plan["results"].append({"idx": i, "reply": (r.get("reply") or "")[:300], "ok": r.get("ok", True)})
+        parts.append(r.get("reply", ""))
+        acts.extend(r.get("actions", []))
+        if r.get("ok") is False:
+            # 失败步不算完成：指针停在它前面，续跑时重跑该步
+            plan["status"] = "failed"
+            plan["last_error"] = (r.get("reply") or "")[:200]
+            _persist_plan(plan)
+            n = len(actions)
+            return {"reply": f"第 {i + 1}/{n} 步失败：{plan['last_error']}\n进度已保存（完成 {i} 步），可点「断点续跑」从中断处继续。",
+                    "actions": acts + [{"type": "plan", "plan_id": plan["id"], "status": "failed",
+                                        "done": i, "total": n}]}
+        plan["done"] = i + 1
+        _persist_plan(plan)  # 每步落盘，进程中途被杀也能续
+    plan["status"] = "done"
+    _persist_plan(plan)
+    acts.append({"type": "plan", "plan_id": plan["id"], "status": "done", "done": len(actions), "total": len(actions)})
+    return {"reply": "\n".join(p for p in parts if p) or f"已完成全部 {len(actions)} 步。", "actions": acts}
+
+
+def resume_plan(plan_id):
+    """从断点续跑指定计划。"""
+    with _plans_lock:
+        plans = load_plans()
+    plan = next((p for p in plans if p.get("id") == plan_id), None)
+    if not plan:
+        return {"reply": f"计划 {plan_id} 不存在。", "actions": []}
+    if plan.get("status") == "done":
+        return {"reply": "该计划已全部完成，无需续跑。", "actions": []}
+    return run_action_plan(plan.get("actions", []), plan.get("source", ""), None, plan=plan)
+
+
+# ---------------------------------------------------------------- 生成反馈记录（采纳信号）
+
+FEEDBACK_FILE = os.path.join(DATA_DIR, "feedback.jsonl")
+_fb_lock = threading.Lock()
+
+
+def _style_of_prompt(prompt):
+    """按风格 SOP 首令牌反查（增强后的英文提示词尾部带风格令牌）。"""
+    p = (prompt or "").lower()
+    for sid, s in STYLE_SOPS.items():
+        first = (s.get("tokens") or "").split(",")[0].strip().lower()
+        if first and first in p:
+            return sid
+    return None
+
+
+def _feedback_params(path):
+    """单文件生成参数：PNG 走内嵌工作流元数据，其余按文件名匹配 runs 账本。"""
+    full = resolve_media(path) if path else None
+    params = {"path": path}
+    if full and full.lower().endswith(".png"):
+        pm = png_workflow_meta(full)
+        if pm.get("prompt"):
+            s = summarize_api_graph(pm["prompt"])
+            params.update({k: s.get(k) for k in ("model", "sampler", "steps", "cfg", "seed", "prompt")})
+            params["style"] = _style_of_prompt(s.get("prompt"))
+            return params
+    name = os.path.basename(path or "")
+    for r in load_runs():
+        if name and name[:24] in json.dumps(r.get("graph", {}))[:4000]:
+            params["workflow"] = r.get("name")
+            params["seed"] = r.get("seed")
+            break
+    return params
+
+
+def record_feedback(event, path="", extra=None):
+    """追加一条行为事件（jsonl）。事件：adopt_archive / delete / rerun / enhance_ok / enhance_fail。"""
+    try:
+        rec = {"ts": int(time.time()), "event": event, **(extra or {})}
+        if path and event in ("adopt_archive", "delete", "rerun"):
+            rec["params"] = _feedback_params(path)
+        with _fb_lock:
+            os.makedirs(os.path.dirname(FEEDBACK_FILE), exist_ok=True)
+            with open(FEEDBACK_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass  # 反馈记录永远不影响主操作
+
+
+def record_feedback_many(event, paths):
+    for p in paths or []:
+        record_feedback(event, p)
+
+
+def feedback_stats():
+    """聚合：采纳率 / 按模型 / 重跑率 / 增强成功率。数据源 feedback.jsonl + runs 账本。"""
+    events = []
+    try:
+        with open(FEEDBACK_FILE, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        events.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+    except FileNotFoundError:
+        pass
+    week_ago = time.time() - 7 * 86400
+    recent = [e for e in events if e.get("ts", 0) >= week_ago]
+
+    def _count(evs, name):
+        return sum(1 for e in evs if e.get("event") == name)
+
+    adopted, deleted = _count(events, "adopt_archive"), _count(events, "delete")
+    total_actions = adopted + deleted
+    by_model = {}
+    for e in events:
+        if e.get("event") in ("adopt_archive", "delete") and isinstance(e.get("params"), dict):
+            m = e["params"].get("model") or e["params"].get("workflow") or "未知"
+            d = by_model.setdefault(m, {"adopted": 0, "deleted": 0})
+            d["adopted" if e["event"] == "adopt_archive" else "deleted"] += 1
+    enh_ok, enh_fail = _count(events, "enhance_ok"), _count(events, "enhance_fail")
+    submissions = len(load_runs())
+    reruns = _count(events, "rerun")
+    return {
+        "total_events": len(events),
+        "adopted": adopted, "deleted": deleted,
+        "adoption_rate": round(adopted / total_actions, 3) if total_actions else None,
+        "by_model": by_model,
+        "enhance": {"ok": enh_ok, "fail": enh_fail,
+                    "fail_rate": round(enh_fail / (enh_ok + enh_fail), 3) if (enh_ok + enh_fail) else None},
+        "rerun": {"count": reruns, "submissions": submissions,
+                  "rerun_rate": round(reruns / submissions, 3) if submissions else None},
+        "recent_7d": {"adopted": _count(recent, "adopt_archive"), "deleted": _count(recent, "delete"),
+                      "rerun": _count(recent, "rerun")},
+    }
+
+
+def enhance_prompt_tracked(text, style_id=None, mode="image"):
+    """enhance_prompt 的埋点版：成功率入反馈账本（量化提示词增强解析失败率）。"""
+    r = enhance_prompt(text, style_id=style_id, mode=mode)
+    record_feedback("enhance_ok" if r.get("ok") else "enhance_fail", "",
+                    extra={"engine": r.get("engine", ""), "mode": mode})
+    return r
 
 
 AGENT_HELP = ("我可以：\n"
-              "· 「跑 Flux 文生图 ×3」/「运行 xxx seed=42」——提交工作流\n"
-              "· 「画：雪夜少女 832x1216」——用 Flux 模板直接生图\n"
+              "· 「跑 Flux 文生图 ×3」/「运行 xxx seed=42」——提交工作流（名称打错一两个字母也能对上）\n"
+              "· 「画：雪夜少女 832x1216」——直接生图；输入 @ 可显式绑定工作流/角色/风格，不用我猜\n"
               "· 「状态 / 中断 / 清空队列」——控制台管理\n"
               "· 「归档最近 10 个」——最新成果写入 Obsidian\n"
-              "· 「打开画廊/知识库/工作流」——页面跳转\n"
+              "· 「打开画廊/知识库/工作流/模型/模板」——页面跳转\n"
+              "· 多步指令（如「跑两个工作流再归档」）会存成任务，中途失败可断点续跑\n"
               "（设置里填智谱 API Key 后，其它说法我会用 GLM 帮你理解）")
 
 
@@ -2854,6 +3275,8 @@ class Handler(BaseHTTPRequestHandler):
             res = submit_workflow(wf, times=int(body.get("times", 1) or 1),
                                   seed=body.get("seed"), overrides=body.get("overrides"),
                                   params=body.get("params"))
+            if body.get("reason") == "rerun" and res.get("ok"):
+                record_feedback("rerun", body.get("path", ""), extra={"name": body.get("name", "")[:80]})
             return self.send_json(res)
         if path == "/api/runs":
             runs = [{k: v for k, v in r.items() if k != "graph"} | {"has_graph": bool(r.get("graph"))}
@@ -2865,6 +3288,8 @@ class Handler(BaseHTTPRequestHandler):
             if not run or not run.get("graph"):
                 return self.send_json({"ok": False, "msg": "找不到该任务的图快照（旧任务不支持一键重试）"})
             res = submit_workflow({"name": "重试·" + run.get("name", ""), "api": run["graph"]}, times=1, seed=None)
+            if res.get("ok"):
+                record_feedback("rerun", "", extra={"name": run.get("name", "")[:80], "prompt_id": pid})
             return self.send_json(res)
         if path == "/api/interrupt" and method == "POST":
             COMFY.http("/interrupt", payload={}, timeout=8)
@@ -2911,6 +3336,7 @@ class Handler(BaseHTTPRequestHandler):
             os.makedirs(dst_dir, exist_ok=True)
             n = 0
             failed = []
+            trashed = []
             for rel in body.get("paths", []):
                 full = resolve_media(rel)
                 if not full or not os.path.isfile(full):
@@ -2919,9 +3345,11 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     shutil.move(full, os.path.join(dst_dir, os.path.basename(full)))
                     n += 1
+                    trashed.append(rel)
                 except Exception as e:
                     # 常见：视频正被预览/播放器占用（Windows 文件锁）
                     failed.append({"path": rel, "error": str(e)[:120] or "文件被占用"})
+            record_feedback_many("delete", trashed)  # 采纳信号：删除=不采纳
             _gallery_cache["ts"] = 0
             msg = f"已移入回收站 {n} 个文件"
             if failed:
@@ -3008,6 +3436,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/obsidian/archive" and method == "POST":
             r = archive_media(body.get("paths", []), title=body.get("title", ""),
                               note=body.get("note", ""), tags=body.get("tags"))
+            if r.get("ok"):
+                archived = body.get("paths", [])[:r.get("count", 0)] or body.get("paths", [])
+                record_feedback_many("adopt_archive", archived)  # 采纳信号：归档=采纳
             return self.send_json(r)
         if path == "/api/obsidian/notes":
             _, notes_dir, _ = vault_dirs()
@@ -3434,11 +3865,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True, "styles": [
                 {"id": k, **{kk: vv for kk, vv in v.items()}} for k, v in STYLE_SOPS.items()]})
         if path == "/api/enhance_prompt" and method == "POST":
-            return self.send_json(enhance_prompt(body.get("text", ""),
-                                                 style_id=body.get("style"),
-                                                 mode=body.get("mode", "image")))
+            return self.send_json(enhance_prompt_tracked(body.get("text", ""),
+                                                         style_id=body.get("style"),
+                                                         mode=body.get("mode", "image")))
         if path == "/api/agent" and method == "POST":
-            return self.send_json({"ok": True, **agent_execute(body.get("text", ""))})
+            return self.send_json({"ok": True, **agent_execute(body.get("text", ""), body.get("entities"))})
+        if path == "/api/agent/plans":
+            return self.send_json({"ok": True, "plans": load_plans()})
+        if path == "/api/agent/plans/resume" and method == "POST":
+            return self.send_json({"ok": True, **resume_plan(body.get("id", ""))})
+        if path == "/api/feedback/stats":
+            return self.send_json({"ok": True, **feedback_stats()})
         if path == "/api/generate" and method == "POST":
             return self.send_json(generate_submit(body))
 

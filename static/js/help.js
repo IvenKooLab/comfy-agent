@@ -72,6 +72,9 @@ const HELP_EN = [
   { mod: "Assistant", items: [
     { q: "What can the assistant do?", a: "Just talk to it:\n· \"draw: swordsman in a snowy bamboo forest\" → enhance and generate\n· \"run H3 t2v ×2\" → queue a batch\n· \"archive latest 10\" → batch archive\n· \"status / interrupt / clear queue\" → manage jobs\n· \"paint in ink-wash style: xxx\" → applies the style SOP automatically" },
     { q: "Will chat history be lost?", a: "No. Chat history is stored locally in your browser and survives refreshes and restarts." },
+    { q: "What is the @ entity selector?", a: "Type @ in the assistant input to open a picker of local workflows, characters and styles. Select one to bind it explicitly — the action carries the real ID and skips name guessing entirely (no more wrong workflow / character when several exist). Bound entities show as removable chips above the input." },
+    { q: "What happens if a multi-step command fails halfway?", a: "Commands with two or more actions are saved as a task plan. If a step fails, the completed steps are kept and the reply shows a \"Resume\" button — click it to continue from the breakpoint instead of redoing everything." },
+    { q: "Why do my typo'd workflow names still work?", a: "Names of workflows, characters and styles are resolved locally first (exact → prefix → substring → edit-distance correction). Only a genuine miss falls back to the LLM. LLM output is validated against a strict action schema, so format drift degrades to a friendly hint instead of a raw error." },
   ]},
   { mod: "Settings", items: [
     { q: "How do I switch AI providers?", a: "Pick a provider (Zhipu / DeepSeek / Kimi / Qwen / SiliconFlow / OpenAI / Custom) → Base URL auto-fills → enter your API key → \"Fetch models\" → pick a model → Save.\nIf fetching fails you can type the model name manually." },
@@ -150,6 +153,9 @@ const HELP = [
   { mod: "助手", items: [
     { q: "助手能做什么？", a: "用中文说就行：\n· 「画：雪夜竹林剑客」→ 自动增强并生图\n· 「跑 H3 文生视频 ×2」→ 批量排队\n· 「归档最近 10 个」→ 批量归档\n· 「状态 / 中断 / 清空队列」→ 管理\n· 「用国风水墨画：xxx」→ 自动挂载风格 SOP" },
     { q: "对话记录会丢吗？", a: "不会。对话历史存在浏览器本地，刷新或重开都保留。" },
+    { q: "输入 @ 弹出的实体选择器是什么？", a: "助手输入框里打 @ 唤起浮层，列出本机的工作流 / 角色 / 风格；选中即显式绑定（输入框上方出现可删除的芯片），动作携带真实 ID 直路由，完全跳过名称猜测——多角色、多工作流并存时不会再绑错。" },
+    { q: "多步指令中途失败了怎么办？", a: "两步及以上的指令会存成任务计划并逐步记录进度；某步失败时已完成步骤保留，回复里出现「断点续跑」按钮，点一下从中断处继续，不用从头重来。" },
+    { q: "工作流名打错字也能识别？", a: "工作流 / 角色 / 风格名先在本机枚举集合里做确定性解析（精确 → 前缀 → 子串 → 编辑距离纠错），真匹配不上才交给 LLM；LLM 输出还要过动作 schema 白名单校验，格式漂移时降级为友好提示，不会裸抛报错。" },
   ]},
   { mod: "设置", items: [
     { q: "AI 厂商怎么切换？", a: "下拉选择厂商（智谱/DeepSeek/Kimi/通义/硅基流动/OpenAI/自定义）→ Base URL 自动填充 → 填 API Key → 点「拉取模型」→ 选模型 → 保存。\n如果拉取失败可以手动填模型名。" },

@@ -106,6 +106,11 @@ const I18N = {
   "agent.ph": ["例如：画：雪夜竹林剑客 832x1216 ／ 跑 H3 文生视频 ×2 ／ 归档最近 10 个",
     "e.g. draw: swordsman in snowy bamboo / run H3 t2v ×2 / archive latest 10"],
   "agent.send": ["发送", "Send"],
+  "agent.entity.ph": ["筛选：工作流 / 角色 / 风格", "Filter: workflows / characters / styles"],
+  "agent.entity.none": ["没有匹配的实体", "No matching entities"],
+  "agent.plan.resume": ["断点续跑（已完成 %n/%m 步）", "Resume (%n/%m steps done)"],
+  "agent.plan.running": ["续跑中…", "Resuming…"],
+  "agent.plan.done": ["计划完成 %n/%m 步", "Plan finished %n/%m steps"],
 
   "settings.title": ["设置", "Settings"],
   "settings.comfy": ["ComfyUI 地址", "ComfyUI URL"],

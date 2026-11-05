@@ -264,6 +264,21 @@ function initAgent() {
           b.addEventListener("click", () => goto(a.view));
           box.appendChild(b);
         }
+        if (a.type === "plan" && a.status === "failed" && a.plan_id) {
+          const b = document.createElement("button");
+          b.className = "btn sm primary"; b.textContent = tf("agent.plan.resume", a.done || 0, a.total || 0);
+          b.addEventListener("click", async () => {
+            b.disabled = true; b.textContent = t("agent.plan.running");
+            const r2 = await api("/api/agent/plans/resume", { method: "POST", body: { id: a.plan_id } });
+            say(r2.ok ? r2.reply : (r2.error || t("agent.error")), "bot", r2.actions);
+          });
+          box.appendChild(b);
+        }
+        if (a.type === "plan" && a.status === "done") {
+          const s = document.createElement("span");
+          s.className = "muted"; s.textContent = tf("agent.plan.done", a.done || 0, a.total || 0);
+          box.appendChild(s);
+        }
       }
       el.appendChild(box);
     }
@@ -282,16 +297,99 @@ function initAgent() {
     say(t("agent.hello"), "bot");
   }
 
+  /* ---- @ 实体选择器：显式绑定工作流/角色/风格，动作按 ID 直路由，跳过名称猜测 ---- */
+  let bound = [];               // [{kind,id,name}]
+  let entityCache = null;
+  const KIND_ZH = { workflow: "工作流", character: "角色", style: "风格" };
+  const KIND_EN = { workflow: "Workflow", character: "Character", style: "Style" };
+
+  const loadEntities = async () => {
+    if (entityCache) return entityCache;
+    const [wf, ch, st] = await Promise.all([api("/api/workflows"), api("/api/characters"), api("/api/styles")]);
+    entityCache = [
+      ...((wf.workflows || []).map((w) => ({ kind: "workflow", id: w.id || w.name, name: w.name }))),
+      ...((ch.characters || []).map((c) => ({ kind: "character", id: c.id, name: c.name }))),
+      ...((st.styles || []).map((s) => ({ kind: "style", id: s.id, name: s.name }))),
+    ];
+    return entityCache;
+  };
+
+  const renderBound = () => {
+    const box = $("#chat-entities");
+    if (!bound.length) { box.style.display = "none"; box.innerHTML = ""; return; }
+    box.style.display = "flex";
+    box.innerHTML = "";
+    for (const e of bound) {
+      const chip = document.createElement("span");
+      chip.className = "chip active";
+      const label = (getLang() === "en" ? KIND_EN : KIND_ZH)[e.kind] || e.kind;
+      chip.textContent = `@${label}:${e.name}`;
+      const x = document.createElement("button");
+      x.textContent = "×"; x.style.marginLeft = "4px";
+      x.addEventListener("click", () => { bound = bound.filter((b) => b.id !== e.id); renderBound(); });
+      chip.appendChild(x);
+      box.appendChild(chip);
+    }
+  };
+
+  const renderEntityList = async (query = "") => {
+    const all = await loadEntities();
+    const list = $("#chat-entity-list");
+    const q = query.trim().toLowerCase();
+    const hits = all.filter((e) => !q || e.name.toLowerCase().includes(q));
+    const groups = {};
+    for (const e of hits) (groups[e.kind] = groups[e.kind] || []).push(e);
+    list.innerHTML = "";
+    if (!hits.length) { list.innerHTML = `<div class="muted" style="padding:8px 0">${t("agent.entity.none")}</div>`; return; }
+    for (const kind of ["workflow", "character", "style"]) {
+      for (const e of (groups[kind] || []).slice(0, 8)) {
+        const b = document.createElement("button");
+        b.className = "chip";
+        const label = (getLang() === "en" ? KIND_EN : KIND_ZH)[kind];
+        b.textContent = `[${label}] ${e.name}`;
+        b.addEventListener("click", () => {
+          if (!bound.some((x) => x.id === e.id)) bound.push(e);
+          renderBound();
+          const inp = $("#chat-input");
+          inp.value = inp.value.replace(/@$/, "");   // 去掉唤起用的 @
+          closeEntityPop();
+          inp.focus();
+        });
+        list.appendChild(b);
+      }
+    }
+  };
+
+  const openEntityPop = () => {
+    $("#chat-entity-pop").style.display = "block";
+    $("#chat-entity-filter").value = "";
+    renderEntityList();
+    setTimeout(() => $("#chat-entity-filter").focus(), 30);
+  };
+  const closeEntityPop = () => { $("#chat-entity-pop").style.display = "none"; };
+
+  $("#chat-input").addEventListener("input", (e) => {
+    if (e.target.value.endsWith("@")) openEntityPop();
+  });
+  $("#chat-entity-filter").addEventListener("input", (e) => renderEntityList(e.target.value));
+  $("#chat-entity-filter").addEventListener("keydown", (e) => { if (e.key === "Escape") closeEntityPop(); });
+  document.addEventListener("click", (e) => {
+    const pop = $("#chat-entity-pop");
+    if (pop.style.display === "block" && !pop.contains(e.target) && e.target !== $("#chat-input")) closeEntityPop();
+  });
+
   const send = async () => {
     const text = $("#chat-input").value.trim();
     if (!text) return;
     $("#chat-input").value = "";
-    say(text, "user");
+    closeEntityPop();
+    say(text + (bound.length ? " " + bound.map((e) => "@[" + e.name + "]").join(" ") : ""), "user");
+    const ents = bound; bound = []; renderBound();
     const holder = document.createElement("div");
     holder.className = "msg bot";
     holder.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
     log.appendChild(holder); log.scrollTop = log.scrollHeight;
-    const r = await api("/api/agent", { method: "POST", body: { text } });
+    const r = await api("/api/agent", { method: "POST", body: { text, entities: ents } });
     holder.remove();
     say(r.ok ? r.reply : (r.error || t("agent.error")), "bot", r.actions, false, r.tool_trace);
   };

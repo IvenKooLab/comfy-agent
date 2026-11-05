@@ -441,8 +441,13 @@
           <button class="chip" data-q="打开知识库" data-i18n="agent.chip.vault">知识库</button>
         </div>
         <div class="chat-input-row">
+          <div id="chat-entities" class="row" style="flex-wrap:wrap;gap:6px;display:none;flex:1 1 100%;margin-bottom:6px"></div>
           <input id="chat-input" class="input grow" data-i18n-ph="agent.ph" placeholder="例如：画：雪夜竹林剑客 832x1216 ／ 跑 Flux 文生图 ×3 ／ 归档最近 10 个">
           <button id="chat-send" class="btn primary" data-i18n="agent.send">发送</button>
+        </div>
+        <div id="chat-entity-pop" class="card pad" style="display:none;position:relative;margin-top:8px;max-height:260px;overflow:auto">
+          <input id="chat-entity-filter" class="input" data-i18n-ph="agent.entity.ph" placeholder="筛选：工作流 / 角色 / 风格">
+          <div id="chat-entity-list" style="margin-top:8px"></div>
         </div>
       </div>
     </section>

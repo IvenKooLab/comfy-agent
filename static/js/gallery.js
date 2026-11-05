@@ -155,7 +155,7 @@ export function initGallery() {
     const it = visible()[lbIndex];
     if (!it) return;
     if (!lbMeta || !lbMeta.prompt) { toast(t("err.no.embed.rerun"), "err"); return; }
-    const r = await api("/api/prompt", { method: "POST", body: { name: t("name.rerun.prefix") + it.name, prompt: lbMeta.prompt } });
+    const r = await api("/api/prompt", { method: "POST", body: { name: t("name.rerun.prefix") + it.name, prompt: lbMeta.prompt, reason: "rerun", path: it.path } });
     r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
     if (r.ok) goto("runs");
   });
@@ -292,7 +292,7 @@ function wireActions(card, it) {
     e.stopPropagation();
     const meta = await api(`/api/media/meta?path=${encodeURIComponent(it.path)}`);
     if (!meta.ok || !meta.prompt) { toast(t("err.no.embed.rerun"), "err"); return; }
-    const r = await api("/api/prompt", { method: "POST", body: { name: t("name.rerun.prefix") + it.name, prompt: meta.prompt } });
+    const r = await api("/api/prompt", { method: "POST", body: { name: t("name.rerun.prefix") + it.name, prompt: meta.prompt, reason: "rerun", path: it.path } });
     r.ok ? toast(r.msg, "ok") : toast(r.msg || r.error, "err");
   });
   card.querySelector('[data-act="del"]')?.addEventListener("click", async (e) => {

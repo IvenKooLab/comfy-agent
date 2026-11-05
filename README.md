@@ -36,7 +36,7 @@ One native window that runs your local ComfyUI end to end: prompt-to-image/video
 - ⬢ **Models** — preset suites (SCAIL-2, MiniMax H3, MOSS-Image, FLUX 3 Klein) with **one-click resumable downloads** and live progress; browse local model dirs by category with search; opening a template that needs missing models offers a one-jump download
 - 🚀 **Launcher** — start/stop/update ComfyUI, model inventory, custom nodes, environment diagnostics (torch/triton/sage), logs
 - 🗂️ **Knowledge** — Obsidian archiving, stats, graph view, full-text search
-- 🤖 **Assistant** — natural-language control with multi-step actions
+- 🤖 **Assistant** — natural-language control with multi-step actions; deterministic local entity resolution (typo-tolerant) runs before the LLM, `@` binds a workflow / character / style by explicit ID, multi-step plans resume from a breakpoint, and gallery adoption signals are recorded for style/quality analytics
 - 🔌 **MCP Server** — expose ComfyAgent to any MCP host (see below)
 - 📖 **Built-in help** — 50+ searchable Q&A, bilingual
 - 📊 **Hardware bar** — GPU util/temp/VRAM/RAM/queue, 2s refresh
