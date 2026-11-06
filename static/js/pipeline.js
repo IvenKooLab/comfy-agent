@@ -58,6 +58,18 @@ export function initPipeline() {
     toast(tf("pl.precheck.summary", res.length, bad, warn), bad ? "err" : "ok");
     if (r.batch) { cur = r.batch; renderItems(); }
   });
+  $("#pl-palette").addEventListener("click", () => {
+    if (!cur) { toast(t("err.no.workflow"), "err"); return; }
+    window.open(`/api/pipeline/palette-sheet?id=${encodeURIComponent(cur.id)}`, "_blank");
+  });
+  $("#pl-beat").addEventListener("click", async () => {
+    if (!cur) { toast(t("err.no.workflow"), "err"); return; }
+    const audio = prompt(t("pl.beat.ask") || "原曲完整路径（不要用剪过的成片）：");
+    if (!audio) return;
+    const r = await api("/api/pipeline/beat-align", { method: "POST", body: { id: cur.id, audio } });
+    if (!r.ok) { toast(r.error || "节拍分析失败", "err"); return; }
+    toast(`${r.hint}\n需调整 ${r.changes} 镜 · 落点偏差 ${r.drift_vs_beat}s`, "ok");
+  });
   $("#pl-retro").addEventListener("click", async () => {
     if (!cur) { toast(t("err.no.workflow"), "err"); return; }
     const r = await api("/api/pipeline/retro", { method: "POST", body: { id: cur.id } });

@@ -2635,7 +2635,7 @@ def wf_supports(wf, input_name):
     return False
 
 
-def precheck_shot(item, wf=None, lock=""):
+def precheck_shot(item, wf=None, lock="", palette=None):
     """单镜头出片前确定性检查。fails 阻断提交（除非强制），warns 只提示——
     对应文章「文字能发现的错不要留到图上」。"""
     fails, warns = [], []
@@ -2699,6 +2699,13 @@ def precheck_shot(item, wf=None, lock=""):
 
     if lock and lock not in prompt:
         warns.append({"code": "CHAR_LOCK_MISSING", "msg": "镜头挂了角色但提示词缺锁定串，人物一致性会掉"})
+
+    # 配色前置：主体/背景亮度差太小 → 转黑白后糊在一起（对应文中「色表转黑白验明暗」）
+    if palette is not None:
+        sep = value_separation({**palette, **(item.get("palette") or {})})
+        if sep < 25:
+            warns.append({"code": "PALETTE_LOW_CONTRAST",
+                          "msg": f"主体与背景亮度差仅 {sep}（<25）：黑白后分不开，先调配色再画首尾帧"})
 
     return {"fails": fails, "warns": warns, "frames": frames, "ok": not fails}
 
@@ -2815,6 +2822,203 @@ def retro_batch(b):
     return {"ok": True, "path": fn, "code_hits": code_hits}
 
 
+# ---------------------------------------------------------------- 配色前置（色表 / 黑白验明暗 / 黄金比例草图）
+
+DEFAULT_PALETTE = {"bg": "#2b2b30", "subject": "#e8dfd2", "accent": "#c8553d", "light": "#f0d9a8"}
+
+
+def hex_to_rgb(v, fallback=(43, 43, 48)):
+    m = re.fullmatch(r"#?([0-9a-fA-F]{6})", (v or "").strip())
+    if not m:
+        return fallback
+    s = m.group(1)
+    return int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16)
+
+
+def luma_255(rgb):
+    """Rec.709 亮度（0-255）：用于「转黑白看主体和背景能不能分开」。"""
+    r, g, b = rgb
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def palette_of(b):
+    p = dict(DEFAULT_PALETTE)
+    if isinstance(b.get("palette"), dict):
+        for k in p:
+            if b["palette"].get(k):
+                p[k] = b["palette"][k]
+    return p
+
+
+def value_separation(pal):
+    """主体与背景亮度差（0-255）。<25 黑白后基本糊在一起。"""
+    return round(abs(luma_255(hex_to_rgb(pal.get("subject"))) - luma_255(hex_to_rgb(pal.get("bg")))), 1)
+
+
+def palette_sheet_html(b):
+    """色板总表（HTML+SVG，零依赖）：每镜 1920×1080 色块草图 + 38%/62% 参考线 + 黑白对照。"""
+    pal = palette_of(b)
+    sep = value_separation(pal)
+    rows = []
+    for idx, it in enumerate(b.get("items", [])):
+        shot_pal = {**pal, **(it.get("palette") or {})}
+        bg, sub, acc = (hex_to_rgb(shot_pal["bg"]), hex_to_rgb(shot_pal["subject"]),
+                        hex_to_rgb(shot_pal["accent"]))
+        cx = int(1920 * (0.38 if idx % 2 == 0 else 0.62))  # 主体块交替落在 38%/62%
+        gray = lambda c: "#%02x%02x%02x" % (int(luma_255(c)), int(luma_255(c)), int(luma_255(c)))
+        name = (it.get("name") or f"#{idx + 1}")[:26]
+
+        def svg(mode, shot_pal=shot_pal, bg=bg, sub=sub, acc=acc, cx=cx, name=name):
+            cbg = bg if mode == "c" else gray(bg)
+            csub = sub if mode == "c" else gray(sub)
+            cacc = acc if mode == "c" else gray(acc)
+            return (f'<svg viewBox="0 0 1920 1080" class="sheet" role="img">'
+                    f'<rect width="1920" height="1080" fill="{cbg}"/>'
+                    f'<rect x="{cx - 170}" y="420" width="340" height="520" rx="18" fill="{csub}"/>'
+                    f'<rect x="120" y="840" width="240" height="90" rx="10" fill="{cacc}"/>'
+                    f'<line x1="729" y1="0" x2="729" y2="1080" stroke="#00d0ff" stroke-width="4" stroke-dasharray="18 14"/>'
+                    f'<line x1="1190" y1="0" x2="1190" y2="1080" stroke="#00d0ff" stroke-width="4" stroke-dasharray="18 14"/>'
+                    f'<text x="740" y="60" fill="#00d0ff" font-size="42">38%</text>'
+                    f'<text x="1200" y="60" fill="#00d0ff" font-size="42">62%</text>'
+                    f'<text x="140" y="120" fill="#fff" font-size="52">{name}</text></svg>')
+
+        rows.append(f'<section class="shot"><h3>{idx + 1}. {name} '
+                    f'<span class="muted">生成 {it.get("gen_secs") or 5}s</span></h3>'
+                    f'<div class="pair">{svg("c")}{svg("bw")}</div>'
+                    f'<p class="muted">主体 {shot_pal["subject"]} / 背景 {shot_pal["bg"]} · 亮度差 {value_separation(shot_pal)}</p>'
+                    f'</section>')
+    swatches = "".join(f'<div class="sw"><span style="background:{v}"></span><b>{k}</b><code>{v}</code></div>'
+                       for k, v in pal.items())
+    warn = "" if sep >= 25 else f'<p class="warn">亮度差只有 {sep}（&lt;25）：转黑白后主体和背景分不开，建议拉开明暗</p>'
+    return f'''<!doctype html><html lang="zh"><meta charset="utf-8">
+<title>色板总表 · {b.get("name", "")}</title>
+<style>
+ body{{background:#12131a;color:#e7e7ea;font:15px/1.5 -apple-system,"PingFang SC",sans-serif;margin:0;padding:28px}}
+ h1{{font-size:20px;margin:0 0 14px}} h3{{font-size:14px;margin:22px 0 8px}}
+ .sw{{display:inline-flex;align-items:center;gap:8px;margin-right:18px}}
+ .sw span{{width:26px;height:26px;border-radius:6px;display:inline-block;border:1px solid #333}}
+ .pair{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
+ .sheet{{width:100%;height:auto;border-radius:10px;border:1px solid #2a2a33}}
+ .muted{{color:#9aa0aa;font-size:13px}} .warn{{color:#ffb86b;font-weight:600}}
+ code{{color:#9aa0aa}}
+</style>
+<h1>色板总表 · {b.get("name", "")}</h1><div>{swatches}</div>{warn}
+{"".join(rows) or '<p class="muted">该批次还没有镜头</p>'}
+</html>'''
+
+
+# ---------------------------------------------------------------- 节拍对齐（只从原曲测拍点）
+
+def _decode_pcm(path, rate=8000):
+    """ffmpeg 解码为 8kHz 单声道 s16le，返回 bytes（够做能量包络）。"""
+    if not FFMPEG or not path or not os.path.isfile(path):
+        return None
+    try:
+        r = subprocess.run([FFMPEG, "-v", "error", "-i", path, "-ac", "1", "-ar", str(rate),
+                            "-f", "s16le", "-"], capture_output=True, timeout=180,
+                            creationflags=0x08000000)
+        return r.stdout if r.returncode == 0 and r.stdout else None
+    except Exception:
+        return None
+
+
+def beat_analysis(path, bpm_hint=None, rate=8000, hop=0.02):
+    """能量包络 + 自相关估 BPM，再按相位取拍点。对应文中「拍点只从原曲上测」——
+    传原始音乐文件，别传已剪过/压制过的成片。"""
+    pcm = _decode_pcm(path, rate)
+    if not pcm:
+        return {"ok": False, "error": "解码失败（文件不存在或不是音频）"}
+    import array
+    samples = array.array("h")
+    samples.frombytes(pcm[: len(pcm) // 2 * 2])
+    n = len(samples)
+    duration = n / rate
+    if duration < 3:
+        return {"ok": False, "error": "音频太短（至少 3 秒）"}
+    step = max(1, int(rate * hop))
+    frames = [sum(abs(x) for x in samples[i:i + step]) / step for i in range(0, n - step, step)]
+    if not frames:
+        return {"ok": False, "error": "音频为空"}
+    mean = sum(frames) / len(frames)
+    env = [max(0.0, f - mean) for f in frames]
+    if max(env) <= 0:
+        return {"ok": False, "error": "没有可用的能量起伏（纯静音或纯噪声）"}
+    lo, hi = int(60 / 200 / hop), int(60 / 60 / hop)
+    scores = {}
+    for lag in range(max(2, lo), min(hi, len(env) // 2) + 1):
+        s = 0.0
+        for i in range(len(env) - lag):
+            s += env[i] * env[i + lag]
+        scores[lag] = s / (len(env) - lag)
+    if not scores:
+        return {"ok": False, "error": "拍点估计失败"}
+    peak = max(scores.values())
+    if peak <= 0:
+        return {"ok": False, "error": "拍点估计失败"}
+    # 倍频歧义：滞后 0.5s 与 1.0s 的相关性可能几乎一样高（拍点同时落在两处）。
+    # 取「达到峰值 90% 的最短滞后」——同一段音乐的较快拍才是人耳听到的 BPM。
+    best_lag = min(lag for lag, sc in scores.items() if sc >= peak * 0.9)
+    best_score = scores[best_lag]
+    bpm = 60.0 / (best_lag * hop)
+    if bpm_hint:
+        try:
+            hint = float(bpm_hint)
+            if hint > 0:
+                for mult in (0.5, 1.0, 2.0):
+                    if abs(bpm * mult - hint) < 4:
+                        bpm = hint
+                        break
+        except (TypeError, ValueError):
+            pass
+    period = 60.0 / bpm
+    best_phase, phase_score = 0.0, -1.0
+    for k in range(16):
+        ph = period * k / 16
+        score, t = 0.0, ph
+        while t < duration:
+            i = int(t / hop)
+            if 0 <= i < len(env):
+                score += env[i]
+            t += period
+        if score > phase_score:
+            best_phase, phase_score = ph, score
+    beats, t = [], best_phase
+    while t < duration and len(beats) < 2000:
+        beats.append(round(t, 3))
+        t += period
+    return {"ok": True, "bpm": round(bpm, 1), "beats": beats, "duration": round(duration, 2),
+            "period": round(period, 3), "beat_count": len(beats)}
+
+
+def beat_align(b, audio_path, beats_per_bar=4, bpm_hint=None):
+    """镜头时长对齐小节：给出每镜建议生成秒数（取整小节）与落点偏差。"""
+    a = beat_analysis(audio_path, bpm_hint)
+    if not a.get("ok"):
+        return a
+    period = a["period"]
+    bar = period * beats_per_bar
+    total, changes, lines = 0.0, 0, []
+    for i, it in enumerate(b.get("items", [])):
+        secs = float(it.get("gen_secs") or 5)
+        snapped = round(max(1, round(secs / bar)) * bar, 2)
+        if abs(snapped - secs) > 0.05:
+            changes += 1
+        total += snapped
+        lines.append({"index": i, "name": it.get("name", ""), "gen_secs": secs, "suggest": snapped,
+                      "note": "" if abs(snapped - secs) <= 0.05 else "改到整小节"})
+    drift = 0.0
+    if a["beats"]:
+        near = min(a["beats"], key=lambda x: abs(x - total))
+        drift = round(total - near, 3)
+    report = {"ok": True, "bpm": a["bpm"], "bar_secs": round(bar, 3), "audio_duration": a["duration"],
+              "total_secs": round(total, 2), "drift_vs_beat": drift, "changes": changes, "shots": lines,
+              "hint": f"片长 {round(total, 2)}s / 音频 {a['duration']}s；转折对副歌，关键动作落拍点"
+                      f"（每小节 {round(bar, 2)}s）"}
+    b["beat"] = {"bpm": a["bpm"], "bar_secs": round(bar, 3), "total_secs": round(total, 2),
+                 "drift": drift, "ts": datetime.now().strftime("%Y-%m-%d %H:%M")}
+    return report
+
+
 def run_batch(bid, only_index=None, draft=False, force=False):
     b = _load_batch(bid)
     if not b:
@@ -2847,7 +3051,7 @@ def run_batch(bid, only_index=None, draft=False, force=False):
         if upgraded:
             item["workflow_id"] = wf_use.get("id")
         # 出片前门禁：确定性检查，fail 级阻断（除非 force）
-        pre = precheck_shot(item, wf_use, lock)
+        pre = precheck_shot(item, wf_use, lock, palette_of(b))
         item["precheck"] = {"ok": pre["ok"], "fails": pre["fails"], "warns": pre["warns"],
                             "frames": pre.get("frames") or {},
                             "ts": datetime.now().strftime("%Y-%m-%d %H:%M")}
@@ -3855,7 +4059,7 @@ class Handler(BaseHTTPRequestHandler):
                     continue
                 item = b["items"][i]
                 wf_use, _ = resolve_shot_workflow(item, wf) if wf else (None, False)
-                pre = precheck_shot(item, wf_use, lock)
+                pre = precheck_shot(item, wf_use, lock, palette_of(b))
                 item["precheck"] = {"ok": pre["ok"], "fails": pre["fails"], "warns": pre["warns"],
                                     "frames": pre.get("frames") or {},
                                     "ts": datetime.now().strftime("%Y-%m-%d %H:%M")}
@@ -3879,6 +4083,39 @@ class Handler(BaseHTTPRequestHandler):
             if not b:
                 return self.send_json({"ok": False, "error": "批次不存在"}, 404)
             return self.send_json(retro_batch(b))
+        if path == "/api/pipeline/palette" and method == "POST":
+            b = _load_batch(body.get("id", ""))
+            if not b:
+                return self.send_json({"ok": False, "error": "批次不存在"}, 404)
+            pal = body.get("palette") or {}
+            b["palette"] = {k: v for k, v in pal.items() if k in DEFAULT_PALETTE and isinstance(v, str)}
+            _save_batch(b)
+            return self.send_json({"ok": True, "palette": palette_of(b),
+                                   "separation": value_separation(palette_of(b)), "batch": b})
+        if path == "/api/pipeline/palette-sheet":
+            b = _load_batch(q.get("id", ""))
+            if not b:
+                return self.send_json({"ok": False, "error": "批次不存在"}, 404)
+            html = palette_sheet_html(b)
+            raw = html.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(raw)
+            return
+        if path == "/api/pipeline/beat-align" and method == "POST":
+            b = _load_batch(body.get("id", ""))
+            if not b:
+                return self.send_json({"ok": False, "error": "批次不存在"}, 404)
+            audio = (body.get("audio") or "").strip()
+            if not audio or not os.path.isfile(audio):
+                return self.send_json({"ok": False, "error": "音频文件不存在（填原曲完整路径，别用剪过的成片）"}, 400)
+            r = beat_align(b, audio, int(body.get("beats_per_bar") or 4), body.get("bpm"))
+            if r.get("ok"):
+                _save_batch(b)
+            return self.send_json(r)
         if path == "/api/pipeline/shot-template":
             # 七段式视频提示词模板（可直接贴进镜头提示词）
             tpl = ("【画风】<一句话画风，与首尾帧一致>\n"

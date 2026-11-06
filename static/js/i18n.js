@@ -413,6 +413,8 @@ Object.assign(I18N, {
   "pl.retro": ["复盘", "Retro"],
   "pl.retro.tip": ["生成本批复盘 markdown：成败、门禁命中、审核结果", "Write a batch retro markdown: outcomes, gate hits, audit results"],
   "pl.retro.done": ["复盘已写入：%s", "Retro saved: %s"],
+  "pl.beat.ask": ["粘贴原曲完整路径（别用剪过的成片，拍点要在原曲上测）", "Paste the full path of the original track (measure beats on the original, not an edited cut)"],
+  "pl.beat.summary": ["BPM %s · 每小节 %m 秒 · 需调整 %n 镜", "BPM %s · %m s/bar · %n shots to adjust"],
   "pick.lf": ["选择镜头「%s」的尾帧图（FL2V 终点锚定）", "Pick last-frame image for shot \"%s\" (FL2V end anchor)"],
   "status.blocked": ["已拦截", "Blocked"],
   "pl.paste.first": ["先粘贴脚本内容", "Paste script text first"],

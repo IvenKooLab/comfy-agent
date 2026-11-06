@@ -33,7 +33,7 @@ One native window that runs your local ComfyUI end to end: prompt-to-image/video
 - 🔧 **Workflows** — SVG node editor (drag/link/snap/validation); built-in Flux + H3 workflows; import UI/API JSON or extract from PNG
 - 📋 **Runs** — queue, progress, ETA, one-click retry, GPU time ledger
 - 🎬 **Pipeline** — episodic script → shot list → batch queue → concat with BGM; shot-to-shot chaining (seamless long takes via last-frame continuation), priority queue, scene library, audio assets, subtitle burn-in, per-episode stats
-  - **Pre-flight gate** — first/last-frame anchoring (H3 FL2V, auto-selected per shot), seven-section prompt check, filmability lint, first/last frame size + SSIM checks; blockers stop the queue (force-submittable), plus an optional vision-model audit and a per-batch retrospective
+  - **Pre-flight gate** — first/last-frame anchoring (H3 FL2V, auto-selected per shot), seven-section prompt check, filmability lint, first/last frame size + SSIM checks; blockers stop the queue (force-submittable), plus an optional vision-model audit, a palette sheet with B&W value check, beat/BPM alignment from the original track, and a per-batch retrospective
 - ⬢ **Models** — preset suites (SCAIL-2, MiniMax H3, MOSS-Image, FLUX 3 Klein) with **one-click resumable downloads** and live progress; browse local model dirs by category with search; opening a template that needs missing models offers a one-jump download
 - 🚀 **Launcher** — start/stop/update ComfyUI, model inventory, custom nodes, environment diagnostics (torch/triton/sage), logs
 - 🗂️ **Knowledge** — Obsidian archiving, stats, graph view, full-text search
