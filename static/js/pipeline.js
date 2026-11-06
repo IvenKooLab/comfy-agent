@@ -48,6 +48,21 @@ export function initPipeline() {
   $("#pl-run").addEventListener("click", runBatch);
   $("#pl-run-draft").addEventListener("click", () => runBatch(true));
   $("#pl-concat").addEventListener("click", concatBatch);
+  $("#pl-precheck-all").addEventListener("click", async () => {
+    if (!cur) { toast(t("err.no.workflow"), "err"); return; }
+    const r = await api("/api/pipeline/precheck", { method: "POST", body: { id: cur.id } });
+    if (!r.ok) { toast(r.error || "预检失败", "err"); return; }
+    const res = r.results || [];
+    const bad = res.filter((x) => !x.ok).length;
+    const warn = res.reduce((n, x) => n + (x.warns || []).length, 0);
+    toast(tf("pl.precheck.summary", res.length, bad, warn), bad ? "err" : "ok");
+    if (r.batch) { cur = r.batch; renderItems(); }
+  });
+  $("#pl-retro").addEventListener("click", async () => {
+    if (!cur) { toast(t("err.no.workflow"), "err"); return; }
+    const r = await api("/api/pipeline/retro", { method: "POST", body: { id: cur.id } });
+    toast(r.ok ? tf("pl.retro.done", r.path) : (r.error || "复盘失败"), r.ok ? "ok" : "err");
+  });
   $("#pl-del").addEventListener("click", delBatch);
   $("#pl-episodes").addEventListener("click", toggleEpisodes);
   $("#pl-scenes").addEventListener("click", () => {
@@ -144,12 +159,23 @@ function renderItems() {
     $("#pl-empty-new")?.addEventListener("click", newBatch);
     return;
   }
-  const stMap = { success: [t("status.success"), "success"], error: [t("status.error"), "error"], queued: [t("status.queued"), "queued"] };
+  const stMap = { success: [t("status.success"), "success"], error: [t("status.error"), "error"], queued: [t("status.queued"), "queued"], blocked: [t("status.blocked"), "error"] };
   box.innerHTML = cur.items.map((it, i) => {
     const [txt, cls] = stMap[it.status] || [t("pl.notqueued"), ""];
     const ff = it.first_frame
       ? `<button class="btn sm pl-ff set" data-i="${i}" title="${it.first_frame}">${t("pl.ff.set")}</button>`
       : `<button class="btn sm ghost pl-ff" data-i="${i}">${t("pl.ff")}</button>`;
+    const lf = it.last_frame
+      ? `<button class="btn sm pl-lf set" data-i="${i}" title="${it.last_frame}">${t("pl.lf.set")}</button>`
+      : `<button class="btn sm ghost pl-lf" data-i="${i}" title="${t("pl.lf.tip")}">${t("pl.lf")}</button>`;
+    const prc = it.precheck;
+    const precheckBtn = `<button class="btn sm ${prc ? (prc.ok ? "set" : "danger") : "ghost"} pl-precheck" data-i="${i}" title="${prc
+      ? ([...(prc.fails || []), ...(prc.warns || [])].map((w) => w.msg).join("\n") || "通过")
+      : t("pl.precheck.tip")}">${prc ? (prc.ok ? `预检✓${(prc.warns || []).length}` : `预检✕${(prc.fails || []).length}`) : t("pl.precheck")}</button>`;
+    const au = it.audit;
+    const auditBtn = `<button class="btn sm ${au ? (au.verdict === "通过" ? "set" : "danger") : "ghost"} pl-audit" data-i="${i}" title="${au
+      ? ([...((au.issues) || []), ...(au.note ? [au.note] : [])].join("\n") || au.verdict || "")
+      : t("pl.audit.tip")}">${au ? (au.verdict === "通过" ? t("pl.audit.pass") : t("pl.audit.fail")) : t("pl.audit")}</button>`;
     const prio = it.priority
       ? `<button class="btn sm pl-prio set" data-i="${i}" title="${t("pl.prio.on.tip")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg> ${t("pl.prio.short")}</button>`
       : `<button class="btn sm ghost pl-prio" data-i="${i}" title="${t("pl.prio.tip")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg> ${t("pl.prio.short")}</button>`;
@@ -159,6 +185,9 @@ function renderItems() {
       <span class="run-status ${cls}">${txt}</span>
       <input class="input pl-item-name" data-i="${i}" value="${it.name.replace(/"/g, "&quot;")}">
       ${ff}
+      ${lf}
+      ${precheckBtn}
+      ${auditBtn}
       ${prio}
       ${chain}
       <button class="btn sm ghost pl-retry" data-i="${i}" title="${t("pl.retry.one")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg></button>
@@ -177,6 +206,34 @@ function renderItems() {
       renderItems();
       toast(t("pl.ff.done"), "ok");
     });
+  }));
+  box.querySelectorAll(".pl-lf").forEach((b) => b.addEventListener("click", async () => {
+    const i = +b.dataset.i;
+    if (cur.items[i].last_frame && !(await uiConfirm(t("pl.lf.clear")))) { /* 保留可重选 */ }
+    openPicker(tf("pick.lf", cur.items[i].name), (path) => {
+      cur.items[i].last_frame = path;
+      saveBatch(true);
+      renderItems();
+      toast(t("pl.lf.done"), "ok");
+    });
+  }));
+  box.querySelectorAll(".pl-precheck").forEach((b) => b.addEventListener("click", async () => {
+    const i = +b.dataset.i;
+    const r = await api("/api/pipeline/precheck", { method: "POST", body: { id: cur.id, index: i } });
+    if (!r.ok) { toast(r.error || "预检失败", "err"); return; }
+    const one = (r.results || [])[0] || {};
+    const lines = [...(one.fails || []).map((w) => "✕ " + w.msg), ...(one.warns || []).map((w) => "△ " + w.msg)];
+    toast(lines.join("\n") || t("pl.precheck.pass"), lines.some((l) => l.startsWith("✕")) ? "err" : "ok");
+    if (r.batch) { cur = r.batch; renderItems(); }
+  }));
+  box.querySelectorAll(".pl-audit").forEach((b) => b.addEventListener("click", async () => {
+    const i = +b.dataset.i;
+    b.disabled = true;
+    const r = await api("/api/pipeline/audit", { method: "POST", body: { id: cur.id, index: i } });
+    b.disabled = false;
+    if (!r.ok) { toast(r.note || r.error || "审核失败", "err"); return; }
+    toast(`${r.verdict}${(r.issues || []).length ? "\n" + r.issues.join("\n") : ""}`, r.verdict === "通过" ? "ok" : "err");
+    if (r.batch) { cur = r.batch; renderItems(); }
   }));
   box.querySelectorAll(".pl-prompt-edit").forEach((ta) => ta.addEventListener("change", (e) => {
     cur.items[+e.target.dataset.i].prompt = e.target.value;

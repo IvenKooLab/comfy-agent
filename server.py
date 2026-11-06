@@ -591,7 +591,11 @@ def path_within(root, rel):
 
 
 def resolve_media(rel):
-    return path_within(SETTINGS["output_dir"], rel)
+    """解析画廊相对路径。SETTINGS 未初始化（模块被单独导入/测试）时安全返回 None。"""
+    root = (SETTINGS or {}).get("output_dir") if isinstance(SETTINGS, dict) else None
+    if not root or not rel:
+        return None
+    return path_within(root, rel)
 
 
 # ---------------------------------------------------------------- workflows store
@@ -2118,6 +2122,8 @@ def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
     if overrides:
         applied = 0
         image_name = overrides.pop("__image__", None)
+        # 定向注图：{节点id: input 目录文件名}——首尾帧需要分别写不同 LoadImage
+        image_map = overrides.pop("__image_map__", None) or {}
         # 「text」类覆盖只写第一个命中的文本节点：正向 CLIPTextEncode 约定排在负向之前，
         # 不做限定会把同一段提示词灌进负向编码节点（MOSS 等双编码工作流直接坏档）
         text_applied = False
@@ -2146,8 +2152,14 @@ def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
             if image_name:
                 # i2v 首帧：只改 LoadImage 的源图选择；first_frame 等连线输入保持不动
                 # （i2v 模板里 first_frame 是 ["LoadImage节点", 0] 连线，覆盖会破坏图）
-                if ct == "LoadImage" and "image" in ins:
+                # 已被 __image_map__ 定向指定的节点不再被整体注入覆盖（首尾帧分别写）
+                if ct == "LoadImage" and "image" in ins and nid not in image_map:
                     ins["image"] = image_name
+        # 定向注图：只认 LoadImage 节点，避免写坏其它节点的同名输入
+        for nid, fname in image_map.items():
+            node = api.get(str(nid))
+            if node and node.get("class_type") == "LoadImage" and isinstance(fname, str):
+                node.setdefault("inputs", {})["image"] = fname
         if applied == 0 and "text" in overrides:
             # 常见场景：把 text 塞给第一个 CLIPTextEncode
             for nid, node in api.items():
@@ -2570,7 +2582,240 @@ def copy_to_input(src_rel, tag="frame"):
     return name
 
 
-def run_batch(bid, only_index=None, draft=False):
+# ---------------------------------------------------------------- 出片前门禁（把错误挡在花钱之前）
+
+SEVEN_SECTIONS = ("画风", "镜头", "构图", "人物", "逐秒", "声音", "约束")
+# 文中总结的「AI 拍得出来/容易抽卡」场景：命中即提示，不阻断
+FILMABILITY_RISKS = [
+    (r"手(里|中)?(拿|握|捏|端着|提着)[^，。]{0,4}", "手拿小物容易糊，改成放在桌面/器物上或换成大件"),
+    (r"文字|字幕|招牌|标语|海报|logo|LOGO|字母|写着", "画面有文字/招牌时模型写不对字，改成空白招牌或无字设计"),
+    (r"镜子|倒影|水面反射|映出", "镜子/倒影极易崩，换成实景或去掉"),
+    (r"(两人|三个人|多人|人群)[^，。]{0,8}(交叉|交错|擦肩|穿插)", "人物交叉最容易穿帮，改成一前一后/入画出画"),
+    (r"(同时|一边[^，。]{0,6}一边[^，。]{0,6}一边)", "一镜连做多个动作必乱，拆成一镜一两个动作"),
+    (r"俯拍[^，。]{0,8}(脸|表情)|航拍[^，。]{0,8}(脸|表情)", "俯拍/航拍看不到脸，表情戏换平视或过肩"),
+]
+
+FLF2V_MAP = {"h3-i2v": "h3-flf2v"}
+RETRO_DIR = os.path.join(DATA_DIR, "retro")
+
+
+def _ffprobe_size(path):
+    """ffmpeg -i 解析首条视频流尺寸；失败返回 None。"""
+    if not FFMPEG or not path or not os.path.isfile(path):
+        return None
+    try:
+        r = subprocess.run([FFMPEG, "-hide_banner", "-i", path], capture_output=True, text=True,
+                           timeout=30, encoding="utf-8", errors="replace", creationflags=0x08000000)
+        m = re.search(r"Video:.*?(\d{2,5})x(\d{2,5})", r.stderr or "")
+        return (int(m.group(1)), int(m.group(2))) if m else None
+    except Exception:
+        return None
+
+
+def _frame_ssim(a, b):
+    """两图 SSIM（0-1），判断首尾帧机位/构图是否跑偏。失败返回 None。"""
+    if not FFMPEG or not (a and b and os.path.isfile(a) and os.path.isfile(b)):
+        return None
+    try:
+        r = subprocess.run([FFMPEG, "-hide_banner", "-i", a, "-i", b,
+                            "-lavfi", "ssim", "-f", "null", "-"],
+                           capture_output=True, text=True, timeout=60,
+                           encoding="utf-8", errors="replace", creationflags=0x08000000)
+        m = re.findall(r"All:([0-9.]+)", (r.stderr or "") + (r.stdout or ""))
+        return round(float(m[-1]), 4) if m else None
+    except Exception:
+        return None
+
+
+def wf_supports(wf, input_name):
+    """工作流是否含某个输入（如 last_frame）。"""
+    for n in (wf or {}).get("api", {}).values():
+        if input_name in (n.get("inputs") or {}):
+            return True
+    return False
+
+
+def precheck_shot(item, wf=None, lock=""):
+    """单镜头出片前确定性检查。fails 阻断提交（除非强制），warns 只提示——
+    对应文章「文字能发现的错不要留到图上」。"""
+    fails, warns = [], []
+    prompt = (item.get("prompt") or "").strip()
+    first, last = item.get("first_frame"), item.get("last_frame")
+
+    if not prompt:
+        fails.append({"code": "PROMPT_EMPTY", "msg": "提示词为空"})
+    elif len(prompt) < 20:
+        warns.append({"code": "PROMPT_SHORT", "msg": f"提示词只有 {len(prompt)} 字，太短容易跑偏"})
+
+    if prompt:
+        if "【" in prompt:
+            missing = [s for s in SEVEN_SECTIONS if f"【{s}" not in prompt]
+            if missing:
+                warns.append({"code": "PROMPT_SECTIONS_MISSING",
+                              "msg": "七段式缺段：" + "、".join(missing) + "（缺逐秒/约束最影响稳定性）"})
+        else:
+            warns.append({"code": "PROMPT_NO_STRUCTURE",
+                          "msg": "未用七段式（画风/镜头/构图/人物/逐秒/声音/约束），建议套模板"})
+
+    neg = len(re.findall(r"(?:^|[，。；！？\s])(不要|别|勿|禁止)", prompt))
+    if neg:
+        warns.append({"code": "PROMPT_NEGATION",
+                      "msg": f"有 {neg} 处「不要/别」否定表述，常被忽略；改成正面约束（如「画面里只有…」）"})
+
+    hits = 0
+    for pat, hint in FILMABILITY_RISKS:
+        m = re.search(pat, prompt)
+        if m:
+            warns.append({"code": "FILMABILITY", "msg": f"易抽卡：{m.group(0)[:16]} → {hint}"})
+            hits += 1
+            if hits >= 3:
+                break
+
+    if last and not first:
+        fails.append({"code": "FRAME_FIRST_MISSING", "msg": "只设了尾帧：尾帧必须配首帧（FL2V 两端都要锚定）"})
+    if last and wf is not None and not wf_supports(wf, "last_frame"):
+        fails.append({"code": "WF_NO_LASTFRAME",
+                      "msg": f"工作流「{wf.get('name')}」不支持 last_frame，请改用 H3 首尾帧生视频（FL2V）"})
+
+    frames = {}
+    if first and last:
+        ffull, lfull = resolve_media(first), resolve_media(last)
+        sz = (_ffprobe_size(ffull), _ffprobe_size(lfull))
+        frames["sizes"] = [list(s) if s else None for s in sz]
+        if sz[0] and sz[1] and sz[0] != sz[1]:
+            fails.append({"code": "FRAME_SIZE_MISMATCH",
+                          "msg": f"首帧 {sz[0][0]}×{sz[0][1]} 与尾帧 {sz[1][0]}×{sz[1][1]} 不一致，视频会形变"})
+        s = _frame_ssim(ffull, lfull)
+        frames["ssim"] = s
+        if s is not None:
+            if s < 0.5:
+                warns.append({"code": "FRAME_LAYOUT_DRIFT",
+                              "msg": f"首尾帧相似度仅 {s}（<0.5）：机位/构图可能对不上，建议在尾帧上改出首帧"})
+            elif s > 0.985:
+                warns.append({"code": "FRAME_IDENTICAL",
+                              "msg": f"首尾帧相似度 {s}（>0.985）：等于没动，推进/拉远镜头要裁切放大尾帧"})
+    elif not FFMPEG:
+        warns.append({"code": "NO_FFMPEG", "msg": "未检测到 ffmpeg，跳过首尾帧尺寸/相似度检查"})
+
+    if lock and lock not in prompt:
+        warns.append({"code": "CHAR_LOCK_MISSING", "msg": "镜头挂了角色但提示词缺锁定串，人物一致性会掉"})
+
+    return {"fails": fails, "warns": warns, "frames": frames, "ok": not fails}
+
+
+def resolve_shot_workflow(item, wf):
+    """带尾帧的镜头自动升级到 FL2V 工作流（当前工作流不支持 last_frame 时）。"""
+    if item.get("last_frame") and not wf_supports(wf, "last_frame"):
+        for w in list_workflows():
+            if w.get("id") == FLF2V_MAP.get(wf.get("id")) and wf_supports(w, "last_frame"):
+                return w, True
+    return wf, False
+
+
+def _image_map_for(wf, first_name=None, last_name=None):
+    """按连线找 first_frame/last_frame 的来源 LoadImage 节点，生成定向注图表。"""
+    src_first = src_last = None
+    for n in (wf or {}).get("api", {}).values():
+        ins = n.get("inputs") or {}
+        if src_first is None and isinstance(ins.get("first_frame"), list):
+            src_first = str(ins["first_frame"][0])
+        if src_last is None and isinstance(ins.get("last_frame"), list):
+            src_last = str(ins["last_frame"][0])
+    m = {}
+    if first_name and src_first:
+        m[src_first] = first_name
+    if last_name and src_last:
+        m[src_last] = last_name
+    return m
+
+
+def audit_shot(item, lock=""):
+    """LLM 视觉审核（对应文章「提交前另开一个 agent 审核」）：首/尾帧 + 提示词逐条挑错。"""
+    key = SETTINGS.get("llm_key") or SETTINGS.get("zhipu_key") or ""
+    if not key:
+        return {"ok": False, "note": "未配置 API Key，视觉审核不可用（预检仍可离线跑）"}
+    import base64
+    imgs = []
+    for rel in (item.get("first_frame"), item.get("last_frame")):
+        full = resolve_media(rel) if rel else None
+        if not (full and os.path.isfile(full)):
+            continue
+        tmp = os.path.join(CACHE_DIR, "audit_" + hashlib.md5(full.encode()).hexdigest()[:10] + ".jpg")
+        ok = make_image_thumb(full, tmp) if FFMPEG else False
+        src = tmp if ok and os.path.isfile(tmp) else full
+        with open(src, "rb") as f:
+            imgs.append("data:image/jpeg;base64," + base64.b64encode(f.read()).decode())
+    got = "、".join(s for s in SEVEN_SECTIONS if f"【{s}" in (item.get("prompt") or "")) or "无"
+    check = (
+        "你是审核，只读不改。这个镜头即将提交视频生成，花的是真钱。\n"
+        f"提示词：\n{item.get('prompt', '')}\n\n已具备的七段：{got}\n"
+        + (f"角色锁定串：{lock}\n" if lock else "")
+        + "逐项核对并放大看图：1) 提示词每句与图对得上吗（位置/左右/颜色/人数/道具数量/衣服/表情）；"
+          "2) 两张图机位、大小、背景一致吗；3) 动作现实吗、原因写了吗、手放在哪；"
+          "4) 模型可能在哪出错（同时动作、凭空出现、走反方向、歧义词、文字、倒影）。\n"
+          '只输出 JSON：{"verdict":"通过|不通过","issues":["问题1"]}，issues 每条写清哪张图/哪句话。'
+    )
+    content = [{"type": "image_url", "image_url": {"url": u}} for u in imgs]
+    content.append({"type": "text", "text": check})
+    base = (SETTINGS.get("llm_base_url") or LLM_PRESETS.get(SETTINGS.get("llm_provider"), {}).get("base", "")).rstrip("/")
+    model = SETTINGS.get("llm_model") or ""
+    body = json.dumps({"model": model, "temperature": 0.1,
+                       "messages": [{"role": "user", "content": content}]}).encode()
+    req = urllib.request.Request(base + "/chat/completions", data=body,
+                                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            resp = json.loads(r.read())
+        raw = resp["choices"][0]["message"]["content"].strip()
+        obj = json.loads(re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M))
+        verdict = "通过" if str(obj.get("verdict", "")).startswith("通过") else "不通过"
+        return {"ok": True, "verdict": verdict, "issues": obj.get("issues") or [], "raw": raw[:800]}
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:160]
+        hint = "（当前模型可能不支持视觉输入，换 glm-4v-flash 等视觉型号）" if e.code == 400 else ""
+        return {"ok": False, "note": f"审核失败：{detail}{hint}"}
+    except Exception as e:
+        return {"ok": False, "note": f"审核失败：{str(e)[:160]}"}
+
+
+def retro_batch(b):
+    """批次复盘：成败、门禁命中、审核结果写成 markdown 沉淀（文章第 8 步）。"""
+    items = b.get("items", [])
+    ok_n = sum(1 for i in items if i.get("status") == "success")
+    code_hits = {}
+    for i in items:
+        pr = i.get("precheck") or {}
+        for w in (pr.get("warns") or []) + (pr.get("fails") or []):
+            code_hits[w["code"]] = code_hits.get(w["code"], 0) + 1
+    audits = [i.get("audit") for i in items if i.get("audit")]
+    passed = sum(1 for a in audits if a.get("verdict") == "通过")
+    lines = [
+        f"# 产线复盘 · {b.get('name', '')}", "",
+        f"- 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"- 镜头数：{len(items)}（成功 {ok_n}，失败 {sum(1 for i in items if i.get('status') == 'error')}，"
+        f"拦截 {sum(1 for i in items if i.get('status') == 'blocked')}）",
+        f"- GPU 时间：{b.get('gpu_min', 0)} 分钟",
+        f"- 视觉审核：{len(audits)} 次，通过 {passed}，不通过 {len(audits) - passed}",
+        "", "## 门禁命中", "",
+    ]
+    lines += [f"- `{c}`：{n} 次" for c, n in sorted(code_hits.items(), key=lambda x: -x[1])] or ["- 无"]
+    lines += ["", "## 镜头清单", ""]
+    for i, it in enumerate(items, 1):
+        pr = it.get("precheck") or {}
+        flag = "，".join([w["code"] for w in (pr.get("warns") or [])][:3]) or "-"
+        lines.append(f"{i}. {it.get('name', '')}｜{it.get('status', '')}｜命中：{flag}")
+    lines += ["", "## 下次改进", "",
+              "- 命中 FILMABILITY：改写描述或补首尾帧锚定",
+              "- 命中 PROMPT_SECTIONS_MISSING：补齐逐秒与约束段再提交",
+              "- 命中 FRAME_LAYOUT_DRIFT：在尾帧上改出首帧，保证机位一致"]
+    os.makedirs(RETRO_DIR, exist_ok=True)
+    fn = os.path.join(RETRO_DIR, f"{safe_name(b.get('name', 'batch'))}_{datetime.now().strftime('%Y%m%d_%H%M')}.md")
+    with open(fn, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return {"ok": True, "path": fn, "code_hits": code_hits}
+
+
+def run_batch(bid, only_index=None, draft=False, force=False):
     b = _load_batch(bid)
     if not b:
         return {"ok": False, "msg": "批次不存在"}
@@ -2591,21 +2836,49 @@ def run_batch(bid, only_index=None, draft=False):
     else:
         indices.sort(key=lambda i: (not b["items"][i].get("priority", False), i))
     queued = 0
+    blocked = 0
+    lock = next((c.get("lock") for c in list_characters() if c.get("id") == b.get("character_id")), "") or ""
     for i in indices:
         item = b["items"][i]
         if only_index is None and item.get("status") == "success":
             continue
+        # 尾帧镜头自动升级到 FL2V 工作流
+        wf_use, upgraded = resolve_shot_workflow(item, wf)
+        if upgraded:
+            item["workflow_id"] = wf_use.get("id")
+        # 出片前门禁：确定性检查，fail 级阻断（除非 force）
+        pre = precheck_shot(item, wf_use, lock)
+        item["precheck"] = {"ok": pre["ok"], "fails": pre["fails"], "warns": pre["warns"],
+                            "frames": pre.get("frames") or {},
+                            "ts": datetime.now().strftime("%Y-%m-%d %H:%M")}
+        if not pre["ok"] and not force:
+            item["status"] = "blocked"
+            item["error"] = "；".join(f["msg"] for f in pre["fails"])[:200]
+            blocked += 1
+            continue
+        if not pre["ok"] and force:
+            item["forced"] = datetime.now().strftime("%Y-%m-%d %H:%M")
         overrides = {"text": item.get("prompt", "")}
-        # 关键帧：镜头指定了首帧图 → 复制进 input 目录并注入图输入
+        # 首/尾帧：复制进 input 目录，按连线定向注入（两张图不能写进同一个 LoadImage）
+        first_name = last_name = None
         if item.get("first_frame"):
-            input_name = copy_to_input(item["first_frame"], tag="ff")
-            if input_name:
-                overrides["__image__"] = input_name
-            else:
+            first_name = copy_to_input(item["first_frame"], tag="ff")
+            if not first_name:
                 item["status"] = "error"
                 item["error"] = f"关键帧图无效：{item['first_frame']}"
                 continue
-        res = submit_workflow({"name": f"{b['name']}·{item['name']}", "api": wf["api"]},
+        if item.get("last_frame"):
+            last_name = copy_to_input(item["last_frame"], tag="lf")
+            if not last_name:
+                item["status"] = "error"
+                item["error"] = f"尾帧图无效：{item['last_frame']}"
+                continue
+        imap = _image_map_for(wf_use, first_name, last_name)
+        if imap:
+            overrides["__image_map__"] = imap
+        elif first_name:
+            overrides["__image__"] = first_name
+        res = submit_workflow({"name": f"{b['name']}·{item['name']}", "api": wf_use["api"]},
                               times=1, seed=None,
                               overrides=overrides,
                               params=item.get("params"))
@@ -2619,7 +2892,10 @@ def run_batch(bid, only_index=None, draft=False):
             item["error"] = (res.get("msg") or "")[:200]
     b["updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     _save_batch(b)
-    return {"ok": True, "msg": f"已排队 {queued}/{len(b.get('items', []))} 个镜头", "batch": b}
+    msg = f"已排队 {queued}/{len(b.get('items', []))} 个镜头"
+    if blocked:
+        msg += f"，{blocked} 个被预检拦截（补齐后重试，或强制提交）"
+    return {"ok": True, "msg": msg, "batch": b, "blocked": blocked}
 
 
 def batch_sync_status():
@@ -3549,7 +3825,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/batches/parse" and method == "POST":
             return self.send_json({"ok": True, "items": parse_script_text(body.get("text", ""))})
         if path == "/api/batches/run" and method == "POST":
-            return self.send_json(run_batch(body.get("id", ""), draft=bool(body.get("draft"))))
+            return self.send_json(run_batch(body.get("id", ""), draft=bool(body.get("draft")),
+                                            force=bool(body.get("force"))))
         if path == "/api/batches/retry" and method == "POST":
             b = _load_batch(body.get("id", ""))
             idx = int(body.get("index", -1))
@@ -3558,9 +3835,61 @@ class Handler(BaseHTTPRequestHandler):
             item = b["items"][idx]
             item["status"] = None
             _save_batch(b)
-            b2 = run_batch(body.get("id", ""), only_index=idx)
+            b2 = run_batch(body.get("id", ""), only_index=idx, force=bool(body.get("force")))
             b = _load_batch(body.get("id", "")) or b
             return self.send_json({"ok": b2.get("ok", False), "msg": b2.get("msg", "已重新排队"), "batch": b})
+        # ---- 出片前门禁：预检 / 视觉审核 / 复盘
+        if path == "/api/pipeline/precheck" and method == "POST":
+            b = _load_batch(body.get("id", ""))
+            if not b:
+                return self.send_json({"ok": False, "error": "批次不存在"}, 404)
+            wf_id = b.get("workflow_id")
+            wf = next((w for w in list_workflows() if w.get("id") == wf_id), None)
+            lock = next((c.get("lock") for c in list_characters()
+                         if c.get("id") == b.get("character_id")), "") or ""
+            idx = body.get("index")
+            targets = [int(idx)] if idx is not None else list(range(len(b.get("items", []))))
+            out = []
+            for i in targets:
+                if not (0 <= i < len(b.get("items", []))):
+                    continue
+                item = b["items"][i]
+                wf_use, _ = resolve_shot_workflow(item, wf) if wf else (None, False)
+                pre = precheck_shot(item, wf_use, lock)
+                item["precheck"] = {"ok": pre["ok"], "fails": pre["fails"], "warns": pre["warns"],
+                                    "frames": pre.get("frames") or {},
+                                    "ts": datetime.now().strftime("%Y-%m-%d %H:%M")}
+                out.append({"index": i, "name": item.get("name", ""), **pre})
+            _save_batch(b)
+            return self.send_json({"ok": True, "results": out, "batch": b})
+        if path == "/api/pipeline/audit" and method == "POST":
+            b = _load_batch(body.get("id", ""))
+            idx = int(body.get("index", -1))
+            if not b or idx < 0 or idx >= len(b.get("items", [])):
+                return self.send_json({"ok": False, "error": "参数错误"}, 400)
+            lock = next((c.get("lock") for c in list_characters()
+                         if c.get("id") == b.get("character_id")), "") or ""
+            r = audit_shot(b["items"][idx], lock)
+            b["items"][idx]["audit"] = {**{k: v for k, v in r.items() if k != "raw"},
+                                        "ts": datetime.now().strftime("%Y-%m-%d %H:%M")}
+            _save_batch(b)
+            return self.send_json({"ok": r.get("ok", False), **r, "batch": b})
+        if path == "/api/pipeline/retro" and method == "POST":
+            b = _load_batch(body.get("id", ""))
+            if not b:
+                return self.send_json({"ok": False, "error": "批次不存在"}, 404)
+            return self.send_json(retro_batch(b))
+        if path == "/api/pipeline/shot-template":
+            # 七段式视频提示词模板（可直接贴进镜头提示词）
+            tpl = ("【画风】<一句话画风，与首尾帧一致>\n"
+                   "【镜头】整段 X 秒，<景别>，<机位>，<运镜；不动就写「不推不拉不摇，不切镜」>\n"
+                   "【构图与配色】<人与物在画面位置，墙与光颜色>\n"
+                   "【人物】<每人的长相、衣服、固定道具，写死>\n"
+                   "【逐秒】0–0.2 秒：画面完全静止，与首帧一致。\n"
+                   "<逐秒写谁做什么、表情怎么变、手放在哪、往画面哪边>。最后 0.3 秒：所有人停住，与尾帧一致。\n"
+                   "【声音】只有 <看得见原因的声音>。人物不说话。\n"
+                   "【约束】画面里一直只有首帧这几个人和这些东西，脸和身形全程不变，一镜到底，无文字、字幕、水印。")
+            return self.send_json({"ok": True, "template": tpl})
         if path == "/api/batches/sync" and method == "POST":
             batch_sync_status()
             return self.send_json({"ok": True})
