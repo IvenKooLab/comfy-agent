@@ -54,6 +54,8 @@ To develop against a source checkout: `python server.py --open` (browser mode), 
 
 ## Screenshots
 
+Captured with `python tools/capture_shots.py` (headless Edge/Chrome, zero extra dependencies; the script spins up a temporary instance with demo data so your own `data/` is untouched).
+
 **Setup Wizard**
 
 ![](docs/thumbs/screenshot-wizard.jpg)

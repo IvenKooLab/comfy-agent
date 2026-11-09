@@ -64,6 +64,8 @@
 
 ## 界面一览
 
+截图由 `python tools/capture_shots.py` 生成（无头 Edge/Chrome，零额外依赖；脚本会起一个带演示数据的临时实例，不动你自己的 `data/`）。
+
 **开屏向导**
 
 ![](docs/thumbs/screenshot-wizard.jpg)
