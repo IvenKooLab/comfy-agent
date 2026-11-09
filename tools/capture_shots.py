@@ -71,8 +71,8 @@ def find_browser(explicit=None):
     return None
 
 
-def build_instance(tmp):
-    """临时实例：复制 server.py/static/VERSION + 演示批次 + 占位图，绝不碰本机 data。"""
+def build_instance(tmp, output_dir=None):
+    """临时实例：复制 server.py/static/VERSION + 演示批次；output_dir 默认用占位图，绝不碰本机 data。"""
     for item in ("server.py", "VERSION"):
         shutil.copy2(os.path.join(ROOT, item), os.path.join(tmp, item))
     shutil.copytree(os.path.join(ROOT, "static"), os.path.join(tmp, "static"))
@@ -86,10 +86,10 @@ def build_instance(tmp):
             if fn.endswith(".json") and ".bak" not in fn and ".crashed." not in fn:
                 shutil.copy2(os.path.join(src_wf, fn), os.path.join(data, "workflows", fn))
 
-    out_dir = os.path.join(tmp, "outputs")
+    out_dir = output_dir or os.path.join(tmp, "outputs")
     os.makedirs(out_dir, exist_ok=True)
     ffmpeg = shutil.which("ffmpeg")
-    if ffmpeg:  # 画廊/创作页有内容可看，避免空态截图
+    if ffmpeg and not output_dir:  # 没给真实出片目录时，用渐变占位图避免空态截图
         for i in range(1, 7):
             subprocess.run([ffmpeg, "-v", "error", "-f", "lavfi",
                             "-i", f"gradients=s=832x1216:c0=0x1b2430:c1=0x6f8fbf:duration=1",
@@ -150,6 +150,8 @@ def main():
     ap.add_argument("--only", default="", help="逗号分隔的页面名，如 pipeline,create")
     ap.add_argument("--browser", default=None, help="浏览器可执行文件路径（默认自动探测 Edge/Chrome）")
     ap.add_argument("--keep", action="store_true", help="保留临时目录（排错用）")
+    ap.add_argument("--output-dir", default=None,
+                    help="用你真实的出片目录当画廊素材（截图画廊/创作页会好看得多；默认用渐变占位图）")
     args = ap.parse_args()
 
     browser = find_browser(args.browser)
@@ -163,7 +165,7 @@ def main():
         return 2
 
     tmp = tempfile.mkdtemp(prefix="comfyagent-shots-")
-    out_dir = build_instance(tmp)
+    out_dir = build_instance(tmp, args.output_dir)
     srv = subprocess.Popen([sys.executable, "server.py"], cwd=tmp,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     ok_all = True
