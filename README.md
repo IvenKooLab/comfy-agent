@@ -121,6 +121,14 @@ A built-in zero-dependency MCP server (stdio + JSON-RPC 2.0) exposes ComfyAgent 
 
 (Requires ComfyAgent to be running.)
 
+## Credits
+
+The local H3 short-drama pipeline (v1.9.0: reference-to-video, dialogue tagging rules,
+reaction-shot checks, SRT/edit-sheet export) was inspired by **Miller ([@TuyetloanP81840](https://x.com/TuyetloanP81840))**'s
+hands-on guide *"Making an AI short drama alone with Claude + H3"* -
+[read the original article](https://x.com/TuyetloanP81840/status/2119326884505043274).
+Thank you for publishing the full workflow and the pitfall list.
+
 ## Contributing
 
 Issues and PRs welcome (English or Chinese):

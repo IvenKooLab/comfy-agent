@@ -120,6 +120,13 @@ bash build_exe.sh         # 构建产品 exe
 
 架构与迭代史见 [CHANGELOG.md](CHANGELOG.md)。
 
+## 致谢
+
+本项目的本地 H3 短剧链路（v1.9.0：参考生视频、台词规范预检、反应镜头检查、SRT/剪辑单导出）
+灵感来自 **Miller（[@TuyetloanP81840](https://x.com/TuyetloanP81840)）** 的实操教程
+《用 Claude + H3 一个人拍 AI 短剧》——[原帖地址](https://x.com/TuyetloanP81840/status/2119326884505043274)。
+感谢作者公开完整流程与踩坑清单。
+
 ## 贡献
 
 欢迎 Issue 与 PR（中英文均可）：
