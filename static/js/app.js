@@ -265,7 +265,7 @@ async function boot() {
     initPipeline(); window.__step = "initPipeline";
     initMisc(); window.__step = "initMisc";
     applyHash(); window.__step = "applyHash";
-    connectSSE(); window.__step = "connectSSE";
+    if (!/[?&]nosse/.test(location.search)) { connectSSE(); window.__step = "connectSSE"; }
     hwLoop(); window.__step = "hwLoop";
     initCmdk(); window.__step = "initCmdk";
     $("#nav-about")?.addEventListener("click", () => { $("#about-modal").hidden = false; });

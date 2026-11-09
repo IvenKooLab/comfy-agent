@@ -20,7 +20,7 @@ function initAbout() {
 
 /* ================= 首次运行向导 ================= */
 function initWizard() {
-  if (localStorage.getItem("comfyagent_wizard")) return;
+  if (localStorage.getItem("comfyagent_wizard") || /[?&]nowizard/.test(location.search)) return;
   $("#wizard").hidden = false;
   api("/api/settings").then((r) => {
     if (!r.ok) return;

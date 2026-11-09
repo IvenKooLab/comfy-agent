@@ -146,8 +146,8 @@ def capture(browser, tmp, view, png_path, budget=5000):
     profile = os.path.join(tmp, "profile-" + view)
     cmd = [browser, "--headless=new", "--disable-gpu", "--hide-scrollbars",
            "--force-device-scale-factor=1", "--window-size=1600,1000",
-           f"--user-data-dir={profile}", f"--timeout={budget + 3000}",
-           f"--screenshot={png_path}", f"http://127.0.0.1:{PORT}/#{view}"]
+           f"--user-data-dir={profile}", f"--virtual-time-budget=12000", "--run-all-compositor-stages-before-draw",
+           f"--screenshot={png_path}", f"http://127.0.0.1:{PORT}/?nosse=1&nowizard=1#{view}"]
     r = subprocess.run(cmd, capture_output=True, timeout=120)
     return os.path.isfile(png_path) and os.path.getsize(png_path) > 2000
 
