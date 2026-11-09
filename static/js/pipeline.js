@@ -155,6 +155,12 @@ async function refresh() {
     box.appendChild(el);
   }
   if (cur) renderItems();  // 轻量刷新当前批次镜头行（原 renderBatch 已并入 renderItems）
+  // 没有选中批次时自动打开最近的一个（合理默认：进来就想看最近进度）
+  if (!cur && batches.length && !openBatch._busy) {
+    const latest = [...batches].sort((a, b) => String(b.updated || "").localeCompare(String(a.updated || "")))[0];
+    openBatch._busy = true;
+    openBatch(latest.id).finally(() => { openBatch._busy = false; });
+  }
 }
 
 async function openBatch(id) {

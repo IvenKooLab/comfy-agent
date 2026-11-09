@@ -113,6 +113,7 @@ window.addEventListener("langchange", () => {
   setComfyDot(comfyOnline);
 });
 export function setComfyDot(on) {
+  if (/[?&]noffline/.test(location.search)) on = true;  // README 截图模式：演示在线态
   if (on === comfyOnline && !setComfyDot._force) return;
   comfyOnline = on;
   setComfyDot._force = false;
