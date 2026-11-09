@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.9.0（2026-11-09）— 本地 H3 短剧流水线：参考生视频（9 图 3 音）+ 台词/反应镜头规范 + 竖屏 + SRT/剪辑单
+
+> 对照 X 作者 **Miller（@TuyetloanP81840）** 的实操文《用 Claude + H3 一个人拍 AI 短剧：一手实战教程，附全流程提示词和技能包》补齐本地短剧链路——**感谢他把「一个人一个剧组」的完整流程和踩坑清单公开**。他那边用 RunningHub 跑 H3（一段约 2 毛），本项目用本机 GPU；他靠「身份板当参考图 + 台词分三种写法 + 反应镜头补剪」保一致性，本版把这套机制做成工作流、字段与检查项。
+
+- **参考生视频（ref2v）落地**：新增 `H3 参考生视频（9 图 + 3 音频参考）` 工作流，对应 ComfyUI 原生 `MiniMaxH3ReferenceToVideo`（`ref_image_1..9` / `ref_audio_1..3`）；镜头带参考图时排队**自动升级**到该工作流，未用到的参考槽在提交前**剪枝**（占位图/占位音频不进执行图），并按槽位定向注入
+- **一图一用途**：镜头 `refs` 支持 `{path, label}`，提交时自动把用途写进提示词（模型实际读的是 `<Picture 1>` / `<Audio 1>` 标签）；喂了图却没在提示词里引用会被预检拦下（`REFS_NOT_REFERENCED`）
+- **台词规范检查**：新增 `dialogue_stats` 与三条 lint——台词字数×时长（**每 10 字≈2 秒**，超预算警告 `DIALOGUE_TOO_LONG`）、有引号台词却没标「说/内心独白/画外音」（`DIALOGUE_UNTAGGED`，防「张嘴念心里话」）、反应镜头夹台词（`REACTION_HAS_LINES`）
+- **镜头属性**：`gen_secs`（生成秒数）、`kind`（dialogue/reaction/establishing）、`seed`、`audio_refs`，走 `/api/pipeline/shot` 写入
+- **竖屏短剧**：批次 `aspect` 一键 9:16 / 16:9，提交时按比例覆盖 H3 的 width/height（352×640 / 640×352，步长 32）
+- **字幕与剪辑单**：`/api/pipeline/srt` 按镜头台词+时长导出 SRT（AI 画不好字，字幕在剪映里加）；`/api/pipeline/editsheet` 导出剪辑单 markdown（镜头号/类型/时长/台词/seed）
+- 管线 UI：竖屏切换、字幕 SRT、剪辑单、镜头「参考」按钮（选图+填用途标签，自动累积到 9 图）
+- 新增 `tests/test_ref2v_shortdrama.py` 13 项（槽位/剪枝/标签注入/路由/台词 lint/SRT/剪辑单），全套 82 项 + 3 个集成脚本全绿
+
 ## v1.8.0（2026-11-06）— 出片前门禁：首尾帧 FL2V + 七段式校验 + 可拍性 lint + 视觉审核 + 复盘
 
 > 思路来自 X 作者 **Eian（@EianLu / GitHub [@YIAN6557](https://github.com/YIAN6557)）** 的长文《Claude code/Codex+Seedance AI视频：从一个想法到成片的全流程》——**感谢他公开分享这套把抽卡率压到极低的生产方法**。他的核心主张是「把错误挡在花钱之前」：文字能发现的错不留到图上，图上能发现的错不留到视频上；配套手段是首尾帧锚定、七段式提示词、提交前审核、复盘沉淀。本版把这条主线本地化：花钱的环节换成 GPU 时间，审核换成确定性预检 + 可选 LLM 视觉审核。

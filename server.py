@@ -2124,6 +2124,7 @@ def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
         image_name = overrides.pop("__image__", None)
         # 定向注图：{节点id: input 目录文件名}——首尾帧需要分别写不同 LoadImage
         image_map = overrides.pop("__image_map__", None) or {}
+        audio_map = overrides.pop("__audio_map__", None) or {}
         # 「text」类覆盖只写第一个命中的文本节点：正向 CLIPTextEncode 约定排在负向之前，
         # 不做限定会把同一段提示词灌进负向编码节点（MOSS 等双编码工作流直接坏档）
         text_applied = False
@@ -2160,6 +2161,11 @@ def submit_workflow(wf, times=1, seed=None, overrides=None, params=None):
             node = api.get(str(nid))
             if node and node.get("class_type") == "LoadImage" and isinstance(fname, str):
                 node.setdefault("inputs", {})["image"] = fname
+        # 音频参考定向注入（LoadAudio 的键是 audio）
+        for nid, aname in audio_map.items():
+            node = api.get(str(nid))
+            if node and node.get("class_type") == "LoadAudio" and isinstance(aname, str):
+                node.setdefault("inputs", {})["audio"] = aname
         if applied == 0 and "text" in overrides:
             # 常见场景：把 text 塞给第一个 CLIPTextEncode
             for nid, node in api.items():
@@ -2582,6 +2588,107 @@ def copy_to_input(src_rel, tag="frame"):
     return name
 
 
+
+# ---------------------------------------------------------------- 参考生视频（9 图 + 3 音频，对应文中「一图一用途」）
+
+def ref_slots(api):
+    """工作流里的参考图/音频槽位：{"image": {1: 节点id}, "audio": {1: 节点id}}。"""
+    out = {"image": {}, "audio": {}}
+    for nid, n in (api or {}).items():
+        for k in (n.get("inputs") or {}):
+            m = re.fullmatch(r"ref_image_(\d+)", k)
+            if m and isinstance(n["inputs"][k], list):
+                out["image"][int(m.group(1))] = str(n["inputs"][k][0])
+            m = re.fullmatch(r"ref_audio_(\d+)", k)
+            if m and isinstance(n["inputs"][k], list):
+                out["audio"][int(m.group(1))] = str(n["inputs"][k][0])
+    return out
+
+
+def prune_ref_graph(api, n_images=0, n_audios=0):
+    """只保留前 N 个参考槽并删掉它们的来源节点（占位图/占位音频不进执行图）。"""
+    api = json.loads(json.dumps(api or {}))
+    slots = ref_slots(api)
+    ref_node = next((nid for nid, n in api.items() if n.get("class_type") == "MiniMaxH3ReferenceToVideo"), None)
+    if not ref_node:
+        return api
+    for idx, nid in slots["image"].items():
+        if idx > n_images:
+            api[ref_node]["inputs"].pop(f"ref_image_{idx}", None)
+            if not any(isinstance(v, list) and v[0] == nid for m in api.values() for v in (m.get("inputs") or {}).values()):
+                api.pop(nid, None)
+    for idx, nid in slots["audio"].items():
+        if idx > n_audios:
+            api[ref_node]["inputs"].pop(f"ref_audio_{idx}", None)
+            if not any(isinstance(v, list) and v[0] == nid for m in api.values() for v in (m.get("inputs") or {}).values()):
+                api.pop(nid, None)
+    return api
+
+
+def ref_tag_prompt(prompt, image_labels, audio_labels=()):
+    """把参考素材的用途写进提示词（模型读的是 <Picture i> / <Audio j> 标签）。"""
+    lines = []
+    for i, lab in enumerate(image_labels or [], 1):
+        if lab:
+            lines.append(f"<Picture {i}> is {lab}.")
+    for j, lab in enumerate(audio_labels or [], 1):
+        if lab:
+            lines.append(f"<Audio {j}> is {lab}.")
+    if not lines:
+        return prompt
+    head = " ".join(lines)
+    return (prompt or "").strip() + ("\n\n" if (prompt or "").strip() else "") + head
+
+
+DIALOGUE_MARKERS = ("说：", "说道", "内心独白", "画外音", "旁白")
+
+
+def dialogue_stats(prompt):
+    """粗估台词：引号内文字算台词；返回 {chars, has_monologue, has_voiceover, has_speech}。"""
+    quoted = re.findall(r"[「“\"]([^」”\"]{1,200})[」”\"]", prompt or "")
+    chars = sum(len(q) for q in quoted)
+    return {"chars": chars, "lines": len(quoted),
+            "has_monologue": "内心独白" in (prompt or ""),
+            "has_voiceover": "画外音" in (prompt or "") or "旁白" in (prompt or ""),
+            "has_speech": bool(re.search(r"说[：:]", prompt or ""))}
+
+
+def shots_to_srt(items, start_at=0.0):
+    """按镜头台词与时长拼 SRT（AI 画不出字，字幕在这里补——对应文中 3.4）。"""
+    def fmt(t):
+        h, rem = divmod(t, 3600)
+        m, s = divmod(rem, 60)
+        return f"{int(h):02d}:{int(m):02d}:{int(s):02d},{int(round((s - int(s)) * 1000)):03d}"
+    cues, t = [], start_at
+    for it in items or []:
+        dur = float(it.get("gen_secs") or 5)
+        quoted = re.findall(r"[「“\"]([^」”\"]{1,200})[」”\"]", it.get("prompt") or "")
+        text = " / ".join(q.strip() for q in quoted if q.strip())
+        if text:
+            cues.append(f"{len(cues) + 1}\n{fmt(t)} --> {fmt(t + dur)}\n{text}\n")
+        t += dur
+    return "\n".join(cues)
+
+
+def edit_sheet_md(b):
+    """剪辑单：镜头号/时长/台词/类型，直接对着剪映排片（对应文中 3.0 的剪辑单）。"""
+    lines = [f"# 剪辑单 · {b.get('name', '')}", "",
+             "| # | 镜头 | 类型 | 时长(s) | 台词 | 备注 |", "|---|---|---|---|---|---|"]
+    t = 0.0
+    for i, it in enumerate(b.get("items", []), 1):
+        dur = float(it.get("gen_secs") or 5)
+        quoted = re.findall(r"[「“\"]([^」”\"]{1,200})[」”\"]", it.get("prompt") or "")
+        text = " / ".join(q.strip() for q in quoted if q.strip()) or "—"
+        note = "反应镜头（无台词）" if (it.get("kind") == "reaction") else ""
+        if it.get("seed") is not None:
+            note = (note + " " if note else "") + f"seed={it['seed']}"
+        lines.append(f"| {i} | {it.get('name', '')} | {it.get('kind') or 'dialogue'} | {dur:g} | {text[:40]} | {note} |")
+        t += dur
+    lines += ["", f"总时长：{round(t, 2)} 秒", "",
+              "字幕：用 `GET /api/pipeline/srt?id=<批次>` 导出 SRT 后在剪映里导入。"]
+    return "\n".join(lines) + "\n"
+
+
 # ---------------------------------------------------------------- 出片前门禁（把错误挡在花钱之前）
 
 SEVEN_SECTIONS = ("画风", "镜头", "构图", "人物", "逐秒", "声音", "约束")
@@ -2707,16 +2814,44 @@ def precheck_shot(item, wf=None, lock="", palette=None):
             warns.append({"code": "PALETTE_LOW_CONTRAST",
                           "msg": f"主体与背景亮度差仅 {sep}（<25）：黑白后分不开，先调配色再画首尾帧"})
 
+    # 台词与时长：文中经验「每 10 字台词约 2 秒」，超了必然口型崩
+    if prompt:
+        ds = dialogue_stats(prompt)
+        secs = float(item.get("gen_secs") or 5)
+        budget = secs / 2.0 * 10
+        if ds["chars"] > budget * 1.15:
+            warns.append({"code": "DIALOGUE_TOO_LONG",
+                          "msg": f"台词约 {ds['chars']} 字，{secs:g} 秒只能放约 {int(budget)} 字（每 10 字≈2 秒），删台词或加时长"})
+        if ds["chars"] and not any(k in prompt for k in ("内心独白", "画外音", "旁白")) and not re.search(r"说[：:]", prompt):
+            warns.append({"code": "DIALOGUE_UNTAGGED",
+                          "msg": "有引号台词但没标「说/内心独白/画外音」，模型会让角色张嘴念心里话"})
+        if item.get("kind") == "reaction" and ds["chars"]:
+            warns.append({"code": "REACTION_HAS_LINES",
+                          "msg": "反应镜头不该有台词（只要表情），把台词挪到对白镜头"})
+        refs = item.get("refs") or []
+        if refs and wf is not None and wf_supports(wf, "ref_image_1"):
+            used = [int(m) for m in re.findall(r"<Picture (\d+)>", prompt)]
+            if not used:
+                warns.append({"code": "REFS_NOT_REFERENCED",
+                              "msg": "喂了参考图但提示词没写 <Picture 1> 之类的用途，模型会用错图"})
+
     return {"fails": fails, "warns": warns, "frames": frames, "ok": not fails}
 
 
 def resolve_shot_workflow(item, wf):
-    """带尾帧的镜头自动升级到 FL2V 工作流（当前工作流不支持 last_frame 时）。"""
+    """按镜头特征自动选工作流：参考图 → 参考生视频；尾帧 → FL2V；首帧 → i2v；否则沿用。"""
+    if item.get("refs") and wf and not wf_supports(wf, "ref_image_1"):
+        for w in list_workflows():
+            if w.get("id") == REF2V_MAP.get(wf.get("id")) and wf_supports(w, "ref_image_1"):
+                return w, True
     if item.get("last_frame") and not wf_supports(wf, "last_frame"):
         for w in list_workflows():
             if w.get("id") == FLF2V_MAP.get(wf.get("id")) and wf_supports(w, "last_frame"):
                 return w, True
     return wf, False
+
+
+REF2V_MAP = {"h3-t2v": "h3-ref2v", "h3-i2v": "h3-ref2v", "h3-flf2v": "h3-ref2v"}
 
 
 def _image_map_for(wf, first_name=None, last_name=None):
@@ -3063,6 +3198,34 @@ def run_batch(bid, only_index=None, draft=False, force=False):
         if not pre["ok"] and force:
             item["forced"] = datetime.now().strftime("%Y-%m-%d %H:%M")
         overrides = {"text": item.get("prompt", "")}
+        # 参考生视频：参考图/音频逐个复制并按槽位注入，未用槽位剪枝
+        refs = [r for r in (item.get("refs") or []) if isinstance(r, dict) and r.get("path")]
+        audio_refs = [r for r in (item.get("audio_refs") or []) if isinstance(r, dict) and r.get("path")]
+        if refs or audio_refs:
+            slots = ref_slots(wf_use.get("api", {}))
+            imap2, amap2, labels, alabels = {}, {}, [], []
+            for i, r in enumerate(refs[:9], 1):
+                nm = copy_to_input(r["path"], tag=f"rf{i}")
+                if nm and i in slots["image"]:
+                    imap2[slots["image"][i]] = nm
+                    labels.append(r.get("label") or "")
+            for j, r in enumerate(audio_refs[:3], 1):
+                nm = copy_to_input(r["path"], tag=f"ra{j}")
+                if nm and j in slots["audio"]:
+                    amap2[slots["audio"][j]] = nm
+                    alabels.append(r.get("label") or "")
+            overrides["text"] = ref_tag_prompt(item.get("prompt", ""), labels, alabels)
+            if imap2:
+                overrides["__image_map__"] = imap2
+            if amap2:
+                overrides["__audio_map__"] = amap2
+            api_ref = prune_ref_graph(wf_use.get("api", {}), len(imap2), len(amap2))
+        else:
+            api_ref = wf_use.get("api", {})
+        # 竖屏/横屏：H3 节点自带 width/height（步长 32），按批次比例覆盖
+        aspect = (b.get("aspect") or "").strip()
+        if aspect in ("9:16", "16:9"):
+            overrides["width"], overrides["height"] = ((352, 640) if aspect == "9:16" else (640, 352))
         # 首/尾帧：复制进 input 目录，按连线定向注入（两张图不能写进同一个 LoadImage）
         first_name = last_name = None
         if item.get("first_frame"):
@@ -3082,7 +3245,7 @@ def run_batch(bid, only_index=None, draft=False, force=False):
             overrides["__image_map__"] = imap
         elif first_name:
             overrides["__image__"] = first_name
-        res = submit_workflow({"name": f"{b['name']}·{item['name']}", "api": wf_use["api"]},
+        res = submit_workflow({"name": f"{b['name']}·{item['name']}", "api": api_ref},
                               times=1, seed=None,
                               overrides=overrides,
                               params=item.get("params"))
@@ -4083,6 +4246,43 @@ class Handler(BaseHTTPRequestHandler):
             if not b:
                 return self.send_json({"ok": False, "error": "批次不存在"}, 404)
             return self.send_json(retro_batch(b))
+        if path == "/api/pipeline/srt":
+            b = _load_batch(q.get("id", ""))
+            if not b:
+                return self.send_json({"ok": False, "error": "批次不存在"}, 404)
+            srt = shots_to_srt(b.get("items", []))
+            raw = srt.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-subrip; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="shots.srt"')
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+            return
+        if path == "/api/pipeline/editsheet":
+            b = _load_batch(q.get("id", ""))
+            if not b:
+                return self.send_json({"ok": False, "error": "批次不存在"}, 404)
+            return self.send_json({"ok": True, "markdown": edit_sheet_md(b)})
+        if path == "/api/pipeline/aspect" and method == "POST":
+            b = _load_batch(body.get("id", ""))
+            if not b:
+                return self.send_json({"ok": False, "error": "批次不存在"}, 404)
+            b["aspect"] = body.get("aspect") if body.get("aspect") in ("9:16", "16:9") else ""
+            _save_batch(b)
+            return self.send_json({"ok": True, "batch": b})
+        if path == "/api/pipeline/shot" and method == "POST":
+            # 镜头属性：gen_secs / kind / refs / audio_refs / seed
+            b = _load_batch(body.get("id", ""))
+            idx = int(body.get("index", -1))
+            if not b or idx < 0 or idx >= len(b.get("items", [])):
+                return self.send_json({"ok": False, "error": "参数错误"}, 400)
+            it = b["items"][idx]
+            for k in ("gen_secs", "kind", "refs", "audio_refs", "seed", "voice_desc"):
+                if k in body:
+                    it[k] = body[k]
+            _save_batch(b)
+            return self.send_json({"ok": True, "batch": b})
         if path == "/api/pipeline/palette" and method == "POST":
             b = _load_batch(body.get("id", ""))
             if not b:

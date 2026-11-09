@@ -58,6 +58,27 @@ export function initPipeline() {
     toast(tf("pl.precheck.summary", res.length, bad, warn), bad ? "err" : "ok");
     if (r.batch) { cur = r.batch; renderItems(); }
   });
+  $("#pl-aspect").addEventListener("click", async () => {
+    if (!cur) return;
+    const next = (cur.aspect === "9:16") ? "16:9" : "9:16";
+    const r = await api("/api/pipeline/aspect", { method: "POST", body: { id: cur.id, aspect: next } });
+    if (r.ok) { cur = r.batch; $("#pl-aspect").textContent = (cur.aspect === "9:16" ? "竖屏 9:16" : "横屏 16:9"); toast("比例：" + (cur.aspect || "默认 16:9"), "ok"); }
+  });
+  $("#pl-srt").addEventListener("click", () => {
+    if (!cur) return;
+    window.open(`/api/pipeline/srt?id=${encodeURIComponent(cur.id)}`, "_blank");
+  });
+  $("#pl-edit").addEventListener("click", async () => {
+    if (!cur) return;
+    const r = await api(`/api/pipeline/editsheet?id=${encodeURIComponent(cur.id)}`);
+    if (!r.ok) { toast(r.error || "导出失败", "err"); return; }
+    const blob = new Blob([r.markdown], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${cur.name || "batch"}_剪辑单.md`;
+    a.click();
+    toast(t("pl.retro.done") ? "剪辑单已导出" : "剪辑单已导出", "ok");
+  });
   $("#pl-palette").addEventListener("click", () => {
     if (!cur) { toast(t("err.no.workflow"), "err"); return; }
     window.open(`/api/pipeline/palette-sheet?id=${encodeURIComponent(cur.id)}`, "_blank");
@@ -171,12 +192,16 @@ function renderItems() {
     $("#pl-empty-new")?.addEventListener("click", newBatch);
     return;
   }
+  const ab = $("#pl-aspect");
+  if (ab) ab.textContent = cur.aspect === "9:16" ? "竖屏 9:16" : "横屏 16:9";
   const stMap = { success: [t("status.success"), "success"], error: [t("status.error"), "error"], queued: [t("status.queued"), "queued"], blocked: [t("status.blocked"), "error"] };
   box.innerHTML = cur.items.map((it, i) => {
     const [txt, cls] = stMap[it.status] || [t("pl.notqueued"), ""];
     const ff = it.first_frame
       ? `<button class="btn sm pl-ff set" data-i="${i}" title="${it.first_frame}">${t("pl.ff.set")}</button>`
       : `<button class="btn sm ghost pl-ff" data-i="${i}">${t("pl.ff")}</button>`;
+    const rfN = (it.refs || []).length + (it.audio_refs || []).length;
+    const refsBtn = `<button class="btn sm ${rfN ? "set" : "ghost"} pl-refs" data-i="${i}" title="${(it.refs || []).map((r) => r.label || r.path).join("\n") || "参考图/音频（9 图 3 音）"}">参考${rfN ? rfN : ""}</button>`;
     const lf = it.last_frame
       ? `<button class="btn sm pl-lf set" data-i="${i}" title="${it.last_frame}">${t("pl.lf.set")}</button>`
       : `<button class="btn sm ghost pl-lf" data-i="${i}" title="${t("pl.lf.tip")}">${t("pl.lf")}</button>`;
@@ -198,6 +223,7 @@ function renderItems() {
       <input class="input pl-item-name" data-i="${i}" value="${it.name.replace(/"/g, "&quot;")}">
       ${ff}
       ${lf}
+      ${refsBtn}
       ${precheckBtn}
       ${auditBtn}
       ${prio}
@@ -227,6 +253,18 @@ function renderItems() {
       saveBatch(true);
       renderItems();
       toast(t("pl.lf.done"), "ok");
+    });
+  }));
+  box.querySelectorAll(".pl-refs").forEach((b) => b.addEventListener("click", () => {
+    const i = +b.dataset.i;
+    const it = cur.items[i];
+    openPicker(tf("pick.ff", it.name), async (path) => {
+      const label = prompt("这张参考图是什么？（如：羊羊的长相 / 书院庭院 / 关键道具），会写进提示词 <Picture N>") || "";
+      it.refs = it.refs || [];
+      it.refs.push({ path, label });
+      await api("/api/pipeline/shot", { method: "POST", body: { id: cur.id, index: i, refs: it.refs } });
+      renderItems();
+      toast(`已加参考图 ${it.refs.length}/9（提示词会用 <Picture ${it.refs.length}> 引用）`, "ok");
     });
   }));
   box.querySelectorAll(".pl-precheck").forEach((b) => b.addEventListener("click", async () => {
