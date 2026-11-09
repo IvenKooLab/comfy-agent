@@ -28,7 +28,7 @@ import urllib.request
 VIEWS = ["create", "templates", "pipeline", "launcher", "models",
          "obsidian", "agent", "help", "settings", "about"]
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PORT = 8791
+PORT = 8793
 
 DEMO_SHOTS = [
     ("S01", "开场·山门", "【画风】明亮午后硬光，国漫 3D\n【镜头】整段 4 秒，大全景，平视，缓慢推近\n"
@@ -117,12 +117,28 @@ def build_instance(tmp, output_dir=None):
 
 
 def wait_up(url, timeout=40):
-    for _ in range(int(timeout / 0.4)):
+    """先探 TCP 端口（bind 即通），再用宽超时探 HTTP——/api/status 离线时 probe 要等
+    数秒（COMFY.probe 4s 超时），2 秒 HTTP 超时会永远误判实例没起来。"""
+    import socket
+    from urllib.parse import urlparse
+    u = urlparse(url)
+    deadline = time.time() + timeout
+    tcp_ok = False
+    while time.time() < deadline:
         try:
-            urllib.request.urlopen(url + "/api/status", timeout=2)
+            socket.create_connection((u.hostname, u.port), timeout=1).close()
+            tcp_ok = True
+            break
+        except OSError:
+            time.sleep(0.4)
+    if not tcp_ok:
+        return False
+    while time.time() < deadline + 20:
+        try:
+            urllib.request.urlopen(url + "/api/status", timeout=15)
             return True
         except Exception:
-            time.sleep(0.4)
+            time.sleep(0.6)
     return False
 
 
@@ -166,8 +182,15 @@ def main():
 
     tmp = tempfile.mkdtemp(prefix="comfyagent-shots-")
     out_dir = build_instance(tmp, args.output_dir)
-    srv = subprocess.Popen([sys.executable, "server.py"], cwd=tmp,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    srv_log = open(os.path.join(tmp, "srv_boot.log"), "wb")
+    srv = subprocess.Popen([sys.executable, "-u", "server.py"], cwd=tmp,
+                           stdout=srv_log, stderr=subprocess.STDOUT)
+    print(f"[diag] srv pid={srv.pid}")
+    time.sleep(2)
+    print(f"[diag] alive after 2s: {srv.poll() is None}")
+    if srv.poll() is not None:
+        srv_log.close()
+        print("[diag] BOOT LOG:\n" + io.open(os.path.join(tmp, "srv_boot.log"), encoding="utf-8", errors="replace").read()[:800])
     ok_all = True
     try:
         if not wait_up(f"http://127.0.0.1:{PORT}"):
