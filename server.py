@@ -3449,6 +3449,21 @@ PRESET_SUITES = [
         ],
     },
     {
+        "id": "h3image",
+        "name": "MiniMax H3-Image 图片生图（本机 22G 组合）",
+        "desc": "文生图/图片编辑/多参考（33.1B DiT）。w4a8 主模型 + qwen3.5_9b 提示词扩展 + qwen3vl_32b 条件编码器（27G，CPU offload）+ VAE；4MP 起步，最佳 16MP",
+        "models": [
+            {"name": "minimax_h3_image_pruned_w4a8.safetensors", "dir": "diffusion_models", "size": 13479567360,
+             "url": "https://hf-mirror.com/Comfy-Org/MiniMax-H3-Image/resolve/main/split_files/diffusion_models/minimax_h3_image_pruned_w4a8.safetensors"},
+            {"name": "qwen3.5_9b_w4a8_gptq.safetensors", "dir": "text_encoders", "size": 7881021440,
+             "url": "https://hf-mirror.com/Comfy-Org/MiniMax-H3-Image/resolve/main/split_files/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors"},
+            {"name": "minimax_h3_image_vae_fp16.safetensors", "dir": "vae", "size": 1256222720,
+             "url": "https://hf-mirror.com/Comfy-Org/MiniMax-H3-Image/resolve/main/split_files/vae/minimax_h3_image_vae_fp16.safetensors"},
+            {"name": "qwen3vl_32b_minimax_h3_int8_convrot.safetensors", "dir": "text_encoders", "size": 29135687680,
+             "url": "https://hf-mirror.com/Comfy-Org/MiniMax-H3-Image/resolve/main/split_files/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors"},
+        ],
+    },
+    {
         "id": "h3t2v",
         "name": "MiniMax H3 产线（本机内置）",
         "desc": "t2v/i2v 锁脸 · 双 VAE 原生音频 · 随环境提供，无需下载",
